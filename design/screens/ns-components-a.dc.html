@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Namadno UI — Components A · Actions &amp; Inputs</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.th-light,.th-dark{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-contrast:#FFFFFF;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-darker:#153F5E;--info-contrast:#FFFFFF;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-darker:#66430A;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-darker:#6E1A1A;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--font-family:'IRANSansX',Tahoma,sans-serif;--font-display:'Divan','IRANSansX',Tahoma,sans-serif;--radius-xs:4px;--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%}
+.th-light{--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:#F1F3F8;--bg-canvas:#F8F9FC;--bg-aurora:radial-gradient(900px 520px at 85% -10%,rgb(58 71 205 / .07),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgb(70 134 166 / .06),transparent 60%);--text-primary:#1F2433;--text-secondary:#636B7F;--text-disabled:#8F97AA;--divider:rgb(143 151 170 / .20);--action-hover:rgb(143 151 170 / .08);--action-selected:rgb(143 151 170 / .16);--action-disabled:rgb(143 151 170 / .80);--action-disabled-bg:rgb(143 151 170 / .24);--action-focus:rgb(143 151 170 / .24);--glass-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(143 151 170 / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(143 151 170 / .16);--shadow-z4:0 4px 8px 0 rgb(143 151 170 / .16);--shadow-z8:0 8px 16px 0 rgb(143 151 170 / .16);--shadow-z12:0 12px 24px -4px rgb(143 151 170 / .16);--shadow-z16:0 16px 32px -4px rgb(143 151 170 / .16);--shadow-z20:0 20px 40px -4px rgb(143 151 170 / .16);--shadow-z24:0 24px 48px 0 rgb(143 151 170 / .16);--shadow-card:0 0 2px 0 rgb(143 151 170 / .20),0 12px 24px -4px rgb(143 151 170 / .12);--shadow-dropdown:0 0 2px 0 rgb(143 151 170 / .24),-20px 20px 40px -4px rgb(143 151 170 / .24);--shadow-dialog:-40px 40px 80px -8px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(58 71 205 / .24);--shadow-success:0 8px 16px 0 rgb(85 176 140 / .24);--shadow-error:0 8px 16px 0 rgb(217 74 74 / .24);--shadow-glass:0 0 0 1px rgb(143 151 170 / .12),0 12px 32px -8px rgb(143 151 170 / .20);--chart-1:#3A47CD;--chart-2:#55B08C;--chart-3:#4686A6;--chart-4:#C3C9D6;--chart-5:#636B7F;--chart-grid:rgb(143 151 170 / .16);--primary-text:#3A47CD;--secondary-text:#2F6480;--info-text:#25628F;--success-text:#2F7D5C;--warning-text:#9E6A14;--error-text:#A32C2C;--inh-main:#1F2433;--inh-on:#FFFFFF;--table-head:#F1F3F8;--tip-bg:#454C5E;--tip-text:#FFFFFF;--skeleton:rgb(143 151 170 / .16);--alpha-fill:.14}
+.th-dark{--bg-default:#141826;--bg-paper:#1F2433;--bg-neutral:rgb(143 151 170 / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%,rgb(58 71 205 / .20),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgb(70 134 166 / .12),transparent 60%);--text-primary:#FFFFFF;--text-secondary:#8F97AA;--text-disabled:#636B7F;--divider:rgb(143 151 170 / .20);--action-hover:rgb(143 151 170 / .08);--action-selected:rgb(143 151 170 / .16);--action-disabled:rgb(143 151 170 / .80);--action-disabled-bg:rgb(143 151 170 / .24);--action-focus:rgb(143 151 170 / .24);--glass-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z4:0 4px 8px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z12:0 12px 24px -4px rgb(0 0 0 / .16);--shadow-z16:0 16px 32px -4px rgb(0 0 0 / .16);--shadow-z20:0 20px 40px -4px rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20),0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24),-20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-dialog:-40px 40px 80px -8px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(58 71 205 / .24);--shadow-success:0 8px 16px 0 rgb(85 176 140 / .24);--shadow-error:0 8px 16px 0 rgb(217 74 74 / .24);--shadow-glass:0 0 0 1px rgb(255 255 255 / .06),0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:#8E97F0;--chart-2:#7CCBA8;--chart-3:#8FC1D6;--chart-4:#636B7F;--chart-5:#C3C9D6;--chart-grid:rgb(143 151 170 / .16);--primary-text:#8E97F0;--secondary-text:#8FC1D6;--info-text:#7FC0E6;--success-text:#7CCBA8;--warning-text:#F0CB7C;--error-text:#F09A9A;--inh-main:#FFFFFF;--inh-on:#1F2433;--table-head:rgb(143 151 170 / .12);--tip-bg:#DEE2EB;--tip-text:#1F2433;--skeleton:rgb(143 151 170 / .16);--alpha-fill:.22}
+.c-default{--c:var(--inh-main);--c-on:var(--inh-on);--c-txt:var(--text-primary);--c-rgb:var(--grey-500-rgb)}
+.c-primary{--c:var(--primary-main);--c-on:var(--primary-contrast);--c-txt:var(--primary-text);--c-rgb:var(--primary-main-rgb)}
+.c-secondary{--c:var(--secondary-main);--c-on:var(--secondary-contrast);--c-txt:var(--secondary-text);--c-rgb:var(--secondary-main-rgb)}
+.c-info{--c:var(--info-main);--c-on:var(--info-contrast);--c-txt:var(--info-text);--c-rgb:var(--info-main-rgb)}
+.c-success{--c:var(--success-main);--c-on:var(--success-contrast);--c-txt:var(--success-text);--c-rgb:var(--success-main-rgb)}
+.c-warning{--c:var(--warning-main);--c-on:var(--warning-contrast);--c-txt:var(--warning-text);--c-rgb:var(--warning-main-rgb)}
+.c-error{--c:var(--error-main);--c-on:var(--error-contrast);--c-txt:var(--error-text);--c-rgb:var(--error-main-rgb)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none;width:20px;height:20px}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.paper{background:var(--bg-paper);border-radius:16px;box-shadow:var(--shadow-card)}
+.sec{display:flex;align-items:center;gap:12px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--grey-500);text-transform:uppercase;white-space:nowrap}
+.sec::after{content:"";flex:1;height:1px;background:var(--divider)}
+.cap{font-size:12px;line-height:1.5;color:var(--text-secondary)}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;line-height:1;border:0;cursor:pointer;background:transparent;color:var(--c-txt);white-space:nowrap;box-sizing:border-box}
+.btn.sm{height:30px;padding:0 10px;font-size:13px}.btn.lg{height:48px;padding:0 22px;font-size:15px}
+.btn.contained{background:var(--c);color:var(--c-on)}.btn.contained.hover{box-shadow:var(--shadow-primary)}
+.btn.outlined{border:1px solid rgb(var(--c-rgb) / .48)}
+.btn.soft{background:rgb(var(--c-rgb) / .16)}
+.btn[disabled]{background:var(--action-disabled-bg);color:var(--action-disabled);border-color:transparent;cursor:default}
+.btn.text[disabled]{background:transparent}
+.ibtn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--text-secondary);cursor:pointer;box-sizing:border-box}
+.ibtn.sm{width:36px;height:36px}.ibtn.soft{background:rgb(var(--c-rgb) / .16);color:var(--c-txt)}.ibtn.outlined{border:1px solid rgb(var(--c-rgb) / .48);color:var(--c-txt)}.ibtn.contained{background:var(--c);color:var(--c-on)}
+.lbl{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;line-height:1;white-space:nowrap;box-sizing:border-box}
+.lbl.filled{background:var(--c);color:var(--c-on)}.lbl.outlined{border:2px solid var(--c);color:var(--c-txt)}.lbl.soft{background:rgb(var(--c-rgb) / .16);color:var(--c-txt)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:500;line-height:1;box-sizing:border-box;white-space:nowrap}
+.chip.filled{background:var(--c);color:var(--c-on)}.chip.outlined{border:1px solid rgb(var(--c-rgb) / .48);color:var(--c-txt)}.chip.soft{background:rgb(var(--c-rgb) / .16);color:var(--c-txt)}
+.tf{position:relative;display:flex;align-items:center;gap:8px;height:56px;padding:0 14px;border:1px solid rgb(var(--grey-500-rgb) / .20);border-radius:8px;box-sizing:border-box;background:transparent;color:var(--text-primary);font-size:14px}
+.tf.sm{height:40px;padding:0 12px}.tf.focus{border:2px solid var(--text-primary);padding:0 13px}.tf.err{border-color:var(--error-main)}.tf.filled{background:rgb(var(--grey-500-rgb) / .08);border-color:transparent}.tf.dis{color:var(--text-disabled);border-style:dashed}
+.tf input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;color:inherit;padding:0}
+.tf .fl{position:absolute;top:-8px;right:10px;padding:0 4px;background:var(--bg-default);font-size:12px;font-weight:600;line-height:16px;color:var(--text-secondary)}
+.tf.err .fl{color:var(--error-main)}
+.tf .ph{flex:1;color:var(--text-disabled)}
+.chk{width:20px;height:20px;border-radius:5px;border:2px solid var(--text-secondary);box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.chk.on{background:var(--primary-main);border-color:var(--primary-main);color:#FFFFFF}
+.rad{width:20px;height:20px;border-radius:50%;border:2px solid var(--text-secondary);box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.rad.on{border-color:var(--primary-main)}
+.sw{width:33px;height:20px;border-radius:10px;background:rgb(var(--grey-500-rgb) / .48);display:flex;align-items:center;justify-content:flex-start;padding:3px;box-sizing:border-box;border:0;cursor:pointer;flex:none}
+.sw.on{background:var(--primary-main);justify-content:flex-end}.sw .kn{width:14px;height:14px;border-radius:50%;background:#FFFFFF;box-shadow:var(--shadow-z1)}
+.sw.off-dis{opacity:.48}
+.nav-item{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:8px;font-size:14px;font-weight:500;color:var(--text-secondary);box-sizing:border-box}
+.nav-item.active{background:rgb(var(--primary-main-rgb) / .08);color:var(--primary-text);font-weight:600}
+.tr{display:grid;grid-template-columns:44px 1fr 110px 130px 110px 48px;align-items:center;height:56px;padding:0 8px;border-bottom:1px dashed var(--divider);font-size:14px;box-sizing:border-box}
+.tr.hover{background:var(--action-hover)}
+.alert{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;box-sizing:border-box}
+.alert.standard{background:rgb(var(--c-rgb) / var(--alpha-fill));color:var(--c-txt)}.alert.filled{background:var(--c);color:var(--c-on)}.alert.outlined{border:1px solid rgb(var(--c-rgb) / .48);color:var(--c-txt);background:var(--bg-paper)}.alert.soft{background:rgb(var(--c-rgb) / .16);color:var(--c-txt)}
+.alert .ico{width:22px;height:22px}
+.skl{background:var(--skeleton);border-radius:6px}
+</style>
+</helmet>
+<div dir="rtl" style="width: 1640px; height: 2200px; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: row; font-family: 'IRANSansX', Tahoma, sans-serif">
+  <sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+    <section class="{{t.cls}}" style="width: 820px; height: 2200px; box-sizing: border-box; padding: 40px; background-color: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); display: flex; flex-direction: column; gap: 22px; overflow: hidden; font-size: 14px; line-height: 1.57">
+
+      <!-- Column header -->
+      <header style="display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 40px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--brand-gradient); display: grid; place-items: center; color: #FFFFFF">
+            <svg viewBox="0 0 64 40" width="26" height="16" aria-hidden="true"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 1px">
+            <div style="font-size: 15px; font-weight: 700; line-height: 1.3">Namadno UI · Components A</div>
+            <div class="cap">Actions &amp; Inputs · ساختار Minimals · پالت نمادنو</div>
+          </div>
+        </div>
+        <div class="glass" style="display: flex; align-items: center; gap: 8px; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 700">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-main)"></span>{{t.label}}
+        </div>
+      </header>
+
+      <!-- Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div class="sec">Buttons · دکمه‌ها</div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <sc-for list="{{variants}}" as="v" hint-placeholder-count="4">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <sc-for list="{{colors}}" as="c" hint-placeholder-count="5">
+                <button type="button" class="btn {{v.cls}} {{c.cls}}">{{c.label}}</button>
+              </sc-for>
+              <span class="cap" style="margin-right: auto">{{v.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+          <button type="button" class="btn contained c-primary sm">کوچک</button>
+          <button type="button" class="btn contained c-primary">متوسط</button>
+          <button type="button" class="btn contained c-primary lg">بزرگ</button>
+          <button type="button" class="btn contained c-primary hover"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>افزودن کارمند</button>
+          <button type="button" class="btn outlined c-primary"><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg>دانلود</button>
+          <button type="button" class="btn contained c-primary" aria-busy="true" style="opacity: .9"><svg class="ico" viewBox="0 0 24 24" style="stroke-width: 2.2"><path d="M12 3a9 9 0 1 1-8.3 5.5"></path></svg>در حال ارسال…</button>
+          <button type="button" class="btn contained c-primary" disabled="disabled">غیرفعال</button>
+          <button type="button" class="btn outlined c-primary" disabled="disabled">غیرفعال</button>
+          <span class="cap" style="margin-right: auto">small · medium · large · start icon · hover · loading · disabled</span>
+        </div>
+      </div>
+
+      <!-- Icon buttons, groups, fab -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Icon buttons</div>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <button type="button" class="ibtn" aria-label="ویرایش"><svg class="ico" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4zM13 7l4 4"></path></svg></button>
+            <button type="button" class="ibtn soft c-primary" aria-label="افزودن"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button>
+            <button type="button" class="ibtn outlined c-primary" aria-label="اشتراک‌گذاری"><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v12M7 9l5-5 5 5M5 14v6h14v-6"></path></svg></button>
+            <button type="button" class="ibtn sm contained c-error" aria-label="حذف"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"></path></svg></button>
+          </div>
+          <span class="cap">default · soft primary · outlined · contained 36</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Button group · Toggle</div>
+          <div style="display: inline-flex; border: 1px solid rgb(var(--primary-main-rgb) / .48); border-radius: 8px; overflow: hidden; width: max-content">
+            <button type="button" class="btn text c-primary" style="border-radius: 0; height: 34px; border-left: 1px solid rgb(var(--primary-main-rgb) / .48)">روز</button>
+            <button type="button" class="btn text c-primary" style="border-radius: 0; height: 34px; border-left: 1px solid rgb(var(--primary-main-rgb) / .48)">هفته</button>
+            <button type="button" class="btn text c-primary" style="border-radius: 0; height: 34px">ماه</button>
+          </div>
+          <div style="display: inline-flex; gap: 4px; padding: 4px; border-radius: 8px; background: var(--bg-neutral); width: max-content">
+            <button type="button" aria-pressed="false" class="btn sm text c-default" style="font-weight: 600; color: var(--text-secondary)">فیزیکی</button>
+            <button type="button" aria-pressed="true" class="btn sm text c-default" style="font-weight: 700; background: var(--bg-paper); box-shadow: var(--shadow-z1)">مجازی</button>
+            <button type="button" aria-pressed="false" class="btn sm text c-default" style="font-weight: 600; color: var(--text-secondary)">همه</button>
+          </div>
+          <span class="cap">outlined group · segmented toggle</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Fab</div>
+          <div style="display: flex; align-items: center; gap: 14px">
+            <button type="button" class="ibtn contained c-primary" aria-label="تراکنش جدید" style="width: 56px; height: 56px; box-shadow: var(--shadow-primary)"><svg class="ico" viewBox="0 0 24 24" style="width: 24px; height: 24px"><path d="M12 5v14M5 12h14"></path></svg></button>
+            <button type="button" class="ibtn contained c-primary" aria-label="افزودن" style="width: 40px; height: 40px; box-shadow: var(--shadow-primary)"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button>
+            <button type="button" class="btn contained c-primary" style="border-radius: 999px; height: 48px; box-shadow: var(--shadow-primary)"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>انتقال وجه</button>
+          </div>
+          <span class="cap">primary 56 · small 40 · extended</span>
+        </div>
+      </div>
+
+      <!-- Labels + Chips -->
+      <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Label</div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{lblVariants}}" as="lv" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 6px">
+                <sc-for list="{{labelColors}}" as="lc" hint-placeholder-count="7">
+                  <span class="lbl {{lv.cls}} {{lc.cls}}">{{lc.label}}</span>
+                </sc-for>
+                <span class="cap" style="margin-right: auto">{{lv.label}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <span class="cap">primary · secondary · info · success · warning · error · default — ۲۴px · radius ۶ · bold ۱۲</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Chips</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <span class="chip filled c-primary">نیلی</span>
+            <span class="chip outlined c-primary">outlined</span>
+            <span class="chip soft c-primary">soft</span>
+            <span class="chip soft c-default"><span style="width: 24px; height: 24px; border-radius: 50%; background: var(--secondary-main); color: #FFFFFF; font-size: 11px; font-weight: 700; display: grid; place-items: center; margin-right: -8px">س</span>سارا محمدی</span>
+            <span class="chip soft c-success">فیلتر: واریز<button type="button" aria-label="حذف فیلتر" style="all: unset; cursor: pointer; display: inline-flex; margin-left: -6px; opacity: .7"><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke-width: 2"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></span>
+            <span class="chip outlined c-default">هلدینگ آرمان<button type="button" aria-label="حذف" style="all: unset; cursor: pointer; display: inline-flex; margin-left: -6px; opacity: .7"><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke-width: 2"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></span>
+          </div>
+          <span class="cap">filled · outlined · soft · with avatar · with delete — ۳۲px pill</span>
+        </div>
+      </div>
+
+      <!-- Text fields -->
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div class="sec">TextField · فیلدهای متنی</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; align-items: start">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf"><label class="fl" for="{{t.cls}}-f1">نام و نام خانوادگی</label><input id="{{t.cls}}-f1" type="text" value="سارا محمدی"></div>
+            <span class="cap">outlined · medium ۵۶ · label floating</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf sm"><label class="fl" for="{{t.cls}}-f2">کد ملی</label><input id="{{t.cls}}-f2" type="text" value="" placeholder="۱۰ رقم"></div>
+            <span class="cap">outlined · small ۴۰ · placeholder</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf filled"><div style="display: flex; flex-direction: column; gap: 2px; flex: 1"><label class="cap" for="{{t.cls}}-f3" style="line-height: 1.2">ایمیل</label><input id="{{t.cls}}-f3" type="email" value="sara@namadno.ir" dir="ltr" style="text-align: right"></div></div>
+            <span class="cap">filled</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf focus"><label class="fl" for="{{t.cls}}-f4">شماره موبایل</label><input id="{{t.cls}}-f4" type="tel" value="۰۹۱۲ ۳۴۵ ۶۷۸۹"><span style="width: 1px; height: 18px; background: var(--text-primary)"></span></div>
+            <span class="cap" style="padding-right: 14px">focus · border ۲px text-primary · helper: برای ارسال رمز پویا</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf err"><label class="fl" for="{{t.cls}}-f5">شماره شبا</label><input id="{{t.cls}}-f5" type="text" value="IR۱۲ ۰۱۷۰ ۰۰۰" dir="ltr" style="text-align: right"><svg class="ico" viewBox="0 0 24 24" style="color: var(--error-main)"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
+            <span class="cap" style="padding-right: 14px; color: var(--error-main)">شماره شبا باید ۲۴ رقم باشد</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf dis"><label class="fl" for="{{t.cls}}-f6">واحد سازمانی</label><input id="{{t.cls}}-f6" type="text" value="فنی و مهندسی" disabled="disabled"></div>
+            <span class="cap">disabled</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf"><label class="fl" for="{{t.cls}}-f7">مبلغ انتقال</label><input id="{{t.cls}}-f7" type="text" value="۱۲٬۵۰۰٬۰۰۰" class="num" style="font-size: 18px; font-weight: 300"><span style="font-size: 13px; font-weight: 600; color: var(--text-secondary)">تومان</span></div>
+            <span class="cap">amount · IRANSansX ۳۰۰ · tabular-nums · adornment «تومان»</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf sm" style="border-radius: 8px"><svg class="ico" viewBox="0 0 24 24" style="color: var(--text-secondary)"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4.5-4.5"></path></svg><input type="search" value="" placeholder="جست‌وجوی تراکنش، کاربر، سازمان…" aria-label="جست‌وجو"><span style="font-size: 11px; color: var(--text-secondary); border: 1px solid var(--divider); border-radius: 6px; padding: 2px 6px" dir="ltr">⌘K</span></div>
+            <span class="cap">search · start icon · shortcut hint</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf"><label class="fl" for="{{t.cls}}-f8">رمز عبور</label><input id="{{t.cls}}-f8" type="password" value="namadno1405"><button type="button" class="ibtn sm" aria-label="نمایش رمز" style="margin-left: -8px"><svg class="ico" viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div>
+            <span class="cap">password · eye toggle</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf"><label class="fl" for="{{t.cls}}-f9">تاریخ واریز</label><input id="{{t.cls}}-f9" type="text" value="۱۴۰۵/۰۷/۱۵" class="num" style="font-weight: 400"><svg class="ico" viewBox="0 0 24 24" style="color: var(--text-secondary)"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg></div>
+            <span class="cap">date field · Jalali · calendar adornment</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Select + Autocomplete -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Select</div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf" role="button" tabindex="0"><span class="fl">واحد</span><span style="flex: 1">فروش</span><svg class="ico" viewBox="0 0 24 24" style="color: var(--text-secondary)"><path d="M6 9l6 6 6-6"></path></svg></div>
+            <span class="cap">closed · chevron end</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div class="tf sm"><span style="flex: 1; display: flex; gap: 6px; align-items: center"><span class="chip soft c-primary" style="height: 24px; font-size: 12px; padding: 0 8px">فنی</span><span class="chip soft c-primary" style="height: 24px; font-size: 12px; padding: 0 8px">مالی</span></span><svg class="ico" viewBox="0 0 24 24" style="color: var(--text-secondary)"><path d="M6 9l6 6 6-6"></path></svg></div>
+            <span class="cap">multiple · chips · small</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Autocomplete · open</div>
+          <div style="display: flex; flex-direction: column; gap: 6px; position: relative">
+            <div class="tf focus"><label class="fl" for="{{t.cls}}-ac">سازمان</label><input id="{{t.cls}}-ac" type="text" value="هلد"><span style="width: 1px; height: 18px; background: var(--text-primary)"></span><svg class="ico" viewBox="0 0 24 24" style="color: var(--text-secondary); transform: rotate(180deg)"><path d="M6 9l6 6 6-6"></path></svg></div>
+            <div class="glass" role="listbox" style="border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; box-shadow: var(--shadow-dropdown), var(--glass-highlight)">
+              <sc-for list="{{acOptions}}" as="o" hint-placeholder-count="4">
+                <div role="option" aria-selected="{{o.sel}}" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 8px; background: {{o.bg}}; font-weight: {{o.fw}}">
+                  <span style="width: 28px; height: 28px; border-radius: 8px; background: rgb(var(--secondary-main-rgb) / .16); color: var(--secondary-text); font-size: 12px; font-weight: 700; display: grid; place-items: center">{{o.ini}}</span>
+                  <span style="flex: 1">{{o.name}}</span>
+                  <span class="cap">{{o.meta}}</span>
+                </div>
+              </sc-for>
+            </div>
+            <span class="cap">glass popover · radius ۱۲ · highlighted option</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checkbox / Radio / Switch -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Checkbox</div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer"><input type="checkbox" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span class="chk"></span>انتخاب‌نشده</label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer"><input type="checkbox" checked="checked" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span class="chk on"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 3"><path d="M5 12l5 5 9-10"></path></svg></span>انتخاب‌شده</label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer"><input type="checkbox" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span class="chk on"><span style="width: 10px; height: 2.5px; background: #FFFFFF; border-radius: 2px"></span></span>نامشخص</label>
+            <label style="display: flex; align-items: center; gap: 10px; color: var(--text-disabled)"><input type="checkbox" disabled="disabled" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span class="chk" style="border-color: var(--text-disabled); opacity: .6"></span>غیرفعال</label>
+          </div>
+          <span class="cap">unchecked · checked · indeterminate · disabled</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Radio group</div>
+          <div role="radiogroup" aria-label="نوع انتقال" style="display: flex; flex-direction: column; gap: 8px">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer"><input type="radio" name="{{t.cls}}-r" checked="checked" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span class="rad on"><span style="width: 10px; height: 10px; border-radius: 50%; background: var(--primary-main)"></span></span>کارت به کارت</label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer"><input type="radio" name="{{t.cls}}-r" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span class="rad"></span>پایا</label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer"><input type="radio" name="{{t.cls}}-r" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span class="rad"></span>ساتنا</label>
+            <label style="display: flex; align-items: center; gap: 10px; color: var(--text-disabled)"><input type="radio" name="{{t.cls}}-r" disabled="disabled" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span class="rad" style="border-color: var(--text-disabled); opacity: .6"></span>پل (غیرفعال)</label>
+          </div>
+          <span class="cap">selected · unselected · disabled</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Switch</div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px"><span>مسدودسازی موقت</span><button type="button" class="sw" aria-pressed="false" aria-label="مسدودسازی موقت"><span class="kn"></span></button></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px"><span>پرداخت اینترنتی</span><button type="button" class="sw on" aria-pressed="true" aria-label="پرداخت اینترنتی"><span class="kn"></span></button></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--text-disabled)"><span>برداشت از خودپرداز</span><button type="button" class="sw off-dis" aria-pressed="false" disabled="disabled" aria-label="برداشت از خودپرداز"><span class="kn"></span></button></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--text-disabled)"><span>اعلان پیامکی</span><button type="button" class="sw on off-dis" aria-pressed="true" disabled="disabled" aria-label="اعلان پیامکی"><span class="kn"></span></button></div>
+          </div>
+          <span class="cap">off · on · disabled off · disabled on — track ۳۳×۲۰</span>
+        </div>
+      </div>
+
+      <!-- Slider + OTP -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Slider</div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 26px 10px 0">
+            <div style="position: relative; height: 20px; display: flex; align-items: center">
+              <div style="position: absolute; right: 0; left: 0; height: 6px; border-radius: 3px; background: rgb(var(--primary-main-rgb) / .24)"></div>
+              <div style="position: absolute; right: 0; width: 65%; height: 6px; border-radius: 3px; background: var(--primary-main)"></div>
+              <div style="position: absolute; right: calc(65% - 10px); width: 20px; height: 20px; border-radius: 50%; background: #FFFFFF; border: 2px solid var(--primary-main); box-sizing: border-box; box-shadow: 0 0 0 6px rgb(var(--primary-main-rgb) / .16)"></div>
+              <div class="num" style="position: absolute; right: calc(65% - 18px); top: -30px; width: 36px; height: 24px; border-radius: 6px; background: var(--grey-800); color: #FFFFFF; font-size: 12px; font-weight: 500; display: grid; place-items: center">۶۵٪</div>
+              <div style="position: absolute; right: 0; width: 100%; display: flex; justify-content: space-between; top: 18px"><span style="width: 2px; height: 2px"></span></div>
+            </div>
+            <div class="cap num" style="display: flex; justify-content: space-between; font-weight: 400"><span>۰</span><span>۵۰ میلیون تومان</span><span>۱۰۰</span></div>
+          </div>
+          <span class="cap">value label · track ۶ · thumb ۲۰ · halo ۱۶٪</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">OTP · رمز پویا</div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div dir="ltr" style="display: flex; gap: 8px; width: max-content">
+              <sc-for list="{{otp}}" as="d" hint-placeholder-count="6">
+                <input type="text" inputmode="numeric" maxlength="1" value="{{d.v}}" aria-label="رقم رمز" class="num" style="width: 46px; height: 56px; border-radius: 8px; border: {{d.bw}} solid {{d.bc}}; box-sizing: border-box; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 22px; font-weight: 400; text-align: center; outline: 0">
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <span class="cap">رمز به شماره <span dir="ltr" class="num" style="font-weight: 500">۰۹۱۲···۶۷۸۹</span> ارسال شد</span>
+              <a href="#" style="font-size: 13px; font-weight: 600">ارسال مجدد <span class="num" dir="ltr">(۰۱:۴۲)</span></a>
+            </div>
+          </div>
+          <span class="cap">۶ باکس ۴۶×۵۶ · LTR · باکس فعال با بوردر ۲px</span>
+        </div>
+      </div>
+
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      themes: [{ cls: 'th-light', label: 'Light' }, { cls: 'th-dark', label: 'Dark' }],
+      variants: [
+        { cls: 'contained', label: 'contained' },
+        { cls: 'outlined', label: 'outlined' },
+        { cls: 'text', label: 'text' },
+        { cls: 'soft', label: 'soft' }
+      ],
+      colors: [
+        { cls: 'c-default', label: 'پیش‌فرض' },
+        { cls: 'c-primary', label: 'اصلی' },
+        { cls: 'c-secondary', label: 'ثانویه' },
+        { cls: 'c-success', label: 'موفق' },
+        { cls: 'c-error', label: 'خطا' }
+      ],
+      lblVariants: [
+        { cls: 'filled', label: 'filled' },
+        { cls: 'outlined', label: 'outlined' },
+        { cls: 'soft', label: 'soft' }
+      ],
+      labelColors: [
+        { cls: 'c-primary', label: 'اصلی' },
+        { cls: 'c-secondary', label: 'ثانویه' },
+        { cls: 'c-info', label: 'اطلاع' },
+        { cls: 'c-success', label: 'موفق' },
+        { cls: 'c-warning', label: 'در انتظار' },
+        { cls: 'c-error', label: 'ناموفق' },
+        { cls: 'c-default', label: 'پیش‌فرض' }
+      ],
+      acOptions: [
+        { ini: 'هآ', name: 'هلدینگ آرمان', meta: '۳۸۴ کارمند', sel: 'true', bg: 'var(--action-selected)', fw: '600' },
+        { ini: 'هپ', name: 'هلدینگ پارسیان', meta: '۱۲۰ کارمند', sel: 'false', bg: 'transparent', fw: '400' },
+        { ini: 'صپ', name: 'صنایع پارس', meta: '۹۶ کارمند', sel: 'false', bg: 'transparent', fw: '400' },
+        { ini: 'هد', name: 'هلدینگ داده‌نگار', meta: '۵۲ کارمند', sel: 'false', bg: 'transparent', fw: '400' }
+      ],
+      otp: [
+        { v: '۴', bw: '1px', bc: 'rgb(143 151 170 / .32)' },
+        { v: '۸', bw: '1px', bc: 'rgb(143 151 170 / .32)' },
+        { v: '۲', bw: '1px', bc: 'rgb(143 151 170 / .32)' },
+        { v: '', bw: '2px', bc: 'var(--primary-main)' },
+        { v: '', bw: '1px', bc: 'rgb(143 151 170 / .32)' },
+        { v: '', bw: '1px', bc: 'rgb(143 151 170 / .32)' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

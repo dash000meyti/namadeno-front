@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>ورود به کنسول بهره‌بردار</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.th-light,.th-dark{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%;--soft-primary:rgb(var(--primary-main-rgb) / .16);--soft-success:rgb(var(--success-main-rgb) / .16);--soft-warning:rgb(var(--warning-main-rgb) / .16);--soft-error:rgb(var(--error-main-rgb) / .16);--soft-info:rgb(var(--info-main-rgb) / .16);--soft-default:rgb(var(--grey-500-rgb) / .16);--nav-active:rgb(var(--primary-main-rgb) / .08);--outline-border:rgb(var(--grey-500-rgb) / .32);--progress-track:rgb(var(--primary-main-rgb) / .16)}
+.th-light{color-scheme:light;--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:var(--grey-200);--bg-canvas:var(--grey-100);--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .16), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .12), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .10), transparent 70%);--text-primary:var(--grey-800);--text-secondary:var(--grey-600);--text-disabled:var(--grey-500);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(255 255 255 / .78);--card-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(var(--grey-500-rgb) / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z8:0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z24:0 24px 48px 0 rgb(var(--grey-500-rgb) / .16);--shadow-card:0 0 2px 0 rgb(var(--grey-500-rgb) / .20), 0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);--shadow-dropdown:0 0 2px 0 rgb(var(--grey-500-rgb) / .24), -20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);--chart-1:var(--primary-main);--chart-2:var(--success-main);--chart-3:var(--secondary-main);--chart-4:var(--grey-400);--chart-5:var(--grey-600);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-main);--success-text:var(--success-dark);--warning-text:var(--warning-dark);--error-text:var(--error-dark);--info-text:var(--info-dark);--default-text:var(--grey-700);--table-head:rgb(var(--grey-500-rgb) / .12);--contained-default:var(--grey-800);--contained-default-text:#FFFFFF;--step-pending:var(--grey-300);--step-pending-text:var(--grey-600)}
+.th-dark{color-scheme:dark;--bg-default:var(--grey-900);--bg-paper:var(--grey-800);--bg-neutral:rgb(var(--grey-500-rgb) / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .32), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .20), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .16), transparent 70%);--text-primary:#FFFFFF;--text-secondary:var(--grey-500);--text-disabled:var(--grey-600);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(31 36 51 / .72);--card-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20), 0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24), -20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:var(--primary-light);--chart-2:#7CCBA8;--chart-3:var(--secondary-light);--chart-4:var(--grey-600);--chart-5:var(--grey-400);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-light);--success-text:#7CCBA8;--warning-text:var(--warning-light);--error-text:var(--error-light);--info-text:var(--info-light);--default-text:var(--grey-400);--table-head:rgb(var(--grey-500-rgb) / .12);--contained-default:#FFFFFF;--contained-default-text:var(--grey-800);--step-pending:rgb(var(--grey-500-rgb) / .24);--step-pending-text:var(--grey-400)}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.card{background:var(--card-bg);border-radius:16px;border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ibtn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--text-secondary);display:grid;place-items:center;cursor:pointer;padding:0}
+.ibtn:hover{background:var(--action-hover)}
+.wm{font-family:'Divan','IRANSansX',Tahoma,sans-serif}
+.btnp{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;border:0;background:var(--primary-main);color:var(--primary-contrast);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btnp:hover{color:var(--primary-contrast);background:var(--primary-dark)}
+.btno{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--outline-border);background:transparent;color:var(--text-primary);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btno:hover{color:var(--text-primary);background:var(--action-hover)}
+.btnt{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px;border-radius:8px;border:0;background:transparent;color:var(--primary-text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btnt:hover{background:var(--action-hover)}
+.btnd{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;border:0;background:var(--error-main);color:var(--error-contrast);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.sw{width:40px;height:24px;border-radius:12px;border:0;position:relative;cursor:pointer;padding:0;flex:none}
+.sw span{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#FFFFFF;box-shadow:var(--shadow-z1)}
+.sec{height:24px;line-height:24px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--grey-500)}
+.ck{width:18px;height:18px;border-radius:4px;box-sizing:border-box;border:2px solid var(--grey-500);background:transparent;display:grid;place-items:center;color:#FFFFFF;flex:none;padding:0;cursor:pointer}
+.ck.on{border-color:var(--primary-main);background:var(--primary-main)}
+.fi{height:40px;box-sizing:border-box;border:1px solid var(--outline-border);border-radius:8px;background:var(--bg-paper);color:var(--text-primary);font-family:inherit;font-size:13px;padding:0 12px;outline:0;width:100%;font-variant-numeric:tabular-nums}
+.fi:disabled{color:var(--text-disabled);background:var(--bg-neutral)}
+.fl{font-size:12px;font-weight:600;color:var(--text-secondary);line-height:1.3}
+.fg{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sel{display:flex;align-items:center;gap:8px;text-align:right;cursor:pointer}
+.fld{display:inline-flex;align-items:center;height:36px;box-sizing:border-box;border:1px solid var(--outline-border);border-radius:8px;overflow:hidden;background:var(--bg-paper)}
+.fld input{height:34px;border:0;background:transparent;color:var(--text-primary);font-family:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:center;padding:0;outline:0}
+.sfx{height:100%;display:flex;align-items:center;padding:0 8px;border-right:1px solid var(--divider);font-size:11px;color:var(--text-secondary);white-space:nowrap}
+.tab{height:40px;padding:0 14px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--text-secondary);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.tab.on{border-bottom-color:var(--primary-main);color:var(--primary-text);font-weight:700}
+.kv{height:36px;display:flex;align-items:center;gap:12px;font-size:13px;border-bottom:1px dashed var(--divider)}
+.kv .k{color:var(--text-secondary);white-space:nowrap}
+.kv .v{margin-right:auto;font-weight:500;white-space:nowrap}
+.chip{height:28px;min-width:40px;padding:0 10px;border-radius:8px;border:1px solid var(--outline-border);background:transparent;color:var(--text-secondary);font-family:inherit;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;white-space:nowrap}
+.chip.on{border-color:var(--primary-main);background:var(--soft-primary);color:var(--primary-text)}
+.th{display:grid;align-items:center;padding:0 16px;background:var(--table-head);color:var(--grey-600);font-size:12px;font-weight:700;flex:none}
+.tr{display:grid;align-items:center;padding:0 16px;border-bottom:1px dashed var(--divider);font-size:13px;flex:none;color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div dir="rtl" class="{{themeCls}}" style="width: 1280px; height: 800px; overflow: hidden; position: relative; background: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); font-family: 'IRANSansX', Tahoma, sans-serif; display: flex; flex-direction: row">
+
+  <!-- top-left utilities -->
+  <div style="position: absolute; top: 20px; left: 24px; z-index: 2; display: flex; align-items: center; gap: 8px">
+    <span class="lbl" dir="ltr" style="gap: 6px; background: var(--soft-success); color: var(--success-text)"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--success-main)"></span>Production</span>
+    <button class="ibtn" aria-label="تغییر تم" onClick="{{toggleTheme}}" style="background: var(--glass-bg); box-shadow: 0 0 0 1px var(--glass-edge); color: var(--text-primary)"><sc-if value="{{isDark}}" hint-placeholder-val="{{ false }}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"></path></svg></sc-if><sc-if value="{{isLight}}" hint-placeholder-val="{{ true }}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7"></path></svg></sc-if></button>
+  </div>
+
+  <!-- brand side (right in RTL) -->
+  <section style="width: 560px; flex: none; box-sizing: border-box; padding: 64px 72px; display: flex; flex-direction: column; gap: 32px">
+    <div style="display: flex; align-items: center; gap: 14px; height: 56px">
+      <span style="width: 56px; height: 56px; border-radius: 16px; background: var(--brand-gradient); box-shadow: var(--shadow-primary); display: grid; place-items: center; color: #FFFFFF; flex: none"><svg viewBox="0 0 64 40" width="36" height="22" aria-hidden="true"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg></span>
+      <span style="display: flex; flex-direction: column; line-height: 1.1; gap: 4px"><span class="wm" style="font-size: 30px; font-weight: 700">نمادنو</span><span style="font-size: 12px; font-weight: 600; color: var(--text-secondary)">کنسول بهره‌بردار</span></span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 30px; line-height: 1.35; font-weight: 800">مدیریت صندوق‌ها، سازمان‌ها و قوانین پلتفرم</h2>
+      <p style="margin: 0; font-size: 14px; line-height: 1.8; color: var(--text-secondary)">دسترسی فقط برای تیم بهره‌بردار. هر ورود ثبت می‌شود و برای عملیات حساس (تغییر قرارداد، غیرفعال‌سازی صندوق) تأیید دومرحله‌ای لازم است.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px">
+      <sc-for list="{{facts}}" as="f" hint-placeholder-count="4">
+        <div class="card" style="box-sizing: border-box; padding: 14px 16px; display: flex; align-items: center; gap: 12px">
+          <span style="width: 36px; height: 36px; border-radius: 10px; background: {{f.bg}}; color: {{f.fg}}; display: grid; place-items: center; flex: none"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><path d="{{f.d}}"></path></svg></span>
+          <span style="display: flex; flex-direction: column; line-height: 1.2; gap: 3px; min-width: 0"><span class="num" style="font-size: 20px">{{f.value}}</span><span style="font-size: 12px; color: var(--text-secondary); white-space: nowrap">{{f.title}}</span></span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="margin-top: auto; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-secondary)">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success-main); box-shadow: 0 0 0 3px var(--soft-success); flex: none"></span>
+      <span>همهٔ سرویس‌ها سالم</span>
+      <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-disabled)"></span>
+      <span class="num" dir="ltr">v2.8.0</span>
+      <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-disabled)"></span>
+      <span>آخرین استقرار <span class="num" dir="ltr">۱۴۰۵/۰۷/۱۴</span></span>
+    </div>
+  </section>
+
+  <!-- login card -->
+  <section style="flex: 1; min-width: 0; display: grid; place-items: center; box-sizing: border-box; padding: 40px">
+    <div class="glass" style="width: 440px; box-sizing: border-box; border-radius: 20px; padding: 32px; display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h4 style="margin: 0; font-size: 22px; line-height: 1.3; font-weight: 700">ورود به کنسول بهره‌بردار</h4>
+        <span style="font-size: 13px; color: var(--text-secondary); line-height: 1.5">با حساب سازمانی خود وارد شوید</span>
+      </div>
+
+      <div class="fg">
+        <label class="fl" for="op-email">ایمیل سازمانی</label>
+        <span style="height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid var(--outline-border); background: var(--bg-paper); display: flex; align-items: center; gap: 10px">
+          <svg class="ico" width="18" height="18" viewBox="0 0 24 24" style="color: var(--text-secondary)"><path d="M3 6h18v12H3zM3 7l9 6 9-6"></path></svg>
+          <input id="op-email" type="email" dir="ltr" value="ali.naderi@namadno.ir" style="flex: 1; min-width: 0; height: 40px; border: 0; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 14px; outline: 0; text-align: left; padding: 0">
+        </span>
+      </div>
+
+      <div class="fg">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <label class="fl" for="op-pass">رمز عبور</label>
+          <button onClick="{{forgot}}" style="margin-right: auto; height: 20px; border: 0; background: transparent; padding: 0; color: var(--primary-text); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer">فراموشی رمز</button>
+        </div>
+        <span style="height: 44px; box-sizing: border-box; padding: 0 12px 0 6px; border-radius: 8px; border: 1px solid var(--outline-border); background: var(--bg-paper); display: flex; align-items: center; gap: 10px">
+          <svg class="ico" width="18" height="18" viewBox="0 0 24 24" style="color: var(--text-secondary)"><path d="M6 11V8a6 6 0 0 1 12 0v3M5 11h14v10H5zM12 15v2"></path></svg>
+          <input id="op-pass" type="{{passType}}" dir="ltr" value="namadno-2026" style="flex: 1; min-width: 0; height: 40px; border: 0; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 14px; outline: 0; text-align: left; padding: 0; letter-spacing: {{passSpacing}}">
+          <button class="ibtn" aria-label="نمایش رمز" aria-pressed="{{showPass}}" onClick="{{togglePass}}" style="width: 32px; height: 32px"><sc-if value="{{isHidden}}" hint-placeholder-val="{{ true }}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path></svg></sc-if><sc-if value="{{showPass}}" hint-placeholder-val="{{ false }}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 10.6a2.5 2.5 0 0 0 3.4 3.4M7.4 7.5C4.3 9.3 2.5 12 2.5 12s3.5 6.5 9.5 6.5c1.7 0 3.2-.5 4.5-1.2M10 5.7A10 10 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5s-.9 1.6-2.5 3.2"></path></svg></sc-if></button>
+        </span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px">
+        <button class="ck {{rememberCls}}" aria-label="مرا به خاطر بسپار" aria-pressed="{{rememberOn}}" onClick="{{toggleRemember}}"><sc-if value="{{remember}}" hint-placeholder-val="{{ true }}"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" style="stroke-width: 3"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if></button>
+        <span style="font-size: 13px">مرا در این دستگاه به خاطر بسپار</span>
+        <span class="lbl" style="margin-right: auto; height: 20px; padding: 0 6px; font-size: 11px; background: var(--soft-default); color: var(--default-text)">۳۰ روز</span>
+      </div>
+
+      <a href="op-overview.dc.html" class="btnp" style="height: 44px; font-size: 14px; box-shadow: var(--shadow-primary)">ورود<svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"></path></svg></a>
+
+      <div style="display: flex; align-items: center; gap: 12px; color: var(--text-disabled); font-size: 11px">
+        <span style="flex: 1; height: 1px; background: var(--divider)"></span><span>یا</span><span style="flex: 1; height: 1px; background: var(--divider)"></span>
+      </div>
+
+      <a href="op-overview.dc.html" class="btno" style="height: 44px; font-size: 14px"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M14 10a4 4 0 1 0-3.9 3.1L4 19v1h3l1-1v-2h2l1-1 .5-.5a4 4 0 0 0 2.5.5M15.5 8.5h.01"></path></svg>ورود با SSO سازمانی</a>
+
+      <span style="font-size: 11px; line-height: 1.6; color: var(--text-disabled); text-align: center">ورود شما در لاگ امنیتی ثبت می‌شود · پشتیبانی داخلی <span class="num" dir="ltr">۴۰۰۰</span></span>
+    </div>
+  </section>
+
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+    <div class="glass" style="position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); height: 48px; padding: 0 16px 0 20px; border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--text-primary); z-index: 20">
+      <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--soft-success); color: var(--success-text); display: grid; place-items: center; flex: none"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" style="stroke-width: 2.4"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  componentDidMount() { try { if (localStorage.getItem('nm-theme-dark') === '1' && !(this.state && this.state.dark)) this.setState({ dark: true }); } catch (e) {} }
+  componentDidUpdate(pp, ps) { try { const d = !!(this.state && this.state.dark); if (!!(ps && ps.dark) !== d) localStorage.setItem('nm-theme-dark', d ? '1' : '0'); } catch (e) {} }
+
+  renderVals() {
+    var self = this;
+    var st = this.state || {};
+    function set(obj) { return function () { self.setState(obj); }; }
+    function toast(msg) {
+      return function () {
+        self.setState({ toast: msg });
+        setTimeout(function () { self.setState({ toast: '' }); }, 2600);
+      };
+    }
+    var show = !!st.showPass;
+    var remember = st.remember == null ? true : !!st.remember;
+    return {
+      themeCls: st.dark ? 'th-dark' : 'th-light',
+      isDark: !!st.dark, isLight: !st.dark,
+      toggleTheme: function () { self.setState({ dark: !((self.state || {}).dark) }); },
+      toast: st.toast || '', hasToast: !!st.toast,
+      showPass: show, isHidden: !show, passType: show ? 'text' : 'password', passSpacing: show ? '0' : '2px',
+      togglePass: set({ showPass: !show }),
+      remember: remember, rememberOn: remember ? 'true' : 'false', rememberCls: remember ? 'on' : '',
+      toggleRemember: set({ remember: !remember }),
+      forgot: toast('لینک بازنشانی رمز به ایمیل سازمانی ارسال شد'),
+      facts: [
+        { title: 'سازمان طرف قرارداد', value: '۴۲', d: 'M5 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17M15 9h3a1 1 0 0 1 1 1v11M3 21h18M9 7h2M9 11h2M9 15h2', bg: 'var(--soft-primary)', fg: 'var(--primary-text)' },
+        { title: 'کاربر فعال', value: '۱۲٬۸۴۰', d: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M15 4.2a3.5 3.5 0 0 1 0 6.6', bg: 'var(--soft-info)', fg: 'var(--info-text)' },
+        { title: 'میلیارد تومان AUM', value: '۴۸۰', d: 'M12 8c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3', bg: 'var(--soft-success)', fg: 'var(--success-text)' },
+        { title: 'درخواست در انتظار', value: '۲۳', d: 'M3 13l2.5-7h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 13h5l1.5 2.5h5L16 13h5', bg: 'var(--soft-warning)', fg: 'var(--warning-text)' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

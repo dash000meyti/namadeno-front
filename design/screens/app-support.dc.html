@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>پشتیبانی</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.th-light,.th-dark{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%;--soft-primary:rgb(var(--primary-main-rgb) / .16);--soft-secondary:rgb(var(--secondary-main-rgb) / .16);--soft-success:rgb(var(--success-main-rgb) / .16);--soft-warning:rgb(var(--warning-main-rgb) / .16);--soft-error:rgb(var(--error-main-rgb) / .16);--soft-info:rgb(var(--info-main-rgb) / .16);--soft-default:rgb(var(--grey-500-rgb) / .16);--outline-border:rgb(var(--grey-500-rgb) / .32);--progress-track:rgb(var(--primary-main-rgb) / .16);--switch-off:rgb(var(--grey-500-rgb) / .48);--ring-track:rgb(var(--grey-500-rgb) / .24)}
+.th-light{color-scheme:light;--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:var(--grey-200);--bg-canvas:var(--grey-100);--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .16), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .12), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .10), transparent 70%);--text-primary:var(--grey-800);--text-secondary:var(--grey-600);--text-disabled:var(--grey-500);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(255 255 255 / .78);--card-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(var(--grey-500-rgb) / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z8:0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z24:0 24px 48px 0 rgb(var(--grey-500-rgb) / .16);--shadow-card:0 0 2px 0 rgb(var(--grey-500-rgb) / .20), 0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);--shadow-dropdown:0 0 2px 0 rgb(var(--grey-500-rgb) / .24), -20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);--chart-1:var(--primary-main);--chart-2:var(--success-main);--chart-3:var(--secondary-main);--chart-4:var(--grey-400);--chart-5:var(--grey-600);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-main);--secondary-text:var(--secondary-dark);--success-text:var(--success-dark);--warning-text:var(--warning-dark);--error-text:var(--error-dark);--info-text:var(--info-dark);--default-text:var(--grey-700);--seg-active:#FFFFFF}
+.th-dark{color-scheme:dark;--bg-default:var(--grey-900);--bg-paper:var(--grey-800);--bg-neutral:rgb(var(--grey-500-rgb) / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .32), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .20), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .16), transparent 70%);--text-primary:#FFFFFF;--text-secondary:var(--grey-500);--text-disabled:var(--grey-600);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(31 36 51 / .72);--card-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20), 0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24), -20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:var(--primary-light);--chart-2:#7CCBA8;--chart-3:var(--secondary-light);--chart-4:var(--grey-600);--chart-5:var(--grey-400);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-light);--secondary-text:var(--secondary-light);--success-text:#7CCBA8;--warning-text:var(--warning-light);--error-text:var(--error-light);--info-text:var(--info-light);--default-text:var(--grey-400);--seg-active:var(--grey-700)}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.card{background:var(--card-bg);border-radius:16px;border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ibtn{width:44px;height:44px;border-radius:50%;border:0;background:transparent;color:var(--text-primary);display:grid;place-items:center;cursor:pointer;padding:0}
+.phone{position:relative;width:390px;height:844px;border-radius:44px;overflow:hidden;background:var(--bg-default);background-image:var(--bg-aurora);box-shadow:var(--shadow-z24),0 0 0 1px var(--divider);flex:none}
+.scr{position:absolute;inset:60px 0 0 0;box-sizing:border-box;padding:12px 16px 100px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}.scr::-webkit-scrollbar{display:none}
+.scr>*{flex:none}
+.top{position:absolute;top:0;left:0;right:0;height:60px;box-sizing:border-box;padding:8px 12px 0;border:0;border-radius:0;border-bottom:1px solid var(--glass-edge);display:flex;align-items:center;gap:6px;z-index:2}
+.bnav{position:absolute;bottom:0;left:0;right:0;height:84px;box-sizing:border-box;padding:0 8px 20px;border:0;border-radius:0;border-top:1px solid var(--glass-edge);display:flex;align-items:stretch;z-index:2}
+.bnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:600;line-height:1}
+.wm{font-family:'Divan','IRANSansX',Tahoma,sans-serif}
+.chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:var(--soft-default);color:var(--default-text);font-variant-numeric:tabular-nums}
+.btn{height:44px;border:0;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:0 16px;white-space:nowrap}
+@keyframes nmInfoUp{from{transform:translateY(100%)}to{transform:none}}
+</style>
+</helmet>
+<div dir="rtl" class="{{themeCls}}" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); font-family: 'IRANSansX', Tahoma, sans-serif">
+<div class="scr" style="gap: 12px">
+  <!-- page tutorial video -->
+  <div style="display: flex; flex-direction: column; gap: 6px; flex: none">
+    <span style="height: 24px; display: flex; align-items: center; font-size: 15px; font-weight: 700">ویدئوی آموزش این صفحه</span>
+    <button class="card" onClick="{{togglePlay}}" aria-label="{{playAria}}" style="width: 100%; box-sizing: border-box; padding: 0; overflow: hidden; display: flex; flex-direction: column; color: var(--text-primary); font-family: inherit; text-align: right; cursor: pointer">
+      <span style="position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; background: linear-gradient(135deg, #3A47CD 0%, #4686A6 60%, #55B08C 100%); overflow: hidden">
+        <span aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(260px 160px at 80% 10%, rgb(255 255 255 / .22), transparent 70%), radial-gradient(200px 140px at 10% 100%, rgb(20 24 38 / .35), transparent 70%)"></span>
+        <!-- phone mock inside the thumbnail -->
+        <span aria-hidden="true" style="position: absolute; left: 28px; top: 22px; width: 78px; height: 150px; box-sizing: border-box; border-radius: 16px; border: 3px solid rgb(255 255 255 / .85); background: rgb(255 255 255 / .16); display: flex; flex-direction: column; gap: 6px; padding: 12px 8px">
+          <span style="height: 8px; width: 60%; border-radius: 4px; background: rgb(255 255 255 / .8)"></span>
+          <span style="height: 30px; border-radius: 6px; background: rgb(255 255 255 / .35)"></span>
+          <span style="height: 6px; width: 80%; border-radius: 3px; background: rgb(255 255 255 / .55)"></span>
+          <span style="height: 6px; width: 70%; border-radius: 3px; background: rgb(255 255 255 / .55)"></span>
+          <span style="height: 6px; width: 50%; border-radius: 3px; background: rgb(255 255 255 / .55)"></span>
+        </span>
+        <span style="position: absolute; right: 16px; top: 16px; max-width: 200px; display: flex; flex-direction: column; gap: 4px; color: #FFFFFF">
+          <span style="font-size: 16px; font-weight: 800; line-height: 1.5">راهنمای پشتیبانی نمادنو</span>
+          <span style="font-size: 12px; line-height: 1.7; opacity: .85">پرسش‌ها، تماس و پیگیری درخواست‌ها</span>
+        </span>
+        <span aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgb(255 255 255 / .92); color: #3A47CD; display: grid; place-items: center; box-shadow: 0 8px 24px rgb(20 24 38 / .3)">
+          <sc-if value="{{paused}}" hint-placeholder-val="{{ true }}"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="margin-left: 3px"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"></path></svg></sc-if>
+          <sc-if value="{{playing}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"></path></svg></sc-if>
+        </span>
+        <span class="num" style="position: absolute; right: 12px; bottom: 12px; height: 22px; padding: 0 8px; border-radius: 6px; background: rgb(20 24 38 / .6); color: #FFFFFF; font-size: 11px; font-weight: 500; display: inline-flex; align-items: center">{{timeStr}}</span>
+        <span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgb(255 255 255 / .25)"><span style="position: absolute; right: 0; top: 0; bottom: 0; width: {{progress}}%; background: #FFFFFF; transition: width .4s linear"></span></span>
+      </span>
+      <span style="display: flex; align-items: center; gap: 8px; padding: 10px 14px">
+        <svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--primary-text)"><path d="M4 6h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2M17 10l5-3v10l-5-3"></path></svg>
+        <span style="font-size: 13px; font-weight: 600">آموزش کامل صفحه پشتیبانی</span>
+        <span class="num" style="margin-right: auto; font-size: 12px; color: var(--text-secondary)">۲:۴۵ دقیقه</span>
+      </span>
+    </button>
+  </div>
+  <div style="height: 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: none"><button class="btn" onClick="{{openChat}}" aria-haspopup="dialog" style="height: 48px; background: var(--primary-main); color: var(--primary-contrast); box-shadow: var(--shadow-primary); display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"></path></svg>گفتگو با پشتیبانی</button><button class="btn num" style="height: 48px; border: 1px solid var(--outline-border); background: transparent; color: var(--text-primary); display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0; font-weight: 600"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg>تماس <span dir="ltr">۰۲۱-۹۱۰۰۰۰۰۰</span></button></div>
+  <span style="height: 16px; font-size: 11px; color: var(--text-secondary); line-height: 16px; text-align: center; flex: none">پاسخ‌گویی شنبه تا چهارشنبه ۸ تا ۱۸ · پنجشنبه ۸ تا ۱۳</span>
+  <div style="display: flex; flex-direction: column; gap: 6px; flex: none"><div style="height: 24px; display: flex; align-items: center"><span style="font-size: 15px; font-weight: 700">درخواست‌های من</span><span class="lbl" style="margin-right: 8px; height: 22px; background: var(--soft-default); color: var(--default-text)">۱</span></div>
+  <div class="card" style="box-sizing: border-box; padding: 0 14px; display: flex; flex-direction: column">
+    <sc-for list="{{tickets}}" as="t" hint-placeholder-count="3"><button onClick="{{t.open}}" aria-haspopup="dialog" style="width: 100%; min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; border-bottom: 1px dashed {{t.border}}; background: transparent; color: var(--text-primary); font-family: inherit; text-align: right; cursor: pointer"><span style="width: 36px; height: 36px; border-radius: 10px; background: {{t.iconBg}}; color: {{t.iconFg}}; display: grid; place-items: center; flex: none"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v4a2 2 0 0 0 0 4v2H4v-2a2 2 0 0 0 0-4zM10 7v10"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; line-height: 1.4"><span style="font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.title}}</span><span style="font-size: 11.5px; color: var(--text-secondary); white-space: nowrap">تیکت <span class="num">{{t.id}}</span> · {{t.date}}{{t.extra}}</span></span><span class="lbl" style="height: 22px; padding: 0 7px; font-size: 11px; background: {{t.stBg}}; color: {{t.stFg}}; white-space: nowrap">{{t.status}}</span><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--text-disabled)"><path d="M14 6l-6 6 6 6"></path></svg></button></sc-for>
+  </div></div>
+  <label style="height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1px solid var(--outline-border); background: var(--bg-paper); display: flex; align-items: center; gap: 10px; flex: none"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" style="color: var(--text-secondary)"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-3.5-3.5"></path></svg><input type="search" placeholder="جست‌وجو در راهنما، مثلاً «قفل زمانی»" aria-label="جست‌وجو در راهنما" style="flex: 1; min-width: 0; height: 44px; border: 0; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 14px; outline: none; padding: 0"></label>
+  <div style="display: flex; flex-direction: column; gap: 6px; flex: none"><span style="height: 24px; display: flex; align-items: center; font-size: 15px; font-weight: 700">پرسش‌های پرتکرار</span>
+  <div class="card" style="box-sizing: border-box; padding: 0 14px; display: flex; flex-direction: column">
+    <sc-for list="{{faq}}" as="f" hint-placeholder-count="3"><div style="display: flex; flex-direction: column; border-bottom: 1px dashed {{f.border}}"><button onClick="{{f.pick}}" aria-expanded="{{f.expanded}}" style="width: 100%; height: 50px; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; padding: 0; color: var(--text-primary); font-family: inherit; text-align: start; cursor: pointer"><span style="flex: 1; min-width: 0; font-size: 14px; font-weight: {{f.w}}">{{f.q}}</span><svg class="ico" width="18" height="18" viewBox="0 0 24 24" style="color: var(--text-secondary); transform: rotate({{f.rot}}deg)"><path d="M6 9l6 6 6-6"></path></svg></button><sc-if value="{{f.open}}" hint-placeholder-val="{{ true }}"><span style="display: block; padding: 0 0 14px; font-size: 13px; line-height: 1.7; color: var(--text-secondary)">{{f.a}}</span></sc-if></div></sc-for>
+  </div></div>
+</div>
+            <header class="glass top">
+              <a href="app-profile.dc.html" class="ibtn" aria-label="بازگشت" style="margin-left: -4px; color: var(--text-primary); text-decoration: none"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"></path></svg></a>
+              <span style="font-size: 18px; font-weight: 700">پشتیبانی</span>
+              <span style="flex: 1"></span>
+              <a href="app-notifications.dc.html" class="ibtn" aria-label="اعلان‌ها" style="width: 32px; height: 32px; flex: none; margin-right: auto; position: relative; color: var(--text-primary); text-decoration: none"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4"></path></svg><span style="position: absolute; top: 3px; left: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--error-main); box-shadow: 0 0 0 2px var(--bg-paper)"></span></a><a href="app-support.dc.html" class="ibtn" aria-label="راهنما و پشتیبانی" style="width: 32px; height: 32px; flex: none; margin-right: -8px; color: var(--text-primary); text-decoration: none"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M9.5 9.5a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.1-2.4 3.6M12 17h.01"></path></svg></a>
+              
+            </header>
+            <nav class="glass bnav" aria-label="منوی اصلی">
+  <a href="app-assets.dc.html" aria-current="page" style="color: var(--primary-text)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5zM3 12.5l9 5 9-5M3 17l9 5 9-5"></path></svg></span><span>دارایی‌ها</span></a>
+  <a href="app-inbox.dc.html" style="color: var(--text-secondary)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4M4 13l2.5-7h11L20 13v6H4z"></path></svg><span style="position: absolute; top: -5px; left: -9px; min-width: 16px; height: 16px; box-sizing: border-box; padding: 0 4px; border-radius: 999px; background: var(--error-main); color: #FFFFFF; font-size: 10px; font-weight: 700; display: grid; place-items: center; line-height: 1; box-shadow: 0 0 0 2px var(--bg-paper)">۱</span></span><span>دریافتی‌ها</span></a>
+  <a href="app-credit.dc.html" style="color: var(--text-secondary)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM9.5 14.5l5-5M9.5 9.5h.01M14.5 14.5h.01"></path></svg></span><span>اعتبار</span></a>
+  <a href="app-card.dc.html" style="color: var(--text-secondary)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h18M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 15h4"></path></svg></span><span>کارت</span></a>
+  <a href="app-history.dc.html" style="color: var(--text-secondary)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2"></path></svg></span><span>تاریخچه</span></a>
+</nav>
+
+  <!-- support chat / ticket sheet -->
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; z-index: 40">
+      <button aria-label="بستن" onClick="{{closeSheet}}" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; margin: 0; padding: 0; background: rgb(20 24 38 / .45); cursor: pointer"></button>
+      <div role="dialog" aria-modal="true" aria-label="{{sh.title}}" style="position: absolute; left: 0; right: 0; bottom: 0; height: 88%; box-sizing: border-box; border-radius: 24px 24px 0 0; background: var(--bg-paper); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -12px 32px rgb(20 24 38 / .25); animation: nmInfoUp .3s cubic-bezier(.2,.8,.2,1)">
+        <span aria-hidden="true" style="align-self: center; width: 36px; height: 4px; border-radius: 2px; background: var(--grey-400); margin-top: 8px; flex: none"></span>
+        <div style="flex: none; padding: 6px 12px 10px 8px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--divider)">
+          <span style="width: 40px; height: 40px; border-radius: 50%; background: {{sh.avBg}}; color: {{sh.avFg}}; display: grid; place-items: center; flex: none; position: relative"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="{{sh.avIcon}}"></path></svg><sc-if value="{{sh.online}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; left: 1px; bottom: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--success-main); box-shadow: 0 0 0 2px var(--bg-paper)"></span></sc-if></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.35"><span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{sh.title}}</span><span style="font-size: 11.5px; color: var(--text-secondary); white-space: nowrap">{{sh.sub}}</span></span>
+          <sc-if value="{{sh.hasStatus}}" hint-placeholder-val="{{ false }}"><span class="lbl" style="height: 22px; padding: 0 7px; font-size: 11px; background: {{sh.stBg}}; color: {{sh.stFg}}">{{sh.status}}</span></sc-if>
+          <button class="ibtn" aria-label="بستن" onClick="{{closeSheet}}" style="width: 36px; height: 36px; color: var(--text-secondary)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-neutral)">
+          <span style="align-self: center; font-size: 11px; color: var(--text-secondary); padding: 2px 10px; border-radius: 999px; background: rgb(var(--grey-500-rgb) / .14)">{{sh.dayLabel}}</span>
+          <sc-for list="{{sh.msgs}}" as="m" hint-placeholder-count="4">
+            <div style="display: flex; justify-content: {{m.justify}}">
+              <div style="max-width: 78%; box-sizing: border-box; padding: 8px 12px 6px; border-radius: {{m.radius}}; background: {{m.bg}}; color: {{m.fg}}; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow-z1)">
+                <sc-if value="{{m.hasWho}}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; font-weight: 700; color: var(--primary-text)">{{m.who}}</span></sc-if>
+                <span style="font-size: 13px; line-height: 1.8">{{m.text}}</span>
+                <sc-if value="{{m.hasFile}}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{m.dl}}" style="display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; background: var(--bg-paper); color: var(--text-primary); text-decoration: none; border: 1px solid var(--outline-border)"><span style="width: 36px; height: 40px; border-radius: 8px; background: var(--soft-error); color: var(--error-text); display: grid; place-items: center; font-size: 10px; font-weight: 800; flex: none">PDF</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.3"><span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.file}}</span><span class="num" style="font-size: 11px; color: var(--text-secondary)">{{m.fileSize}}</span></span><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--primary-text)"><path d="M12 4v11M8 11l4 4 4-4M4 19h16"></path></svg></a></sc-if>
+                <span class="num" style="align-self: flex-end; font-size: 10.5px; opacity: .7">{{m.time}}</span>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{sh.typing}}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: flex-end"><span style="padding: 8px 12px; border-radius: 14px 14px 14px 4px; background: var(--bg-paper); font-size: 12px; color: var(--text-secondary)">پشتیبان در حال نوشتن…</span></div></sc-if>
+        </div>
+        <sc-if value="{{sh.hasReport}}" hint-placeholder-val="{{ false }}"><div style="flex: none; padding: 10px 14px; border-top: 1px solid var(--divider); display: flex; align-items: center; gap: 10px; background: var(--soft-success)">
+          <svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--success-text)"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"></path></svg>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.4"><span style="font-size: 12.5px; font-weight: 700">خروجی گزارش آماده است</span><span style="font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{sh.reportName}}</span></span>
+          <button onClick="{{download}}" style="height: 34px; padding: 0 12px; border: 0; border-radius: 9px; background: var(--success-main); color: #FFFFFF; font-family: inherit; font-size: 12.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; cursor: pointer">{{sh.dlLabel}}</button>
+        </div></sc-if>
+        <sc-if value="{{sh.canReply}}" hint-placeholder-val="{{ true }}"><div style="flex: none; padding: 10px 12px 22px; border-top: 1px solid var(--divider); display: flex; align-items: center; gap: 8px; background: var(--bg-paper)">
+          <span style="flex: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 22px; background: var(--bg-neutral); display: flex; align-items: center; font-size: 13px; color: {{sh.draftColor}}; white-space: nowrap; overflow: hidden">{{sh.draft}}</span>
+          <button class="ibtn" aria-label="پیوست" style="width: 40px; height: 40px; color: var(--text-secondary)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12l-8 8a5 5 0 0 1-7-7l8-8a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7-7"></path></svg></button>
+          <button onClick="{{send}}" aria-label="ارسال" style="width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--primary-main); color: var(--primary-contrast); display: grid; place-items: center; cursor: pointer; box-shadow: var(--shadow-primary); flex: none"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2; transform: scaleX(-1)"><path d="M20 4L3 11l7 2 2 7zM10 13l10-9"></path></svg></button>
+        </div></sc-if>
+        <sc-if value="{{sh.closed}}" hint-placeholder-val="{{ false }}"><div style="flex: none; padding: 12px 14px 24px; border-top: 1px solid var(--divider); text-align: center; font-size: 12px; color: var(--text-secondary); background: var(--bg-paper)">این تیکت بسته شده است · برای موضوع جدید از «گفتگو با پشتیبانی» استفاده کنید</div></sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  componentDidMount() { try { if (localStorage.getItem('nm-theme-dark') === '1' && !(this.state && this.state.dark)) this.setState({ dark: true }); } catch (e) {} }
+  componentWillUnmount() { clearInterval(this._vid); }
+  componentDidUpdate(pp, ps) { try { const d = !!(this.state && this.state.dark); if (!!(ps && ps.dark) !== d) localStorage.setItem('nm-theme-dark', d ? '1' : '0'); } catch (e) {} }
+
+  renderVals() {
+    var self = this;
+    var st = this.state || {};
+    var isDark = !!st.dark;
+    var tone = {
+      primary: ['var(--soft-primary)', 'var(--primary-text)'],
+      secondary: ['var(--soft-secondary)', 'var(--secondary-text)'],
+      success: ['var(--soft-success)', 'var(--success-text)'],
+      info: ['var(--soft-info)', 'var(--info-text)'],
+      warning: ['var(--soft-warning)', 'var(--warning-text)'],
+      error: ['var(--soft-error)', 'var(--error-text)'],
+      def: ['var(--soft-default)', 'var(--default-text)']
+    };
+    function lastBorder(arr) {
+      return arr.map(function (x, i) { x.border = i === arr.length - 1 ? 'transparent' : 'var(--divider)'; return x; });
+    }
+    var openIdx = ('faq' in st) ? st.faq : 0;
+    var faq = lastBorder([
+      { q: 'تفاوت دارایی آزاد و قفل‌شده چیست؟', a: 'دارایی آزاد را می‌توانید به ریال بفروشید یا برداشت کنید. دارایی قفل‌شده مال شماست و سود و تغییر NAV آن را می‌گیرید، اما تا رفع شرط آزادسازی (تسویه وام، رسیدن تاریخ یا تأیید مرحله توسط سازمان) قابل فروش یا برداشت نیست. «قابل برداشت» و «حداکثر» همیشه فقط از بخش آزاد حساب می‌شود. مثال: از ۲۰۲٬۵۰۰٬۰۰۰ تومان دارایی شما، ۱۳۰٬۹۰۰٬۰۰۰ آزاد و ۷۱٬۶۰۰٬۰۰۰ قفل‌شده است.' },
+      { q: 'قفل زمانی سازمان یعنی چه؟', a: 'سازمان می‌تواند بسته‌ای را با قفل زمانی بفرستد؛ واحدهای آن تا تاریخ مشخص‌شده قابل فروش نیستند، اما سود و تغییر NAV آن‌ها برای شماست و در آن تاریخ خودکار آزاد می‌شوند. مثال: ۲۰٬۰۰۰٬۰۰۰ تومان پاداش تیر در صندوق درآمد ثابت، آزاد در ۱۴۰۵/۱۰/۱۵.' },
+      { q: 'آزادسازی مرحله‌ای چطور کار می‌کند؟', a: 'سازمان کل مبلغ یک قرارداد را به‌صورت واحد صندوق به شما می‌دهد و آن را قفل می‌کند؛ با تأیید هر مرحله توسط سازمان، سهم همان مرحله آزاد می‌شود. مثال: قرارداد پروژه پرتال منابع انسانی، ۲۰٬۰۰۰٬۰۰۰ تومان در صندوق طلا و ۵ مرحله؛ ۲ مرحله تأیید شده و ۸٬۰۰۰٬۰۰۰ تومان (۴۰٪) آزاد است. پیشرفت مراحل را در «دریافتی‌ها» و صفحه صندوق طلا ببینید.' },
+      { q: 'چرا بخشی از دارایی‌ام وثیقه شده؟', a: 'وقتی وام، اعتبار کارت یا خرید اقساطی دارید، معادل وثیقه از واحدهای صندوق قفل می‌شود. وثیقه وام با تسویه وام آزاد می‌شود و وثیقه خرید اقساطی با پرداخت هر قسط، بخشی آزاد می‌شود.' },
+      { q: 'برداشت چقدر زمان می‌برد؟', a: 'برداشت از کیف پول ریالی با پایا در سیکل بعدی (معمولاً همان روز) به حساب بانکی پیش‌فرض شما واریز می‌شود. فروش واحد صندوق T+1 تسویه می‌شود.' }
+    ].map(function (f, i) {
+      var on = i === openIdx;
+      f.open = on; f.expanded = on ? 'true' : 'false'; f.w = on ? 700 : 600; f.rot = on ? 180 : 0;
+      f.pick = function () { self.setState({ faq: on ? -1 : i }); };
+      return f;
+    }));
+    // tutorial video mock: play/pause, progress ticks every second
+    var DUR = 165, t = st.t || 0, playing = !!st.playing;
+    var mmss = function (x) { var m = Math.floor(x / 60), r = x % 60; return String(m).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }) + ':' + (r < 10 ? '۰' : '') + String(r).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); };
+    // support chat + tickets (bottom sheet)
+    var ME = function (t, time) { return { me: true, text: t, time: time }; }, AG = function (t, time, who, file, size) { return { me: false, text: t, time: time, who: who || '', file: file || '', fileSize: size || '' }; };
+    var TK = [
+      { id: 'SP-4120', title: 'مغایرت تراکنش کارت — فروشگاه آنلاین', date: '۱۳ مهر', status: 'در حال بررسی', stBg: 'var(--soft-warning)', stFg: 'var(--warning-text)', iconBg: 'var(--soft-warning)', iconFg: 'var(--warning-text)', open: true, extra: ' · ۲ پیام جدید',
+        msgs: [ME('سلام، مبلغ ۱٬۲۵۰٬۰۰۰ تومان از کارتم کم شده ولی خرید در فروشگاه ثبت نشده.', '۱۰:۱۲'), AG('سلام سارا جان، درخواست شما ثبت شد. لطفاً تصویر رسید یا کد پیگیری فروشگاه را ارسال کنید.', '۱۰:۲۰', 'مریم · پشتیبانی'), ME('کد پیگیری فروشگاه: ۸۴۷۲۱۹۳', '۱۰:۲۴'), AG('ممنون. موضوع به بانک صادرکننده ارجاع شد؛ نتیجه حداکثر تا ۳ روز کاری اعلام می‌شود.', '۱۱:۰۵', 'مریم · پشتیبانی')] },
+      { id: 'SP-3987', title: 'گزارش سود صندوق درآمد ثابت', date: '۲ مهر', status: 'بسته شده', stBg: 'var(--soft-success)', stFg: 'var(--success-text)', iconBg: 'var(--soft-success)', iconFg: 'var(--success-text)', open: false, extra: ' · گزارش دارد', report: 'گزارش سود شهریور ۱۴۰۵ · صندوق درآمد ثابت.pdf',
+        msgs: [ME('سلام، گزارش سود ماه شهریور صندوق درآمد ثابت را برای اظهارنامه لازم دارم.', '۰۹:۴۰'), AG('سلام، گزارش تهیه شد و در پیوست قرار گرفت.', '۱۴:۱۵', 'علی · واحد صندوق‌ها', 'گزارش سود شهریور ۱۴۰۵.pdf', '۲۱۴ کیلوبایت'), ME('عالی، ممنون.', '۱۴:۲۲'), AG('خواهش می‌کنم. تیکت بسته شد.', '۱۴:۲۵', 'علی · واحد صندوق‌ها')] },
+      { id: 'SP-3851', title: 'تغییر حساب بانکی پیش‌فرض', date: '۲۸ شهریور', status: 'بسته شده', stBg: 'var(--soft-success)', stFg: 'var(--success-text)', iconBg: 'var(--soft-default)', iconFg: 'var(--default-text)', open: false, extra: '',
+        msgs: [ME('می‌خواهم حساب پیش‌فرض را به بانک پاسارگاد تغییر دهم.', '۱۲:۰۳'), AG('انجام شد. از این پس برداشت‌ها به حساب پاسارگاد واریز می‌شود.', '۱۲:۴۰', 'رضا · پشتیبانی')] }
+    ];
+    var openT = st.ticket || '', mode = st.sheetMode || '', sent = st.sent || 0;
+    var tickets = TK.map(function (t, i) { return { id: t.id, title: t.title, date: t.date, extra: t.extra, status: t.status, stBg: t.stBg, stFg: t.stFg, iconBg: t.iconBg, iconFg: t.iconFg, border: i === TK.length - 1 ? 'transparent' : 'var(--divider)', open: function () { self.setState({ sheetMode: 'ticket', ticket: t.id, sent: 0, dl: false }); } }; });
+    var fmt = function (arr) { return arr.map(function (m) { return { text: m.text, time: m.time, who: m.who || '', hasWho: !m.me && !!m.who, hasFile: !!m.file, file: m.file, fileSize: m.fileSize, dl: function () { self.setState({ dl: true }); },
+      justify: m.me ? 'flex-start' : 'flex-end', bg: m.me ? 'var(--primary-main)' : 'var(--bg-paper)', fg: m.me ? 'var(--primary-contrast)' : 'var(--text-primary)', radius: m.me ? '14px 14px 4px 14px' : '14px 14px 14px 4px' }; }); };
+    var sh = { msgs: [] };
+    if (mode === 'chat') {
+      var cm = [AG('سلام سارا جان، به پشتیبانی نمادنو خوش آمدید. چطور می‌توانم کمک کنم؟', '۰۹:۰۲', 'دستیار نمادنو')];
+      if (sent >= 1) cm.push(ME('سلام، برداشت از کیف پول ریالی کی به حسابم می‌رسد؟', '۰۹:۰۳'));
+      if (sent >= 2) cm.push(AG('برداشت‌ها در سیکل پایای بعدی (حدود ۱۳:۴۵) به حساب پیش‌فرض شما واریز می‌شود. اگر بیشتر طول کشید، از همین‌جا خبر بدهید.', '۰۹:۰۴', 'مریم · پشتیبانی'));
+      sh = { title: 'گفتگو با پشتیبانی', sub: 'معمولاً در کمتر از ۵ دقیقه پاسخ می‌دهیم', avBg: 'var(--soft-primary)', avFg: 'var(--primary-text)', avIcon: 'M4 5h16v11H9l-5 4z', online: true, hasStatus: false, dayLabel: 'امروز', msgs: fmt(cm), typing: sent === 1, hasReport: false, canReply: true, closed: false,
+        draft: sent === 0 ? 'سلام، برداشت از کیف پول ریالی کی به حسابم می‌رسد؟' : 'پیام خود را بنویسید…', draftColor: sent === 0 ? 'var(--text-primary)' : 'var(--text-disabled)' };
+    } else if (mode === 'ticket') {
+      var T = TK.filter(function (t) { return t.id === openT; })[0] || TK[0];
+      var tm = T.msgs.slice();
+      if (T.open && sent >= 1) tm.push(ME('ممنون، منتظر نتیجه هستم.', 'اکنون'));
+      sh = { title: T.title, sub: 'تیکت ' + T.id + ' · ثبت ' + T.date, avBg: T.iconBg, avFg: T.iconFg, avIcon: 'M4 7h16v4a2 2 0 0 0 0 4v2H4v-2a2 2 0 0 0 0-4zM10 7v10', online: false, hasStatus: true, status: T.status, stBg: T.stBg, stFg: T.stFg, dayLabel: T.date, msgs: fmt(tm), typing: false,
+        hasReport: !!T.report, reportName: T.report || '', dlLabel: st.dl ? 'دانلود شد ✓' : 'دانلود', canReply: T.open, closed: !T.open,
+        draft: T.open && sent === 0 ? 'ممنون، منتظر نتیجه هستم.' : 'پیام خود را بنویسید…', draftColor: T.open && sent === 0 ? 'var(--text-primary)' : 'var(--text-disabled)' };
+    }
+    return {
+      tickets: tickets, sh: sh, sheetOpen: mode !== '',
+      openChat: function () { self.setState({ sheetMode: 'chat', sent: 0 }); },
+      closeSheet: function () { self.setState({ sheetMode: '', ticket: '' }); },
+      send: function () { var n = ((self.state && self.state.sent) || 0) + 1; self.setState({ sent: n }); if ((self.state && self.state.sheetMode) === 'chat' && n === 1) { setTimeout(function () { self.setState({ sent: 2 }); }, 1400); } },
+      download: function () { self.setState({ dl: true }); },
+      paused: !playing, playing: playing,
+      progress: Math.round(t / DUR * 1000) / 10,
+      timeStr: playing || t ? mmss(t) + ' از ' + mmss(DUR) : mmss(DUR),
+      playAria: playing ? 'توقف ویدئوی آموزش' : 'پخش ویدئوی آموزش این صفحه',
+      togglePlay: function () {
+        if (self.state && self.state.playing) { clearInterval(self._vid); self.setState({ playing: false }); return; }
+        self.setState({ playing: true });
+        clearInterval(self._vid);
+        self._vid = setInterval(function () {
+          var nt = ((self.state && self.state.t) || 0) + 1;
+          if (nt >= DUR) { clearInterval(self._vid); self.setState({ t: 0, playing: false }); } else self.setState({ t: nt });
+        }, 1000);
+      },
+      themeCls: isDark ? 'th-dark' : 'th-light',
+      isDark: isDark,
+      isLight: !isDark,
+      toggleTheme: function () { self.setState({ dark: !(self.state && self.state.dark) }); },
+      faq: faq
+    };
+  }
+}
+</script>
+</body>
+</html>

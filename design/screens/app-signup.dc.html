@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>ثبت‌نام</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.th-light,.th-dark{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%;--soft-primary:rgb(var(--primary-main-rgb) / .16);--soft-secondary:rgb(var(--secondary-main-rgb) / .16);--soft-success:rgb(var(--success-main-rgb) / .16);--soft-warning:rgb(var(--warning-main-rgb) / .16);--soft-error:rgb(var(--error-main-rgb) / .16);--soft-info:rgb(var(--info-main-rgb) / .16);--soft-default:rgb(var(--grey-500-rgb) / .16);--outline-border:rgb(var(--grey-500-rgb) / .32);--progress-track:rgb(var(--primary-main-rgb) / .16);--switch-off:rgb(var(--grey-500-rgb) / .48);--ring-track:rgb(var(--grey-500-rgb) / .24)}
+.th-light{color-scheme:light;--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:var(--grey-200);--bg-canvas:var(--grey-100);--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .16), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .12), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .10), transparent 70%);--text-primary:var(--grey-800);--text-secondary:var(--grey-600);--text-disabled:var(--grey-500);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(255 255 255 / .78);--card-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(var(--grey-500-rgb) / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z8:0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z24:0 24px 48px 0 rgb(var(--grey-500-rgb) / .16);--shadow-card:0 0 2px 0 rgb(var(--grey-500-rgb) / .20), 0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);--shadow-dropdown:0 0 2px 0 rgb(var(--grey-500-rgb) / .24), -20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);--chart-1:var(--primary-main);--chart-2:var(--success-main);--chart-3:var(--secondary-main);--chart-4:var(--grey-400);--chart-5:var(--grey-600);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-main);--secondary-text:var(--secondary-dark);--success-text:var(--success-dark);--warning-text:var(--warning-dark);--error-text:var(--error-dark);--info-text:var(--info-dark);--default-text:var(--grey-700);--seg-active:#FFFFFF}
+.th-dark{color-scheme:dark;--bg-default:var(--grey-900);--bg-paper:var(--grey-800);--bg-neutral:rgb(var(--grey-500-rgb) / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .32), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .20), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .16), transparent 70%);--text-primary:#FFFFFF;--text-secondary:var(--grey-500);--text-disabled:var(--grey-600);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(31 36 51 / .72);--card-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20), 0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24), -20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:var(--primary-light);--chart-2:#7CCBA8;--chart-3:var(--secondary-light);--chart-4:var(--grey-600);--chart-5:var(--grey-400);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-light);--secondary-text:var(--secondary-light);--success-text:#7CCBA8;--warning-text:var(--warning-light);--error-text:var(--error-light);--info-text:var(--info-light);--default-text:var(--grey-400);--seg-active:var(--grey-700)}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.card{background:var(--card-bg);border-radius:16px;border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ibtn{width:44px;height:44px;border-radius:50%;border:0;background:transparent;color:var(--text-primary);display:grid;place-items:center;cursor:pointer;padding:0}
+.phone{position:relative;width:390px;height:844px;border-radius:44px;overflow:hidden;background:var(--bg-default);background-image:var(--bg-aurora);box-shadow:var(--shadow-z24),0 0 0 1px var(--divider);flex:none}
+.scr{position:absolute;inset:60px 0 0 0;box-sizing:border-box;padding:12px 16px 100px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}.scr::-webkit-scrollbar{display:none}
+.scr>*{flex:none}
+.top{position:absolute;top:0;left:0;right:0;height:60px;box-sizing:border-box;padding:8px 12px 0;border:0;border-radius:0;border-bottom:1px solid var(--glass-edge);display:flex;align-items:center;gap:6px;z-index:2}
+.bnav{position:absolute;bottom:0;left:0;right:0;height:84px;box-sizing:border-box;padding:0 8px 20px;border:0;border-radius:0;border-top:1px solid var(--glass-edge);display:flex;align-items:stretch;z-index:2}
+.bnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:600;line-height:1}
+.wm{font-family:'Divan','IRANSansX',Tahoma,sans-serif}
+.chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:var(--soft-default);color:var(--default-text);font-variant-numeric:tabular-nums}
+.btn{height:44px;border:0;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:0 16px;white-space:nowrap}
+.ovl{position:absolute;inset:0;z-index:5;background:rgb(20 24 38 / .45)}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;box-sizing:border-box;max-height:780px;overflow-y:auto;border-radius:24px 24px 0 0;padding:8px 16px 28px;display:flex;flex-direction:column;gap:14px;animation:nm-up .28s cubic-bezier(.2,.8,.2,1)}
+.sheet>*{flex:none}
+@keyframes nm-up{from{transform:translateY(100%)}to{transform:none}}
+.sw{width:52px;height:44px;border:0;background:transparent;padding:0;cursor:pointer;display:grid;place-items:center;flex:none}
+.rowbtn{width:100%;min-height:60px;box-sizing:border-box;border:0;background:transparent;padding:8px 0;font-family:inherit;color:var(--text-primary);text-align:right;cursor:pointer;display:flex;align-items:center;gap:12px}
+.stp-fwd{animation:nm-fwd .32s cubic-bezier(.2,.8,.2,1)}
+.stp-back{animation:nm-back .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes nm-fwd{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@keyframes nm-back{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes nm-note{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.otpbox{height:54px;box-sizing:border-box;border-radius:12px;display:grid;place-items:center;font-size:24px;font-weight:400;color:var(--text-primary);font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div dir="rtl" class="{{themeCls}}" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); font-family: 'IRANSansX', Tahoma, sans-serif">
+<div class="scr" style="padding: 4px 20px 28px; gap: 20px">
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 4px"><span style="width: 72px; height: 72px; border-radius: 20px; background: var(--brand-gradient); box-shadow: var(--shadow-primary); display: grid; place-items: center; color: #FFFFFF"><svg viewBox="0 0 64 40" width="44" height="28" aria-hidden="true"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg></span><span class="wm" style="font-size: 32px; font-weight: 800; line-height: 1.1">نمادنو</span><span style="font-size: 13px; color: var(--text-secondary); line-height: 1.5">ارزش پول شما، در واحدهای صندوق</span></div>
+
+  <div class="card" style="box-sizing: border-box; padding: 18px 16px 20px; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600"><span style="color: var(--primary-text)">{{flowLabel}}</span><span class="num" style="color: var(--text-secondary); font-weight: 500">مرحله {{stepNum}} از {{stepTotal}}</span></div>
+      <div aria-hidden="true" style="display: flex; gap: 6px"><sc-for list="{{segs}}" as="sg" hint-placeholder-count="3"><span style="flex: 1; height: 4px; border-radius: 4px; background: {{sg.bg}}; transition: background .3s"></span></sc-for></div>
+    </div>
+
+    <!-- every step shares the same four fixed-height slots: title 56 · field 108 · row 44 · button 48 -->
+    <sc-if value="{{isNid}}" hint-placeholder-val="{{ true }}">
+      <div class="{{animCls}}" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="height: 56px; display: flex; flex-direction: column; justify-content: space-between"><h3 style="margin: 0; font-size: 20px; font-weight: 700; line-height: 28px">کد ملی</h3><span style="font-size: 13px; color: var(--text-secondary); line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">برای احراز هویت، کد ملی ۱۰ رقمی خود را وارد کنید</span></div>
+        <label style="height: 108px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px"><span style="height: 20px; font-size: 13px; font-weight: 600; line-height: 20px">کد ملی</span><span style="height: 54px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--outline-border); background: var(--bg-paper); display: flex; align-items: center; gap: 10px"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--text-secondary)"><path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4M5.5 16c.6-1.6 1.6-2.5 2.5-2.5s1.9.9 2.5 2.5M14 9h4M14 13h3"></path></svg><input type="text" inputmode="numeric" dir="ltr" value="۰۰۱۲۳۴۵۶۷۸" aria-label="کد ملی" maxlength="10" class="num" style="flex: 1; min-width: 0; height: 44px; border: 0; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 18px; font-weight: 400; outline: none; padding: 0; text-align: left; letter-spacing: 2px"></span><span style="height: 22px; font-size: 12px; line-height: 22px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">باید با شماره موبایل مرحله بعد به نام خودتان باشد</span></label>
+        <div style="height: 44px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary)"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--success-text)"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM9 12l2 2 4-4"></path></svg>استعلام از ثبت احوال؛ اطلاعات شما محرمانه می‌ماند</div>
+        <button class="btn" onClick="{{toPhone}}" style="height: 48px; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary-main); color: var(--primary-contrast); font-size: 15px; box-shadow: var(--shadow-primary)">ادامه<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></button>
+      </div>
+    </sc-if>
+    <sc-if value="{{isPhone}}" hint-placeholder-val="{{ false }}">
+      <div class="{{animCls}}" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="height: 56px; display: flex; flex-direction: column; justify-content: space-between"><h3 style="margin: 0; font-size: 20px; font-weight: 700; line-height: 28px">شماره موبایل</h3><span style="font-size: 13px; color: var(--text-secondary); line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">با شماره‌ای که در سازمان ثبت شده ثبت‌نام کنید</span></div>
+        <label style="height: 108px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px"><span style="height: 20px; font-size: 13px; font-weight: 600; line-height: 20px">شماره موبایل</span><span style="height: 54px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1.5px solid {{phoneBd}}; background: var(--bg-paper); display: flex; align-items: center; gap: 10px"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--text-secondary)"><path d="M8 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2M11 18h2"></path></svg><input type="tel" inputmode="numeric" dir="ltr" value="۰۹۱۲ ۳۴۵ ۴۵۶۷" aria-label="شماره موبایل" class="num" style="flex: 1; min-width: 0; height: 44px; border: 0; background: transparent; color: var(--text-primary); font-family: inherit; font-size: 18px; font-weight: 400; outline: none; padding: 0; text-align: left; letter-spacing: .5px"><span class="chip" dir="ltr">+۹۸</span></span><span role="{{helpRole}}" style="height: 22px; font-size: 12px; line-height: 22px; color: {{helpColor}}; font-weight: {{helpWeight}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{helpText}}</span></label>
+        <div style="height: 44px; display: flex; align-items: center; gap: 8px">
+          <button role="checkbox" aria-checked="{{agreeAria}}" onClick="{{toggleAgree}}" style="height: 44px; display: inline-flex; align-items: center; gap: 10px; border: 0; background: transparent; padding: 0; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text-primary); cursor: pointer"><span style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 6px; border: 1.5px solid {{agreeBd}}; background: {{agreeBg}}; color: var(--primary-contrast); display: grid; place-items: center; flex: none"><sc-if value="{{agree}}" hint-placeholder-val="{{ false }}"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.4"><path d="M5 12l5 5 9-11"></path></svg></sc-if></span>قوانین را می‌پذیرم</button>
+          <button onClick="{{openTerms}}" style="margin-right: auto; height: 44px; border: 0; background: transparent; padding: 0 4px; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--primary-text); cursor: pointer">مطالعه قوانین</button>
+        </div>
+        <button class="btn" onClick="{{sendCode}}" aria-disabled="{{notAgreeAria}}" style="height: 48px; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary-main); color: var(--primary-contrast); box-shadow: {{btnShadow}}; opacity: {{btnOpacity}}; font-size: 15px">دریافت کد<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></button>
+      </div>
+    </sc-if>
+    <sc-if value="{{isOtp}}" hint-placeholder-val="{{ false }}">
+      <div class="{{animCls}}" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="height: 56px; display: flex; flex-direction: column; justify-content: space-between"><h3 style="margin: 0; font-size: 20px; font-weight: 700; line-height: 28px">کد تأیید</h3><span style="font-size: 13px; color: var(--text-secondary); line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">کد ۶ رقمی به <span class="num" style="display: inline-flex; direction: ltr; font-weight: 500; color: var(--text-primary)"><span>۰۹۱۲</span><span>•••</span><span>۴۵۶۷</span></span> پیامک شد</span></div>
+        <div style="height: 108px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px">
+          <span style="height: 20px; font-size: 13px; font-weight: 600; line-height: 20px">کد تأیید</span>
+          <button dir="ltr" onClick="{{autofill}}" aria-label="کد تأیید ۶ رقمی" style="height: 54px; border: 0; background: transparent; padding: 0; cursor: text; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; font-family: inherit">
+            <sc-for list="{{otp}}" as="o" hint-placeholder-count="6"><span class="otpbox" style="border: 1.5px solid {{o.bd}}; background: {{o.bg}}">{{o.v}}</span></sc-for>
+          </button>
+          <span style="height: 22px; display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 22px; color: {{otpHelpColor}}; white-space: nowrap"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 8v4l3 2"></path></svg>{{otpHelp}}</span>
+        </div>
+        <div style="height: 44px; display: flex; align-items: center; gap: 8px">
+          <button onClick="{{resend}}" aria-disabled="{{resendDisabled}}" style="height: 44px; border: 0; background: transparent; padding: 0 4px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; color: {{resendColor}}"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4"></path></svg>ارسال مجدد</button>
+          <button onClick="{{goBack}}" style="margin-right: auto; height: 44px; border: 0; background: transparent; padding: 0 4px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; color: var(--primary-text)"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16zM13 7l4 4"></path></svg>{{otpBackLabel}}</button>
+        </div>
+        <sc-if value="{{filled}}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{otpNext}}" style="height: 48px; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary-main); color: var(--primary-contrast); font-size: 15px; box-shadow: var(--shadow-primary)">تأیید کد<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></button></sc-if>
+        <sc-if value="{{notFilled}}" hint-placeholder-val="{{ true }}"><button class="btn" aria-disabled="true" onClick="{{autofill}}" style="height: 48px; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary-main); color: var(--primary-contrast); font-size: 15px; opacity: .48">تأیید کد<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></button></sc-if>
+      </div>
+    </sc-if>
+    <sc-if value="{{isSetPass}}" hint-placeholder-val="{{ false }}">
+      <div class="{{animCls}}" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="height: 56px; display: flex; flex-direction: column; justify-content: space-between"><h3 style="margin: 0; font-size: 20px; font-weight: 700; line-height: 28px">{{setTitle}}</h3><span style="font-size: 13px; color: var(--text-secondary); line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{setSub}}</span></div>
+        <div style="height: 108px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px">
+          <span style="height: 20px; font-size: 13px; font-weight: 600; line-height: 20px">{{pwLabel}}</span>
+          <span style="height: 54px; box-sizing: border-box; padding: 0 4px 0 12px; border-radius: 12px; border: 1.5px solid {{pwBd}}; background: var(--bg-paper); display: flex; align-items: center; gap: 10px"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--text-secondary)"><path d="M15 7a4 4 0 1 1-3.9 5H9v2H7v2H4v-3l6.1-6.1A4 4 0 0 1 15 7M16 9h.01"></path></svg><button onClick="{{fillPw}}" aria-label="{{pwLabel}}" class="num" dir="{{pwDir}}" style="flex: 1; min-width: 0; height: 44px; border: 0; background: transparent; padding: 0; font-family: inherit; font-size: {{pwSize}}px; letter-spacing: {{pwSpacing}}; color: {{pwColor}}; text-align: {{pwAlign}}; cursor: text; white-space: nowrap; overflow: hidden">{{pwText}}</button><button class="ibtn" onClick="{{toggleShow}}" aria-label="{{eyeAria}}" aria-pressed="{{eyePressed}}" style="width: 44px; height: 44px; border: 0; background: transparent; color: var(--text-secondary); display: grid; place-items: center; cursor: pointer; flex: none"><sc-if value="{{pwShown}}" hint-placeholder-val="{{ false }}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 4.4-1.1M9.9 9.9a3 3 0 0 0 4.2 4.2"></path></svg></sc-if><sc-if value="{{pwHidden}}" hint-placeholder-val="{{ true }}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6"></path></svg></sc-if></button></span>
+          <span role="{{pwHelpRole}}" style="height: 22px; font-size: 12px; line-height: 22px; color: {{pwHelpColor}}; font-weight: {{pwHelpWeight}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{pwHelp}}</span>
+        </div>
+        <div style="height: 44px; display: flex; align-items: center; gap: 6px" aria-label="شرایط رمز عبور">
+          <sc-for list="{{rules}}" as="r" hint-placeholder-count="3"><span style="height: 28px; box-sizing: border-box; padding: 0 8px; border-radius: 8px; background: {{r.bg}}; color: {{r.fg}}; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; transition: background .3s, color .3s"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2"><path d="{{r.d}}"></path></svg>{{r.t}}</span></sc-for>
+        </div>
+        <sc-if value="{{pwFilled}}" hint-placeholder-val="{{ false }}"><a href="app-assets.dc.html" class="btn" onClick="{{resetDemo}}" style="height: 48px; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary-main); color: var(--primary-contrast); font-size: 15px; box-shadow: var(--shadow-primary); text-decoration: none">{{setBtn}}<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></a></sc-if>
+        <sc-if value="{{pwEmpty}}" hint-placeholder-val="{{ true }}"><button class="btn" aria-disabled="true" onClick="{{fillPw}}" style="height: 48px; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary-main); color: var(--primary-contrast); font-size: 15px; opacity: .48">{{setBtn}}<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></button></sc-if>
+      </div>
+    </sc-if>
+  </div>
+
+  <div role="note" aria-hidden="{{noteHidden}}" style="height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; background: var(--soft-warning); color: var(--warning-text); display: flex; align-items: center; gap: 8px; opacity: {{noteOpacity}}; transform: translateY({{noteShift}}); transition: opacity .35s .1s, transform .35s .1s"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM12 9v4M12 16h.01"></path></svg><span style="font-size: 12.5px; font-weight: 600; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">کد تأیید را به هیچ‌کس، حتی پشتیبانی، ندهید.</span></div>
+
+  <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; flex: none"><span style="color: var(--text-secondary)">حساب کاربری دارید؟</span><a href="app-login.dc.html" style="font-weight: 700">ورود</a></div>
+  <div style="margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="font-size: 12px; color: var(--text-secondary); line-height: 1.5">پشتیبانی: <span class="num" style="display: inline-flex; direction: ltr; gap: 4px; font-weight: 600; color: var(--text-primary)"><span>۰۲۱</span><span>۹۱۰۰۰۰۰۰</span></span></span></div>
+</div>
+<header class="top" style="border-bottom: 0; background: transparent"><sc-if value="{{canBack}}" hint-placeholder-val="{{ false }}"><button class="ibtn" aria-label="مرحله قبل" onClick="{{goBack}}" style="margin-left: -4px"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6l6 6-6 6"></path></svg></button></sc-if><span style="flex: 1"></span></header>
+<sc-if value="{{termsOpen}}" hint-placeholder-val="{{ false }}">
+  <div class="ovl" aria-hidden="true" onClick="{{closeTerms}}"></div>
+  <div class="glass sheet" role="dialog" aria-modal="true" aria-label="قوانین و شرایط استفاده">
+    <span aria-hidden="true" style="width: 36px; height: 4px; border-radius: 4px; background: var(--outline-border); align-self: center"></span><div style="height: 44px; display: flex; align-items: center; gap: 8px"><span style="font-size: 17px; font-weight: 700">قوانین و شرایط استفاده</span><button class="ibtn" aria-label="بستن" onClick="{{closeTerms}}" style="margin-right: auto; margin-left: -10px; color: var(--text-secondary)"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <sc-for list="{{terms}}" as="tm" hint-placeholder-count="4"><div style="display: flex; align-items: flex-start; gap: 10px"><span class="num" style="width: 24px; height: 24px; border-radius: 50%; background: var(--soft-primary); color: var(--primary-text); display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none">{{tm.n}}</span><span style="font-size: 13px; line-height: 1.8">{{tm.t}}</span></div></sc-for>
+    </div>
+    <button class="btn" onClick="{{acceptTerms}}" style="height: 48px; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary-main); color: var(--primary-contrast); box-shadow: var(--shadow-primary); font-size: 15px">می‌پذیرم</button>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  componentDidMount() { try { if (localStorage.getItem('nm-theme-dark') === '1' && !(this.state && this.state.dark)) this.setState({ dark: true }); } catch (e) {} }
+  componentDidUpdate(pp, ps) { try { const d = !!(this.state && this.state.dark); if (!!(ps && ps.dark) !== d) localStorage.setItem('nm-theme-dark', d ? '1' : '0'); } catch (e) {} }
+  renderVals() {
+    var self = this;
+    var st = this.state || {};
+    var dark = !!st.dark;
+    var KIND = 'signup';
+    function fa(n) { return String(n).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); }
+    // flows: signup = phone → otp → set password · login = phone → password, or forgot: otp → new password
+    var step = st.step || (KIND === 'signup' ? 'nid' : 'phone');
+    var forgotFlow = KIND === 'login' && (step === 'otp' || step === 'setpass');
+    var flow = KIND === 'signup' ? ['nid', 'phone', 'otp', 'setpass'] : (forgotFlow ? ['otp', 'setpass'] : ['phone', 'pass']);
+    var idx = flow.indexOf(step);
+    var go = function (to, dir) { self.setState({ step: to, anim: dir, pw: false, show: false, filled: false, resent: false }); };
+    var prev = { signup: { phone: 'nid', otp: 'phone', setpass: 'otp' }, login: { pass: 'phone', otp: 'pass', setpass: 'otp' } }[KIND];
+    var agree = !!st.agree, err = !!st.showErr && !agree;
+    var filled = !!st.filled;
+    var otp = ['۴', '۸', '۲', '۹', '۱', '۵'].map(function (v, i) {
+      if (filled) return { v: v, bd: 'var(--primary-main)', bg: 'var(--soft-primary)' };
+      return { v: '', bd: i === 0 ? 'var(--primary-main)' : 'var(--outline-border)', bg: 'var(--bg-paper)' };
+    });
+    var pw = !!st.pw, show = !!st.show;
+    var isSet = step === 'setpass';
+    var rules = [['۸ کاراکتر یا بیشتر'], ['حرف و عدد'], ['یک نماد مثل @']].map(function (r) {
+      return { t: r[0], bg: pw ? 'var(--soft-success)' : 'var(--soft-default)', fg: pw ? 'var(--success-text)' : 'var(--text-secondary)', d: pw ? 'M5 12l5 5 9-11' : 'M12 12h.01' };
+    });
+    var remember = st.remember !== false;
+    var terms = [
+      'حساب نمادنو فقط با شماره‌ای فعال می‌شود که سازمان شما ثبت کرده است.',
+      'دارایی‌ها به‌صورت واحد صندوق‌های سرمایه‌گذاری نگهداری می‌شوند و ارزش آن‌ها ممکن است تغییر کند.',
+      'بسته‌های سازمانی تا تأیید شما به دارایی‌تان اضافه نمی‌شوند.',
+      'اطلاعات شما محرمانه و مطابق مقررات سازمان بورس نگهداری می‌شود.'
+    ].map(function (t, i) { return { n: fa(i + 1), t: t }; });
+    return {
+      themeCls: dark ? 'th-dark' : 'th-light', isDark: dark, isLight: !dark,
+      resetDemo: function () { try { localStorage.setItem('nm-pending', '1'); } catch (e) {} },
+      flowLabel: KIND === 'signup' ? 'ثبت‌نام در نمادنو' : (forgotFlow ? 'بازیابی رمز عبور' : 'ورود به نمادنو'),
+      stepNum: fa(idx + 1), stepTotal: fa(flow.length),
+      segs: flow.map(function (s, i) { return { bg: i <= idx ? 'var(--primary-main)' : 'var(--progress-track)' }; }),
+      isNid: step === 'nid', toPhone: function () { go('phone', 'fwd'); },
+      isPhone: step === 'phone', isOtp: step === 'otp', isLoginPass: step === 'pass', isSetPass: isSet,
+      canBack: step !== flow[0],
+      goBack: function () { var p = prev[(self.state && self.state.step) || step]; if (p) go(p, 'back'); },
+      animCls: st.anim === 'back' ? 'stp-back' : (st.anim === 'fwd' ? 'stp-fwd' : ''),
+      // phone step
+      agree: agree, agreeAria: agree ? 'true' : 'false', notAgreeAria: agree ? 'false' : 'true',
+      agreeBd: agree ? 'var(--primary-main)' : (err ? 'var(--error-main)' : 'var(--outline-border)'),
+      agreeBg: agree ? 'var(--primary-main)' : 'var(--bg-paper)',
+      btnOpacity: agree ? '1' : '.48', btnShadow: agree ? 'var(--shadow-primary)' : 'none',
+      helpText: err ? 'برای دریافت کد، ابتدا قوانین را بپذیرید' : (KIND === 'signup' ? 'کد تأیید به این شماره پیامک می‌شود' : 'اگر این شماره حساب نداشته باشد، به ثبت‌نام می‌روید'),
+      helpColor: err ? 'var(--error-text)' : 'var(--text-secondary)', helpWeight: err ? '600' : '400', helpRole: err ? 'alert' : 'note',
+      phoneBd: err ? 'var(--error-main)' : 'var(--outline-border)',
+      toggleAgree: function () { self.setState({ agree: !(self.state && self.state.agree), showErr: false }); },
+      sendCode: function () { if (!(self.state && self.state.agree)) { self.setState({ showErr: true }); return; } go('otp', 'fwd'); },
+      remember: remember, rememberAria: remember ? 'true' : 'false',
+      rememberBd: remember ? 'var(--primary-main)' : 'var(--outline-border)', rememberBg: remember ? 'var(--primary-main)' : 'var(--bg-paper)',
+      toggleRemember: function () { self.setState({ remember: (self.state && self.state.remember) === false }); },
+      toPassword: function () { go('pass', 'fwd'); },
+      forgot: function () { go('otp', 'fwd'); },
+      // otp step
+      otp: otp, filled: filled, notFilled: !filled,
+      autofill: function () { self.setState({ filled: true }); },
+      otpNext: function () { go('setpass', 'fwd'); },
+      otpBackLabel: KIND === 'signup' ? 'ویرایش شماره' : 'بازگشت به رمز عبور',
+      otpHelp: st.resent ? 'کد جدید ارسال شد · ۰۱:۵۹ تا ارسال دوباره' : '۰۱:۲۴ تا امکان ارسال مجدد',
+      otpHelpColor: st.resent ? 'var(--success-text)' : 'var(--text-secondary)',
+      resendDisabled: st.resent ? 'true' : 'false', resendColor: st.resent ? 'var(--text-disabled)' : 'var(--primary-text)',
+      resend: function () { self.setState({ resent: true, filled: false }); },
+      noteHidden: step === 'otp' ? 'false' : 'true', noteOpacity: step === 'otp' ? '1' : '0', noteShift: step === 'otp' ? '0' : '-6px',
+      // password steps (tap the field to fill it in the prototype)
+      pwFilled: pw, pwEmpty: !pw,
+      fillPw: function () { self.setState({ pw: true }); },
+      pwLabel: isSet ? (KIND === 'signup' ? 'رمز عبور' : 'رمز عبور جدید') : 'رمز عبور',
+      pwText: pw ? (show ? 'Namad@1405' : '••••••••••') : 'رمز عبور را وارد کنید',
+      pwColor: pw ? 'var(--text-primary)' : 'var(--text-disabled)',
+      pwSize: pw && !show ? 22 : 15, pwSpacing: pw && !show ? '2px' : '0',
+      pwDir: pw ? 'ltr' : 'rtl', pwAlign: pw ? 'left' : 'right',
+      pwBd: pw ? 'var(--primary-main)' : 'var(--outline-border)',
+      pwShown: show, pwHidden: !show, eyeAria: show ? 'پنهان کردن رمز' : 'نمایش رمز', eyePressed: show ? 'true' : 'false',
+      toggleShow: function () { self.setState({ show: !(self.state && self.state.show) }); },
+      pwHelp: isSet ? (pw ? 'رمز قوی است' : 'حداقل ۸ کاراکتر، شامل حرف، عدد و یک نماد') : 'بعد از ۵ تلاش ناموفق، ورود ۱۵ دقیقه قفل می‌شود',
+      pwHelpColor: isSet && pw ? 'var(--success-text)' : 'var(--text-secondary)', pwHelpWeight: isSet && pw ? '600' : '400', pwHelpRole: 'note',
+      rules: rules,
+      setTitle: KIND === 'signup' ? 'تعیین رمز عبور' : 'رمز عبور جدید',
+      setSub: KIND === 'signup' ? 'از این رمز برای ورودهای بعدی استفاده می‌کنید' : 'رمز جدید جایگزین رمز قبلی می‌شود',
+      setBtn: KIND === 'signup' ? 'ثبت‌نام و ورود' : 'ذخیره و ورود',
+      // terms sheet (signup)
+      termsOpen: !!st.terms, terms: terms,
+      openTerms: function () { self.setState({ terms: true }); },
+      closeTerms: function () { self.setState({ terms: false }); },
+      acceptTerms: function () { self.setState({ terms: false, agree: true, showErr: false }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

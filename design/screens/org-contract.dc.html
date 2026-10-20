@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>تنظیمات قرارداد</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.th-light,.th-dark{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%;--soft-primary:rgb(var(--primary-main-rgb) / .16);--soft-success:rgb(var(--success-main-rgb) / .16);--soft-warning:rgb(var(--warning-main-rgb) / .16);--soft-error:rgb(var(--error-main-rgb) / .16);--soft-info:rgb(var(--info-main-rgb) / .16);--soft-default:rgb(var(--grey-500-rgb) / .16);--nav-active:rgb(var(--primary-main-rgb) / .08);--outline-border:rgb(var(--grey-500-rgb) / .32);--progress-track:rgb(var(--primary-main-rgb) / .16)}
+.th-light{color-scheme:light;--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:var(--grey-200);--bg-canvas:var(--grey-100);--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .16), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .12), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .10), transparent 70%);--text-primary:var(--grey-800);--text-secondary:var(--grey-600);--text-disabled:var(--grey-500);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(255 255 255 / .78);--card-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(var(--grey-500-rgb) / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z8:0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z24:0 24px 48px 0 rgb(var(--grey-500-rgb) / .16);--shadow-card:0 0 2px 0 rgb(var(--grey-500-rgb) / .20), 0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);--shadow-dropdown:0 0 2px 0 rgb(var(--grey-500-rgb) / .24), -20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);--chart-1:var(--primary-main);--chart-2:var(--success-main);--chart-3:var(--secondary-main);--chart-4:var(--grey-400);--chart-5:var(--grey-600);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-main);--success-text:var(--success-dark);--warning-text:var(--warning-dark);--error-text:var(--error-dark);--info-text:var(--info-dark);--default-text:var(--grey-700);--table-head:rgb(var(--grey-500-rgb) / .12);--contained-default:var(--grey-800);--contained-default-text:#FFFFFF;--step-pending:var(--grey-300);--step-pending-text:var(--grey-600)}
+.th-dark{color-scheme:dark;--bg-default:var(--grey-900);--bg-paper:var(--grey-800);--bg-neutral:rgb(var(--grey-500-rgb) / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .32), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .20), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .16), transparent 70%);--text-primary:#FFFFFF;--text-secondary:var(--grey-500);--text-disabled:var(--grey-600);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(31 36 51 / .72);--card-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20), 0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24), -20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:var(--primary-light);--chart-2:#7CCBA8;--chart-3:var(--secondary-light);--chart-4:var(--grey-600);--chart-5:var(--grey-400);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-light);--success-text:#7CCBA8;--warning-text:var(--warning-light);--error-text:var(--error-light);--info-text:var(--info-light);--default-text:var(--grey-400);--table-head:rgb(var(--grey-500-rgb) / .12);--contained-default:#FFFFFF;--contained-default-text:var(--grey-800);--step-pending:rgb(var(--grey-500-rgb) / .24);--step-pending-text:var(--grey-400)}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.card{background:var(--card-bg);border-radius:16px;border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ibtn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--text-secondary);display:grid;place-items:center;cursor:pointer;padding:0}
+.ibtn:hover{background:var(--action-hover)}
+.wm{font-family:'Divan','IRANSansX',Tahoma,sans-serif}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;border:0;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;text-decoration:none}
+.cell{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fld{display:flex;align-items:center;gap:8px;height:40px;box-sizing:border-box;padding:0 12px;border-radius:8px;border:1px solid var(--outline-border);background:var(--card-bg);color:var(--text-primary);font-size:13px}
+.fld input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-family:inherit;font-size:13px;color:var(--text-primary);padding:0}
+.flbl{font-size:12px;font-weight:600;color:var(--text-secondary);line-height:18px}
+.dim{position:absolute;inset:0;z-index:20;background:rgba(20,24,38,.48);display:grid;place-items:center}
+.dlg{width:480px;box-sizing:border-box;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.toast{position:absolute;left:24px;bottom:24px;z-index:30;width:360px;box-sizing:border-box;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:13px}
+.sw{width:40px;height:24px;border-radius:12px;border:0;position:relative;cursor:pointer;padding:0;flex:none}
+.sw span{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,.24)}
+.row-a{text-decoration:none;color:inherit}.row-a:hover{background:var(--action-hover)}
+.th{background:var(--table-head);color:var(--grey-600);font-size:11px;font-weight:700}
+.lkbar{height:6px;border-radius:6px;display:flex;overflow:hidden;background:rgb(var(--grey-500-rgb) / .16);gap:2px}
+.lkbar>.f{background:var(--primary-main);border-radius:6px}
+.lkbar>.l{border-radius:6px;background:repeating-linear-gradient(135deg,rgb(var(--grey-500-rgb) / .55) 0 3px,rgb(var(--grey-500-rgb) / .22) 3px 6px)}
+.lkleg{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.lkleg b{font-weight:500;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.lkdot{width:8px;height:8px;border-radius:50%;background:var(--primary-main);display:inline-block;margin-left:4px}
+.lktype{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.lkseg{display:flex;gap:3px;height:6px}
+.lkseg>span{flex:1;border-radius:3px;background:var(--progress-track)}
+.lkseg>span.r{background:var(--primary-main)}
+.lkseg>span.p{background:transparent;box-shadow:inset 0 0 0 1.5px var(--warning-main)}
+.th-light,.th-dark{--soft-secondary:rgb(var(--secondary-main-rgb) / .16)}
+.th-light{--secondary-text:var(--secondary-dark)}
+.th-dark{--secondary-text:var(--secondary-light)}
+</style>
+</helmet>
+<div dir="rtl" class="{{themeCls}}" style="width: 1280px; height: 800px; overflow: hidden; position: relative; background: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); font-family: 'IRANSansX', Tahoma, sans-serif; display: flex; flex-direction: row">
+
+  <!-- Vertical nav (right, RTL) -->
+  <aside class="glass" style="width: 300px; flex: none; box-sizing: border-box; border: 0; border-left: 1px solid var(--divider); box-shadow: none; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 0 4px">
+      <span style="width: 40px; height: 40px; border-radius: 10px; background: var(--brand-gradient); display: grid; place-items: center; color: #FFFFFF; flex: none"><svg viewBox="0 0 64 40" width="26" height="16" aria-hidden="true"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg></span>
+      <span style="display: flex; align-items: baseline; gap: 8px"><span class="wm" style="font-size: 22px; font-weight: 700; line-height: 1">نمادنو</span><span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); line-height: 1">· سازمان</span></span>
+    </div>
+
+    <button style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--divider); background: var(--bg-neutral); color: var(--text-primary); font-family: inherit; text-align: right; cursor: pointer">
+      <svg class="ico" width="20" height="20" viewBox="0 0 24 24" style="color: var(--text-secondary)"><path d="M5 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17M15 9h3a1 1 0 0 1 1 1v11M3 21h18M9 7h2M9 11h2M9 15h2"></path></svg>
+      <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.2"><span style="font-size: 13px; font-weight: 600">هلدینگ آرمان</span><span style="font-size: 11px; color: var(--text-secondary)">سازمان فعال</span></span>
+      <svg class="ico" width="16" height="16" viewBox="0 0 24 24" style="color: var(--text-secondary)"><path d="M7 10l5 5 5-5"></path></svg>
+    </button>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <span style="display: block; height: 24px; line-height: 24px; padding: 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--grey-500)">منو</span>
+      <sc-for list="{{navMain}}" as="n" hint-placeholder-count="7">
+        <a href="{{n.href}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 8px; background: {{n.bg}}; color: var({{n.c}}); font-size: 14px; font-weight: {{n.w}}; text-decoration: none">
+          <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+          <span style="flex: 1">{{n.label}}</span>
+          <sc-if value="{{n.badge}}" hint-placeholder-val="{{ true }}">
+            <span class="lbl" style="height: 22px; padding: 0 7px; background: var(--error-main); color: var(--error-contrast)">{{n.badge}}</span>
+          </sc-if>
+        </a>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--bg-neutral)">
+        <span style="width: 40px; height: 40px; border-radius: 50%; background: var(--soft-primary); color: var(--primary-text); display: grid; place-items: center; font-size: 15px; font-weight: 700; flex: none">ن</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">نیما رضایی</span><span style="font-size: 12px; color: var(--text-secondary); white-space: nowrap">مدیر منابع انسانی</span></span>
+      </div>
+      <a href="org-login.dc.html" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-radius: 8px; color: var(--text-secondary); font-size: 13px; font-weight: 600; text-decoration: none">
+        <svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M10 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M14 8l4 4-4 4M18 12H9"></path></svg>
+        <span>خروج</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main column -->
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+
+    <!-- Header 72 glass -->
+    <header class="glass" style="height: 72px; flex: none; box-sizing: border-box; border: 0; border-bottom: 1px solid var(--glass-edge); box-shadow: var(--glass-highlight); padding: 0 24px; display: flex; align-items: center; gap: 8px">
+      <button class="ibtn" aria-label="جمع کردن منو"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+      <button style="display: flex; align-items: center; gap: 10px; height: 40px; width: 260px; padding: 0 14px 0 6px; border-radius: 999px; border: 0; background: var(--action-hover); color: var(--text-secondary); font-family: inherit; font-size: 14px; cursor: pointer; text-align: right">
+        <svg class="ico" width="20" height="20" viewBox="0 0 24 24"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"></path></svg>
+        <span style="flex: 1">جستجو…</span>
+        <span class="lbl" dir="ltr" style="height: 22px; padding: 0 6px; border-radius: 6px; background: var(--bg-paper); color: var(--text-secondary); font-size: 11px; box-shadow: 0 0 0 1px var(--divider)">⌘K</span>
+      </button>
+
+      <div style="margin-right: auto; display: flex; align-items: center; gap: 4px">
+        <button class="ibtn" aria-label="تغییر تم" onClick="{{toggleTheme}}" style="background: var(--glass-bg); box-shadow: 0 0 0 1px var(--glass-edge)"><sc-if value="{{isDark}}" hint-placeholder-val="{{ false }}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"></path></svg></sc-if><sc-if value="{{isLight}}" hint-placeholder-val="{{ true }}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7"></path></svg></sc-if></button>
+        <a href="org-requests.dc.html" class="ibtn" aria-label="اعلان‌ها" style="position: relative; text-decoration: none"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4"></path></svg><span style="position: absolute; top: 5px; left: 5px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--error-main); color: #FFFFFF; font-size: 11px; font-weight: 700; display: grid; place-items: center; line-height: 1">۴</span></a>
+        <a href="org-contract.dc.html" class="ibtn" aria-label="تنظیمات" style="text-decoration: none"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"></path></svg></a>
+        <span aria-label="حساب کاربری" style="width: 40px; height: 40px; border-radius: 50%; box-sizing: border-box; padding: 2px; display: grid; place-items: center; margin-right: 4px"><span style="display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--soft-primary); color: var(--primary-text); font-size: 14px; font-weight: 700; box-shadow: 0 0 0 2px var(--bg-paper)">ن</span></span>
+      </div>
+    </header>
+
+    <main style="flex: 1; min-height: 0; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 20px; overflow: hidden">
+      <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <h4 style="margin: 0; font-size: 20px; line-height: 1.3; font-weight: 700">تنظیمات قرارداد</h4>
+          <nav style="display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.3">
+            <a href="org-dashboard.dc.html" style="color: var(--text-primary)">هلدینگ آرمان</a>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-disabled)"></span>
+            <a href="org-dashboard.dc.html" style="color: var(--text-primary)">منابع انسانی</a>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-disabled)"></span>
+            <span style="color: var(--text-disabled)">تنظیمات قرارداد</span>
+          </nav>
+        </div>
+        <span style="margin-right: auto; font-size: 12px; color: var(--text-secondary); white-space: nowrap">آخرین تغییر: ۱۴۰۵/۰۴/۱۰ · توسط بهره‌بردار</span>
+        <a href="org-requests.dc.html" class="btn" style="border: 1px solid var(--outline-border); background: transparent; color: var(--text-primary)"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8zM14 3v5h5M9 13h6M9 17h4"></path></svg>درخواست تغییر قرارداد</a>
+      </div>
+
+      <div style="flex: 1; min-height: 0; display: flex; gap: 20px">
+
+        <!-- Right column: contract + limits + funds -->
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+          <div class="card" style="height: 120px; flex: none; box-sizing: border-box; padding: 16px 20px; display: flex; align-items: center; gap: 20px">
+            <span style="width: 56px; height: 56px; border-radius: 14px; background: var(--brand-gradient); color: #FFFFFF; display: grid; place-items: center; flex: none"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" style="stroke-width: 1.6"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8zM14 3v5h5M9 13h6M9 17h4"></path></svg></span>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; line-height: 1.2">
+              <span style="display: flex; align-items: center; gap: 10px"><span style="font-size: 16px; font-weight: 700; white-space: nowrap">قرارداد همکاری هلدینگ آرمان</span><span class="lbl" style="background: var(--soft-success); color: var(--success-text)">فعال</span><span class="lbl" style="background: var(--soft-default); color: var(--default-text)">فقط‌خواندنی</span></span>
+              <div style="display: flex; gap: 16px">
+                <sc-for list="{{facts}}" as="f" hint-placeholder-count="4">
+                  <span style="display: flex; flex-direction: column; gap: 3px; line-height: 1.25; padding-left: 16px; border-left: 1px solid var(--divider)"><span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap">{{f.label}}</span><span class="num" dir="{{f.dir}}" style="font-size: 13px; font-weight: 500; white-space: nowrap; text-align: right">{{f.value}}</span></span>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 96px; flex: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px">
+            <sc-for list="{{tiles}}" as="k" hint-placeholder-count="4">
+              <div class="card" style="box-sizing: border-box; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-width: 0">
+                <span style="display: flex; align-items: center; gap: 8px"><span style="width: 28px; height: 28px; border-radius: 8px; background: {{k.bg}}; color: {{k.fg}}; display: grid; place-items: center; flex: none"><svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="{{k.d}}"></path></svg></span><span class="cell" style="font-size: 11px; color: var(--text-secondary)">{{k.label}}</span></span>
+                <span class="num cell" style="font-size: 16px; font-weight: 500">{{k.value}}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div class="card" style="flex: none; box-sizing: border-box; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px">
+            <div style="height: 24px; display: flex; align-items: center; gap: 10px">
+              <h6 style="margin: 0; font-size: 15px; font-weight: 700; line-height: 1.2">صندوق‌های مجاز برای بسته‌ها</h6>
+              <span style="font-size: 12px; color: var(--text-secondary)">کارکنان فقط می‌توانند بین این صندوق‌ها تخصیص دهند</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+              <sc-for list="{{funds}}" as="fd" hint-placeholder-count="3">
+                <div style="box-sizing: border-box; padding: 12px; border-radius: 12px; border: 1px solid var(--divider); background: {{fd.bg}}; display: flex; flex-direction: column; gap: 8px; min-width: 0; opacity: {{fd.op}}">
+                  <span style="display: flex; align-items: center; gap: 8px"><span style="width: 10px; height: 10px; border-radius: 3px; background: var({{fd.color}}); flex: none"></span><span class="cell" style="font-size: 13px; font-weight: 700">{{fd.name}}</span><span class="lbl" style="margin-right: auto; height: 20px; padding: 0 6px; font-size: 11px; background: {{fd.sbg}}; color: {{fd.sfg}}">{{fd.s}}</span></span>
+                  <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.5">نماد <span class="num" style="font-weight: 500; color: var(--text-primary)">{{fd.symbol}}</span> · {{fd.note}}</span>
+                  <span style="margin-top: auto; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-secondary)"><svg class="ico" width="14" height="14" viewBox="0 0 24 24"><path d="M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3M12 15v2"></path></svg><span class="cell">{{fd.lock}}</span></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div class="card" style="flex: 1; min-height: 0; box-sizing: border-box; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px">
+            <div style="height: 24px; display: flex; align-items: center; gap: 10px">
+              <h6 style="margin: 0; font-size: 15px; font-weight: 700; line-height: 1.2; white-space: nowrap">سیاست‌های قفل مجاز</h6>
+              <span class="cell" style="font-size: 12px; color: var(--text-secondary)">از قرارداد بهره‌بردار · هنگام ارسال بسته قابل انتخاب</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+              <sc-for list="{{lockPols}}" as="lp" hint-placeholder-count="3">
+                <div style="box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--divider); display: flex; flex-direction: column; gap: 6px; min-width: 0">
+                  <span style="display: flex; align-items: center; gap: 6px"><span class="lktype" style="background: {{lp.tbg}}; color: {{lp.tfg}}"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="{{lp.td}}"></path></svg>{{lp.tlabel}}</span><span class="lbl" style="margin-right: auto; height: 20px; padding: 0 6px; font-size: 11px; background: var(--soft-success); color: var(--success-text)">مجاز</span></span>
+                  <span class="num" style="font-size: 11px; color: var(--text-secondary); line-height: 1.5">{{lp.rule}}</span>
+                </div>
+              </sc-for>
+            </div>
+            <span style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: var(--text-secondary); line-height: 1.6"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" style="margin-top: 2px; flex: none"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 11v5M12 8h.01"></path></svg><span>قفل وثیقه، اقساطی و مسدودی قانونی را نمادنو اعمال می‌کند. تغییر سیاست‌ها و سقف‌ها فقط با «درخواست تغییر قرارداد».</span></span>
+          </div>
+        </div>
+
+        <!-- Left column: approval chain + panel users -->
+        <div style="width: 380px; flex: none; display: flex; flex-direction: column; gap: 20px">
+          <div class="card" style="flex: none; box-sizing: border-box; padding: 16px 20px; display: flex; flex-direction: column; gap: 6px">
+            <div style="height: 24px; display: flex; align-items: center; gap: 8px">
+              <h6 style="margin: 0; font-size: 15px; font-weight: 700; line-height: 1.2">زنجیره تأیید</h6>
+              <span class="lbl" style="height: 20px; padding: 0 6px; font-size: 11px; background: var(--soft-primary); color: var(--primary-text)">قابل ویرایش</span>
+              <sc-if value="{{dirty}}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{saveChain}}" style="margin-right: auto; height: 28px; padding: 0 10px; font-size: 12px; background: var(--primary-main); color: var(--primary-contrast)">ذخیره</button></sc-if>
+            </div>
+            <sc-for list="{{chain}}" as="c" hint-placeholder-count="4">
+              <div style="height: 44px; display: flex; align-items: center; gap: 10px; border-bottom: 1px dashed var(--divider)">
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3"><span class="cell" style="font-size: 13px; font-weight: 600">{{c.label}}</span><span class="cell" style="font-size: 11px; color: var(--text-secondary)">{{c.desc}}</span></span>
+                <button class="sw" dir="ltr" role="switch" aria-checked="{{c.on}}" aria-label="{{c.label}}" onClick="{{c.toggle}}" style="background: {{c.swBg}}"><span style="left: {{c.knob}}px"></span></button>
+              </div>
+            </sc-for>
+            <div style="display: flex; align-items: center; gap: 8px; padding-top: 8px; font-size: 11px; color: var(--text-secondary)"><svg class="ico" width="14" height="14" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 7.8-8 9-4.6-1.2-8-4.5-8-9V6zM9 12l2 2 4-4"></path></svg><span>مرحله «تأیید مدیر مالی» طبق قرارداد الزامی است و قابل غیرفعال‌سازی نیست.</span></div>
+          </div>
+
+          <div class="card" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+            <div style="height: 44px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--divider)">
+              <h6 style="margin: 0; font-size: 15px; font-weight: 700; line-height: 1.2">کاربران پنل</h6>
+              <span class="num" style="font-size: 12px; color: var(--text-secondary)">{{userCount}} کاربر</span>
+              <button class="btn" onClick="{{openInvite}}" style="margin-right: auto; height: 30px; padding: 0 10px; font-size: 12px; border: 1px solid var(--outline-border); background: transparent; color: var(--text-primary)"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" style="stroke-width: 2"><path d="M12 5v14M5 12h14"></path></svg>افزودن کاربر</button>
+            </div>
+            <sc-for list="{{users}}" as="u" hint-placeholder-count="3">
+              <div style="height: 52px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px dashed var(--divider); font-size: 13px">
+                <span style="width: 32px; height: 32px; border-radius: 50%; background: {{u.avBg}}; color: {{u.avFg}}; display: grid; place-items: center; font-size: 13px; font-weight: 700; flex: none">{{u.initial}}</span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25"><span class="cell" style="font-weight: 600">{{u.name}}</span><span class="cell" dir="ltr" style="font-size: 11px; color: var(--text-secondary); text-align: right">{{u.email}}</span></span>
+                <span class="lbl" style="height: 22px; padding: 0 7px; font-size: 11px; background: {{u.rbg}}; color: {{u.rfg}}">{{u.role}}</span>
+              </div>
+            </sc-for>
+            <div style="flex: 1"></div>
+            <div style="height: 36px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-secondary)"><svg class="ico" width="14" height="14" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 11v5M12 8h.01"></path></svg>«مدیر مالی» تأییدکنندهٔ نهایی بسته‌ها است و قابل حذف نیست.</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+  <sc-if value="{{isInvite}}" hint-placeholder-val="{{ false }}">
+    <div class="dim">
+      <div class="glass dlg" role="dialog" aria-label="افزودن کاربر به پنل سازمان">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <h6 style="margin: 0; font-size: 18px; font-weight: 700; line-height: 1.4">افزودن کاربر به پنل سازمان</h6>
+          <button class="ibtn" aria-label="بستن" onClick="{{closeInvite}}" style="margin-right: auto; width: 32px; height: 32px"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <span style="font-size: 13px; color: var(--text-secondary); line-height: 1.6">لینک فعال‌سازی به ایمیل سازمانی کاربر ارسال می‌شود و ۴۸ ساعت اعتبار دارد.</span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <label style="display: flex; flex-direction: column; gap: 4px"><span class="flbl">نام و نام خانوادگی</span><span class="fld"><input type="text" value="مینا راد" aria-label="نام و نام خانوادگی"></span></label>
+          <label style="display: flex; flex-direction: column; gap: 4px"><span class="flbl">ایمیل سازمانی</span><span class="fld"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" style="color: var(--text-secondary)"><path d="M3 6h18v12H3zM3 6l9 7 9-7"></path></svg><input type="email" value="m.rad@arman-holding.ir" aria-label="ایمیل" dir="ltr" style="text-align: right"></span></label>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span class="flbl">نقش</span>
+          <div style="height: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; box-sizing: border-box; border-radius: 8px; background: var(--bg-neutral)">
+            <sc-for list="{{roles}}" as="ro" hint-placeholder-count="3">
+              <button aria-pressed="{{ro.on}}" onClick="{{ro.pick}}" style="border: 0; border-radius: 6px; background: {{ro.bg}}; color: var({{ro.c}}); box-shadow: {{ro.sh}}; font-family: inherit; font-size: 13px; font-weight: {{ro.w}}; cursor: pointer">{{ro.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-direction: row-reverse">
+          <button class="btn" onClick="{{sendInvite}}" style="background: var(--primary-main); color: var(--primary-contrast); box-shadow: var(--shadow-primary)">ارسال دعوت</button>
+          <button class="btn" onClick="{{closeInvite}}" style="background: transparent; color: var(--text-secondary)">انصراف</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isToast}}" hint-placeholder-val="{{ false }}">
+    <div class="glass toast" role="status">
+      <span style="width: 32px; height: 32px; border-radius: 8px; background: var(--soft-success); color: var(--success-text); display: grid; place-items: center; flex: none"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>
+      <span style="flex: 1; font-weight: 500">{{toastMsg}}</span>
+      <button class="ibtn" aria-label="بستن" onClick="{{closeToast}}" style="width: 28px; height: 28px"><svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  componentDidMount() { try { if (localStorage.getItem('nm-theme-dark') === '1' && !(this.state && this.state.dark)) this.setState({ dark: true }); } catch (e) {} }
+  componentDidUpdate(pp, ps) { try { const d = !!(this.state && this.state.dark); if (!!(ps && ps.dark) !== d) localStorage.setItem('nm-theme-dark', d ? '1' : '0'); } catch (e) {} }
+
+  renderVals() {
+    var LKI = 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', LKF = 'M5 21V4M5 4h11l-2 4 2 4H5';
+    var LKT = {
+      collateral: { label: 'وثیقه اعتبار و وام', short: 'وثیقه', bg: 'var(--soft-info)', fg: 'var(--info-text)', d: LKI },
+      vesting: { label: 'قفل زمانی سازمان', short: 'قفل زمانی', bg: 'var(--soft-warning)', fg: 'var(--warning-text)', d: LKI },
+      installment: { label: 'وثیقه خرید اقساطی', short: 'اقساطی', bg: 'var(--soft-secondary)', fg: 'var(--secondary-text)', d: LKI },
+      milestone: { label: 'آزادسازی مرحله‌ای', short: 'مرحله‌ای', bg: 'var(--soft-primary)', fg: 'var(--primary-text)', d: LKF },
+      legal: { label: 'مسدودی قانونی', short: 'مسدودی', bg: 'var(--soft-error)', fg: 'var(--error-text)', d: LKI },
+      none: { label: 'بدون قفل', short: 'بدون قفل', bg: 'var(--soft-default)', fg: 'var(--default-text)', d: 'M7 11V8a5 5 0 0 1 9.6-2M5 11h14v10H5z' }
+    };
+    function lkt(k, long) { var t = LKT[k]; return { tlabel: long ? t.label : t.short, tbg: t.bg, tfg: t.fg, td: t.d }; }
+    function lkFa(x) { return String(x).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }).replace(/\./g, '٫'); }
+    function lkMoney(n) { return lkFa(String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')).replace(/,/g, '٬'); }
+    var st = this.state || {};
+    var self = this;
+    var ICON = {
+      dashboard: 'M4 4h7v7H4zM13 4h7v4h-7zM13 11h7v9h-7zM4 14h7v6H4z',
+      users: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M15 4.2a3.5 3.5 0 0 1 0 6.6',
+      pkg: 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
+      credit: 'M3 6h18v12H3zM3 10h18M7 15h3',
+      inbox: 'M3 13l2.5-7h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 13h5l1.5 2.5h5L16 13h5',
+      reports: 'M4 20h16M7 16V10M12 16V5M17 16v-3',
+      contract: 'M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8zM14 3v5h5M9 13h6M9 17h4',
+      percent: 'M19 5L5 19M7.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M16.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3',
+      calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h2M14 14h2',
+      lock: 'M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3M12 15v2',
+      check: 'M5 12.5l4.5 4.5L19 7',
+      x: 'M6 6l12 12M18 6L6 18',
+      info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 11v5M12 8h.01',
+      warn: 'M12 3l10 18H2zM12 10v5M12 18h.01',
+      wallet: 'M3 7h18v12H3zM3 7l2-3h12l2 3M15 12h3',
+      coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v10M9.5 9.5h3.5a1.5 1.5 0 0 1 0 3h-2a1.5 1.5 0 0 0 0 3H15',
+      shield: 'M12 3l8 3v6c0 4.5-3.4 7.8-8 9-4.6-1.2-8-4.5-8-9V6zM9 12l2 2 4-4',
+      download: 'M12 4v11M7.5 10.5L12 15l4.5-4.5M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2',
+      plus: 'M12 5v14M5 12h14',
+      chevL: 'M14 6l-6 6 6 6',
+      user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1',
+      clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3 2',
+      file: 'M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8zM14 3v5h5',
+      mail: 'M3 6h18v12H3zM3 6l9 7 9-7',
+      refresh: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5',
+      bank: 'M3 10l9-6 9 6M5 10v9M9 10v9M15 10v9M19 10v9M3 19h18'
+    };
+    var FA = '۰۱۲۳۴۵۶۷۸۹';
+    function fa(n) { return String(n).replace(/\d/g, function (d) { return FA[+d]; }); }
+    function nav(label, icon, active, badge, href) {
+      return {
+        label: label, d: ICON[icon], badge: badge || '', href: href,
+        bg: active ? 'var(--nav-active)' : 'transparent',
+        c: active ? '--primary-text' : '--text-secondary',
+        w: active ? 600 : 500
+      };
+    }
+    function tone(t) { return { bg: 'var(--soft-' + t + ')', fg: 'var(--' + t + '-text)' }; }
+    var AV = [
+      ['var(--soft-primary)', 'var(--primary-text)'], ['var(--soft-success)', 'var(--success-text)'],
+      ['var(--soft-info)', 'var(--info-text)'], ['var(--soft-warning)', 'var(--warning-text)'],
+      ['var(--soft-default)', 'var(--default-text)'], ['var(--soft-primary)', 'var(--primary-text)'],
+      ['var(--soft-info)', 'var(--info-text)'], ['var(--soft-success)', 'var(--success-text)']
+    ];
+    var ACTIVE = 'contract';
+    var base = {
+      themeCls: st.dark ? 'th-dark' : 'th-light',
+      isDark: !!st.dark,
+      isLight: !st.dark,
+      toggleTheme: () => this.setState({ dark: !(this.state && this.state.dark) }),
+      navMain: [
+        nav('داشبورد', 'dashboard', ACTIVE === 'dashboard', '', 'org-dashboard.dc.html'),
+        nav('کارکنان', 'users', ACTIVE === 'employees', '', 'org-employees.dc.html'),
+        nav('بسته‌های دارایی', 'pkg', ACTIVE === 'packages', '', 'org-packages.dc.html'),
+        nav('تسهیلات و اعتبار', 'credit', ACTIVE === 'credit', '', 'org-credit.dc.html'),
+        nav('درخواست‌ها', 'inbox', ACTIVE === 'requests', '۱۷', 'org-requests.dc.html'),
+        nav('گزارش‌ها', 'reports', ACTIVE === 'reports', '', 'org-reports.dc.html'),
+        nav('تنظیمات قرارداد', 'contract', ACTIVE === 'contract', '', 'org-contract.dc.html')
+      ],
+      isToast: !!st.toast, toastMsg: st.toast || '',
+      closeToast: function () { self.setState({ toast: '' }); }
+    };
+    var lockPols = [
+      ['none', 'برای مزایا، عیدی و بسته‌های نقدی'],
+      ['vesting', 'حداکثر ۱۲ ماه · پیش‌فرض ۳ ماه · فقط بخش صندوقی'],
+      ['milestone', 'حداکثر ۸ مرحله · هر مرحله حداقل ۵٪ · جمع ۱۰۰٪']
+    ].map(function (p) { var t = lkt(p[0]); t.rule = p[1]; return t; });
+    var chainDefault = { c1: true, c2: true, c3: false, c4: true };
+    var chainOn = st.chainOn || chainDefault;
+    var saved = st.chainSaved || chainDefault;
+    var dirty = Object.keys(chainDefault).some(function (k) { return !!chainOn[k] !== !!saved[k]; });
+    var chainData = [
+      ['c1', 'نیاز به تأیید مدیر مالی', 'برای هر بسته، پیش از ارسال به کارکنان', true],
+      ['c2', 'تأیید دومرحله‌ای بسته‌های بزرگ', 'بسته‌های بالای ۵ میلیارد تومان · مدیرعامل', false],
+      ['c3', 'تأیید HR برای برداشت نقدی', 'درخواست‌های برداشت از بسته‌های نقدی‌مجاز', false],
+      ['c4', 'اطلاع‌رسانی پس از ارسال', 'پیامک و اعلان به کارکنان گیرنده', false]
+    ];
+    var chain = chainData.map(function (r) {
+      var on = !!chainOn[r[0]], locked = r[3];
+      return { label: r[1], desc: r[2], on: on, swBg: on ? (locked ? 'var(--primary-light)' : 'var(--primary-main)') : 'var(--grey-400)', knob: on ? 19 : 3,
+        toggle: function () { if (locked) { self.setState({ toast: 'این مرحله طبق قرارداد الزامی است' }); return; } var n = Object.assign({}, chainOn); n[r[0]] = !on; self.setState({ chainOn: n }); } };
+    });
+    var role = st.role || 'hr';
+    var roleData = [['hr', 'منابع انسانی'], ['fin', 'مدیر مالی'], ['view', 'مشاهده‌گر']];
+    var invited = st.invited || [];
+    var baseUsers = [
+      ['نیما رضایی', 'n.rezaei@arman-holding.ir', 'مدیر منابع انسانی', 'primary'],
+      ['سحر کاظمی', 's.kazemi@arman-holding.ir', 'کارشناس HR', 'info'],
+      ['فرهاد مرادی', 'f.moradi@arman-holding.ir', 'مدیر مالی', 'success']
+    ].concat(invited);
+    var users = baseUsers.map(function (u, i) {
+      var t = tone(u[3]);
+      return { name: u[0], email: u[1], role: u[2], initial: u[0].charAt(0), avBg: AV[i][0], avFg: AV[i][1], rbg: t.bg, rfg: t.fg };
+    });
+    var page = {
+      lockPols: lockPols,
+      facts: [
+        { label: 'شماره قرارداد', value: '۱۴۰۴-۰۲۱', dir: 'ltr' },
+        { label: 'تاریخ شروع', value: '۱۴۰۴/۰۱/۰۱', dir: 'rtl' },
+        { label: 'پایان اعتبار', value: '۱۴۰۵/۱۲/۲۹', dir: 'rtl' },
+        { label: 'تمدید', value: 'خودکار · سالانه', dir: 'rtl' }
+      ],
+      tiles: [
+        { label: 'سقف وام', value: '۴۰٪ دارایی', d: ICON.percent, bg: 'var(--soft-primary)', fg: 'var(--primary-text)' },
+        { label: 'بازپرداخت', value: '۶ / ۱۲ / ۱۸ ماه', d: ICON.calendar, bg: 'var(--soft-info)', fg: 'var(--info-text)' },
+        { label: 'اعتبار کارت', value: 'تا ۲۵٪ دارایی', d: ICON.credit, bg: 'var(--soft-success)', fg: 'var(--success-text)' },
+        { label: 'قفل زمانی پیش‌فرض', value: '۳ ماه', d: ICON.lock, bg: 'var(--soft-warning)', fg: 'var(--warning-text)' }
+      ],
+      funds: [
+        { name: 'صندوق طلا', symbol: 'طلا‌نو', note: 'قابل وثیقه تا ۷۰٪', lock: 'قفل زمانی پیش‌فرض ۳ ماه', color: '--warning-main', s: 'مجاز', sbg: 'var(--soft-success)', sfg: 'var(--success-text)', bg: 'transparent', op: 1 },
+        { name: 'صندوق درآمد ثابت', symbol: 'ثابت‌نو', note: 'قابل وثیقه تا ۹۰٪', lock: 'قفل زمانی پیش‌فرض ۳ ماه', color: '--chart-3', s: 'مجاز', sbg: 'var(--soft-success)', sfg: 'var(--success-text)', bg: 'transparent', op: 1 },
+        { name: 'صندوق انرژی', symbol: 'انرژی‌نو', note: 'در انتظار راه‌اندازی بهره‌بردار', lock: 'در قرارداد فعلی تعریف نشده', color: '--chart-5', s: 'به‌زودی', sbg: 'var(--soft-default)', sfg: 'var(--default-text)', bg: 'var(--bg-neutral)', op: .7 }
+      ],
+      chain: chain, dirty: dirty,
+      saveChain: function () { self.setState({ chainSaved: chainOn, toast: 'تنظیمات زنجیره تأیید ذخیره شد' }); },
+      users: users, userCount: fa(users.length),
+      roles: roleData.map(function (r) {
+        var on = role === r[0];
+        return { label: r[1], on: on, bg: on ? 'var(--bg-paper)' : 'transparent', c: on ? '--text-primary' : '--text-secondary', sh: on ? 'var(--shadow-z1)' : 'none', w: on ? 700 : 500,
+          pick: function () { self.setState({ role: r[0] }); } };
+      }),
+      isInvite: !!st.invite,
+      openInvite: function () { self.setState({ invite: true }); },
+      closeInvite: function () { self.setState({ invite: false }); },
+      sendInvite: function () {
+        var rl = roleData.filter(function (r) { return r[0] === role; })[0];
+        var n = invited.concat([['مینا راد', 'm.rad@arman-holding.ir', rl[1], 'warning']]);
+        self.setState({ invite: false, invited: n, toast: 'دعوت‌نامه برای مینا راد ارسال شد' });
+      }
+    };
+
+    return Object.assign(base, page);
+  }
+}
+</script>
+</body>
+</html>

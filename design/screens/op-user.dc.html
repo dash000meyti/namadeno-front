@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>سارا محمدی — کاربر</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.th-light,.th-dark{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%;--soft-primary:rgb(var(--primary-main-rgb) / .16);--soft-success:rgb(var(--success-main-rgb) / .16);--soft-warning:rgb(var(--warning-main-rgb) / .16);--soft-error:rgb(var(--error-main-rgb) / .16);--soft-info:rgb(var(--info-main-rgb) / .16);--soft-default:rgb(var(--grey-500-rgb) / .16);--nav-active:rgb(var(--primary-main-rgb) / .08);--outline-border:rgb(var(--grey-500-rgb) / .32);--progress-track:rgb(var(--primary-main-rgb) / .16)}
+.th-light{color-scheme:light;--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:var(--grey-200);--bg-canvas:var(--grey-100);--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .16), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .12), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .10), transparent 70%);--text-primary:var(--grey-800);--text-secondary:var(--grey-600);--text-disabled:var(--grey-500);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(255 255 255 / .78);--card-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(var(--grey-500-rgb) / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z8:0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z24:0 24px 48px 0 rgb(var(--grey-500-rgb) / .16);--shadow-card:0 0 2px 0 rgb(var(--grey-500-rgb) / .20), 0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);--shadow-dropdown:0 0 2px 0 rgb(var(--grey-500-rgb) / .24), -20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);--chart-1:var(--primary-main);--chart-2:var(--success-main);--chart-3:var(--secondary-main);--chart-4:var(--grey-400);--chart-5:var(--grey-600);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-main);--success-text:var(--success-dark);--warning-text:var(--warning-dark);--error-text:var(--error-dark);--info-text:var(--info-dark);--default-text:var(--grey-700);--table-head:rgb(var(--grey-500-rgb) / .12);--contained-default:var(--grey-800);--contained-default-text:#FFFFFF;--step-pending:var(--grey-300);--step-pending-text:var(--grey-600)}
+.th-dark{color-scheme:dark;--bg-default:var(--grey-900);--bg-paper:var(--grey-800);--bg-neutral:rgb(var(--grey-500-rgb) / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .32), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .20), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .16), transparent 70%);--text-primary:#FFFFFF;--text-secondary:var(--grey-500);--text-disabled:var(--grey-600);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(31 36 51 / .72);--card-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20), 0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24), -20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:var(--primary-light);--chart-2:#7CCBA8;--chart-3:var(--secondary-light);--chart-4:var(--grey-600);--chart-5:var(--grey-400);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-light);--success-text:#7CCBA8;--warning-text:var(--warning-light);--error-text:var(--error-light);--info-text:var(--info-light);--default-text:var(--grey-400);--table-head:rgb(var(--grey-500-rgb) / .12);--contained-default:#FFFFFF;--contained-default-text:var(--grey-800);--step-pending:rgb(var(--grey-500-rgb) / .24);--step-pending-text:var(--grey-400)}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.card{background:var(--card-bg);border-radius:16px;border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ibtn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--text-secondary);display:grid;place-items:center;cursor:pointer;padding:0}
+.ibtn:hover{background:var(--action-hover)}
+.wm{font-family:'Divan','IRANSansX',Tahoma,sans-serif}
+.btnp{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;border:0;background:var(--primary-main);color:var(--primary-contrast);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btnp:hover{color:var(--primary-contrast);background:var(--primary-dark)}
+.btno{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--outline-border);background:transparent;color:var(--text-primary);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btno:hover{color:var(--text-primary);background:var(--action-hover)}
+.btnt{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px;border-radius:8px;border:0;background:transparent;color:var(--primary-text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btnt:hover{background:var(--action-hover)}
+.btnd{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;border:0;background:var(--error-main);color:var(--error-contrast);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.sw{width:40px;height:24px;border-radius:12px;border:0;position:relative;cursor:pointer;padding:0;flex:none}
+.sw span{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#FFFFFF;box-shadow:var(--shadow-z1)}
+.sec{height:24px;line-height:24px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--grey-500)}
+.ck{width:18px;height:18px;border-radius:4px;box-sizing:border-box;border:2px solid var(--grey-500);background:transparent;display:grid;place-items:center;color:#FFFFFF;flex:none;padding:0;cursor:pointer}
+.ck.on{border-color:var(--primary-main);background:var(--primary-main)}
+.fi{height:40px;box-sizing:border-box;border:1px solid var(--outline-border);border-radius:8px;background:var(--bg-paper);color:var(--text-primary);font-family:inherit;font-size:13px;padding:0 12px;outline:0;width:100%;font-variant-numeric:tabular-nums}
+.fi:disabled{color:var(--text-disabled);background:var(--bg-neutral)}
+.fl{font-size:12px;font-weight:600;color:var(--text-secondary);line-height:1.3}
+.fg{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sel{display:flex;align-items:center;gap:8px;text-align:right;cursor:pointer}
+.fld{display:inline-flex;align-items:center;height:36px;box-sizing:border-box;border:1px solid var(--outline-border);border-radius:8px;overflow:hidden;background:var(--bg-paper)}
+.fld input{height:34px;border:0;background:transparent;color:var(--text-primary);font-family:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:center;padding:0;outline:0}
+.sfx{height:100%;display:flex;align-items:center;padding:0 8px;border-right:1px solid var(--divider);font-size:11px;color:var(--text-secondary);white-space:nowrap}
+.tab{height:40px;padding:0 14px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--text-secondary);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.tab.on{border-bottom-color:var(--primary-main);color:var(--primary-text);font-weight:700}
+.kv{height:36px;display:flex;align-items:center;gap:12px;font-size:13px;border-bottom:1px dashed var(--divider)}
+.kv .k{color:var(--text-secondary);white-space:nowrap}
+.kv .v{margin-right:auto;font-weight:500;white-space:nowrap}
+.chip{height:28px;min-width:40px;padding:0 10px;border-radius:8px;border:1px solid var(--outline-border);background:transparent;color:var(--text-secondary);font-family:inherit;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;white-space:nowrap}
+.chip.on{border-color:var(--primary-main);background:var(--soft-primary);color:var(--primary-text)}
+.th{display:grid;align-items:center;padding:0 16px;background:var(--table-head);color:var(--grey-600);font-size:12px;font-weight:700;flex:none}
+.tr{display:grid;align-items:center;padding:0 16px;border-bottom:1px dashed var(--divider);font-size:13px;flex:none;color:inherit;text-decoration:none}
+.lkbar{height:6px;border-radius:6px;display:flex;overflow:hidden;background:rgb(var(--grey-500-rgb) / .16);gap:2px}
+.lkbar>.f{background:var(--primary-main);border-radius:6px}
+.lkbar>.l{border-radius:6px;background:repeating-linear-gradient(135deg,rgb(var(--grey-500-rgb) / .55) 0 3px,rgb(var(--grey-500-rgb) / .22) 3px 6px)}
+.lkleg{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.lkleg b{font-weight:500;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.lkdot{width:8px;height:8px;border-radius:50%;background:var(--primary-main);display:inline-block;margin-left:4px}
+.lktype{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.lkstep{width:18px;height:6px;border-radius:3px;box-sizing:border-box;flex:none;display:inline-block}
+.th-light,.th-dark{--soft-secondary:rgb(var(--secondary-main-rgb) / .16)}
+.th-light{--secondary-text:var(--secondary-dark)}
+.th-dark{--secondary-text:var(--secondary-light)}
+</style>
+</helmet>
+<div dir="rtl" class="{{themeCls}}" style="width: 1280px; height: 800px; overflow: hidden; position: relative; background: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); font-family: 'IRANSansX', Tahoma, sans-serif; display: flex; flex-direction: row">
+
+  <!-- Vertical nav (right, RTL) -->
+  <aside class="glass" style="width: 300px; flex: none; box-sizing: border-box; border: 0; border-left: 1px solid var(--divider); box-shadow: none; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 0 4px; height: 40px">
+      <span style="width: 40px; height: 40px; border-radius: 10px; background: var(--brand-gradient); display: grid; place-items: center; color: #FFFFFF; flex: none"><svg viewBox="0 0 64 40" width="26" height="16" aria-hidden="true"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg></span>
+      <span style="display: flex; flex-direction: column; line-height: 1.1; gap: 2px"><span class="wm" style="font-size: 22px; font-weight: 700">نمادنو</span><span style="font-size: 11px; font-weight: 600; color: var(--text-secondary)">پنل بهره‌بردار</span></span>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <span style="display: block; height: 24px; line-height: 24px; padding: 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--grey-500)">عملیات</span>
+      <sc-for list="{{navOps}}" as="n" hint-placeholder-count="4">
+        <sc-if value="{{n.hasHref}}" hint-placeholder-val="{{ true }}">
+          <a href="{{n.href}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 8px; background: {{n.bg}}; color: var({{n.c}}); font-size: 14px; font-weight: {{n.w}}; text-decoration: none">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+            <sc-if value="{{n.badge}}" hint-placeholder-val="{{ true }}">
+              <span class="lbl" style="height: 22px; padding: 0 7px; background: var(--error-main); color: var(--error-contrast)">{{n.badge}}</span>
+            </sc-if>
+          </a>
+        </sc-if>
+        <sc-if value="{{n.noHref}}" hint-placeholder-val="{{ false }}">
+          <button style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 0; background: {{n.bg}}; color: var({{n.c}}); font-family: inherit; font-size: 14px; font-weight: {{n.w}}; cursor: pointer; text-align: right">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+            <sc-if value="{{n.badge}}" hint-placeholder-val="{{ true }}">
+              <span class="lbl" style="height: 22px; padding: 0 7px; background: var(--error-main); color: var(--error-contrast)">{{n.badge}}</span>
+            </sc-if>
+          </button>
+        </sc-if>
+      </sc-for>
+    </nav>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <span style="display: block; height: 24px; line-height: 24px; padding: 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--grey-500)">محصول</span>
+      <sc-for list="{{navProduct}}" as="n" hint-placeholder-count="3">
+        <sc-if value="{{n.hasHref}}" hint-placeholder-val="{{ true }}">
+          <a href="{{n.href}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 8px; background: {{n.bg}}; color: var({{n.c}}); font-size: 14px; font-weight: {{n.w}}; text-decoration: none">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+          </a>
+        </sc-if>
+        <sc-if value="{{n.noHref}}" hint-placeholder-val="{{ false }}">
+          <button style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 0; background: {{n.bg}}; color: var({{n.c}}); font-family: inherit; font-size: 14px; font-weight: {{n.w}}; cursor: pointer; text-align: right">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+          </button>
+        </sc-if>
+      </sc-for>
+    </nav>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <span style="display: block; height: 24px; line-height: 24px; padding: 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--grey-500)">سیستم</span>
+      <sc-for list="{{navSystem}}" as="n" hint-placeholder-count="3">
+        <sc-if value="{{n.hasHref}}" hint-placeholder-val="{{ true }}">
+          <a href="{{n.href}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 8px; background: {{n.bg}}; color: var({{n.c}}); font-size: 14px; font-weight: {{n.w}}; text-decoration: none">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+          </a>
+        </sc-if>
+        <sc-if value="{{n.noHref}}" hint-placeholder-val="{{ false }}">
+          <button style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 0; background: {{n.bg}}; color: var({{n.c}}); font-family: inherit; font-size: 14px; font-weight: {{n.w}}; cursor: pointer; text-align: right">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+          </button>
+        </sc-if>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--bg-neutral)">
+      <span style="width: 40px; height: 40px; border-radius: 50%; background: var(--soft-primary); color: var(--primary-text); display: grid; place-items: center; font-size: 15px; font-weight: 700; flex: none">ع</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">علی نادری</span><span style="font-size: 12px; color: var(--text-secondary); white-space: nowrap">مدیر محصول</span></span>
+      <a href="op-login.dc.html" title="خروج از حساب" style="display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 8px; border-radius: 8px; color: var(--text-secondary); font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; flex: none"><svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="M9 4H5v16h4M14 16l4-4-4-4M18 12H9"></path></svg>خروج</a>
+    </div>
+  </aside>
+
+  <!-- Main column -->
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+
+    <!-- Header 72 glass -->
+    <header class="glass" style="height: 72px; flex: none; box-sizing: border-box; border: 0; border-bottom: 1px solid var(--glass-edge); box-shadow: var(--glass-highlight); padding: 0 24px; display: flex; align-items: center; gap: 8px">
+      <button class="ibtn" aria-label="جمع کردن منو"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+      <button style="display: flex; align-items: center; gap: 10px; height: 40px; width: 280px; padding: 0 14px 0 6px; border-radius: 999px; border: 0; background: var(--action-hover); color: var(--text-secondary); font-family: inherit; font-size: 14px; cursor: pointer; text-align: right">
+        <svg class="ico" width="20" height="20" viewBox="0 0 24 24"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"></path></svg>
+        <span style="flex: 1">جستجوی سازمان، کاربر، تراکنش…</span>
+        <span class="lbl" dir="ltr" style="height: 22px; padding: 0 6px; border-radius: 6px; background: var(--bg-paper); color: var(--text-secondary); font-size: 11px; box-shadow: 0 0 0 1px var(--divider)">⌘K</span>
+      </button>
+
+      <div style="margin-right: auto; display: flex; align-items: center; gap: 8px">
+        <span class="lbl" dir="ltr" style="gap: 6px; background: var(--soft-success); color: var(--success-text)"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--success-main)"></span>Production</span>
+        <button class="ibtn" aria-label="تغییر تم" onClick="{{toggleTheme}}" style="background: var(--glass-bg); box-shadow: 0 0 0 1px var(--glass-edge)"><sc-if value="{{isDark}}" hint-placeholder-val="{{ false }}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"></path></svg></sc-if><sc-if value="{{isLight}}" hint-placeholder-val="{{ true }}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7"></path></svg></sc-if></button>
+        <a href="op-requests.dc.html" class="ibtn" aria-label="اعلان‌ها" style="position: relative"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4"></path></svg><span style="position: absolute; top: 5px; left: 5px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--error-main); color: #FFFFFF; font-size: 11px; font-weight: 700; display: grid; place-items: center; line-height: 1">۳</span></a>
+        <a href="op-settings.dc.html" aria-label="حساب کاربری" style="width: 40px; height: 40px; border-radius: 50%; padding: 2px; box-sizing: border-box; display: grid; place-items: center; text-decoration: none"><span style="display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--soft-primary); color: var(--primary-text); font-size: 14px; font-weight: 700; box-shadow: 0 0 0 2px var(--bg-paper)">ع</span></a>
+      </div>
+    </header>
+
+    <main style="flex: 1; min-height: 0; box-sizing: border-box; padding: 24px 24px 0; display: flex; flex-direction: column; gap: 20px; overflow: hidden">
+
+      <!-- Page heading -->
+      <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 12px">
+        <a href="op-users.dc.html" class="ibtn" aria-label="بازگشت به کاربران" style="background: var(--card-bg); box-shadow: 0 0 0 1px var(--glass-edge); color: var(--text-primary)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"></path></svg></a>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <h4 style="margin: 0; font-size: 20px; line-height: 1.3; font-weight: 700">سارا محمدی</h4>
+            <span class="lbl" style="gap: 5px; background: var(--soft-success); color: var(--success-text)"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" style="stroke-width: 2.4"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9.5C7.4 20.3 4 16.5 4 12V6zM9 12l2 2 4-4"></path></svg>KYC تأیید · سطح ۲</span>
+            <span class="lbl" style="background: var(--soft-primary); color: var(--primary-text)">امتیاز ۷۴۲ · عالی</span>
+            <span class="lbl" style="gap: 5px; background: {{acct.bg}}; color: {{acct.fg}}"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor"></span>{{acct.label}}</span>
+            <sc-if value="{{legalOn}}" hint-placeholder-val="{{ false }}"><span class="lbl" style="gap: 4px; background: var(--soft-error); color: var(--error-text)"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" style="stroke-width: 2"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2"></path></svg>مسدودی قانونی</span></sc-if>
+          </div>
+          <nav style="display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.3">
+            <a href="op-overview.dc.html" style="color: var(--text-primary)">بهره‌بردار</a>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-disabled)"></span>
+            <a href="op-users.dc.html" style="color: var(--text-primary)">کاربران</a>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-disabled)"></span>
+            <span style="color: var(--text-disabled)">سارا محمدی</span>
+          </nav>
+        </div>
+        <div style="margin-right: auto; display: flex; align-items: center; gap: 8px">
+          <button class="btno" onClick="{{openNote}}"><svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16zM13 7l4 4"></path></svg>یادداشت<sc-if value="{{hasNotes}}" hint-placeholder-val="{{ true }}"><span class="lbl" style="height: 18px; padding: 0 5px; font-size: 10px; background: var(--soft-primary); color: var(--primary-text)">{{noteCount}}</span></sc-if></button>
+          <sc-if value="{{acct.active}}" hint-placeholder-val="{{ true }}"><button class="btno" onClick="{{block}}" style="border-color: var(--error-main); color: var(--error-text)"><svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M5.5 5.5l13 13"></path></svg>مسدودسازی موقت</button></sc-if>
+          <sc-if value="{{acct.blocked}}" hint-placeholder-val="{{ false }}"><button class="btnp" onClick="{{unblock}}" style="background: var(--success-main); color: var(--success-contrast)"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" style="stroke-width: 2.2"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>رفع مسدودی</button></sc-if>
+        </div>
+      </div>
+
+      <!-- Profile card -->
+      <div class="card" style="height: 92px; flex: none; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; gap: 20px">
+        <span style="width: 56px; height: 56px; border-radius: 50%; background: var(--soft-primary); color: var(--primary-text); display: grid; place-items: center; font-size: 22px; font-weight: 800; flex: none">س</span>
+        <div style="display: flex; flex-direction: column; gap: 4px; line-height: 1.3; width: 230px; min-width: 0">
+          <span style="font-size: 15px; font-weight: 700; white-space: nowrap">سارا محمدی</span>
+          <a href="op-organization.dc.html" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); font-weight: 500; white-space: nowrap"><span style="width: 20px; height: 20px; border-radius: 6px; background: var(--soft-primary); color: var(--primary-text); display: grid; place-items: center; font-size: 10px; font-weight: 700">آ</span>هلدینگ آرمان · کد پرسنلی <span class="num" dir="ltr">۱۰۲۴</span><svg class="ico" width="14" height="14" viewBox="0 0 24 24" style="color: var(--text-secondary)"><path d="M14 6l-6 6 6 6"></path></svg></a>
+          <span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap">واحد محصول · عضو از <span class="num" dir="ltr">۱۴۰۴/۰۲/۱۰</span></span>
+        </div>
+        <span style="width: 1px; height: 52px; background: var(--divider); flex: none"></span>
+        <div style="display: grid; grid-template-columns: repeat(4, auto); gap: 6px 28px; font-size: 12px; line-height: 1.3; flex: 1">
+          <span style="color: var(--text-secondary)">موبایل</span><span style="color: var(--text-secondary)">کد ملی</span><span style="color: var(--text-secondary)">آخرین ورود</span><span style="color: var(--text-secondary)">دستگاه‌ها</span>
+          <span class="num" dir="ltr" style="font-size: 13px; font-weight: 500; text-align: right">۰۹۱۲ ۴۵۶ ۷۸۹۰</span><span class="num" dir="ltr" style="font-size: 13px; font-weight: 500; text-align: right">۰۰۸•••••۴۲</span><span style="font-size: 13px; font-weight: 500">امروز ۰۹:۱۲ · تهران</span><span style="font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px">۲ فعال<span class="lbl" style="height: 18px; padding: 0 5px; font-size: 10px; background: var(--soft-warning); color: var(--warning-text)">دستگاه جدید</span></span>
+        </div>
+      </div>
+
+      <!-- KPI tiles -->
+      <div style="height: 88px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+        <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+          <div class="card" style="box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 12px">
+            <span style="width: 40px; height: 40px; border-radius: 10px; background: {{k.bg}}; color: {{k.fg}}; display: grid; place-items: center; flex: none"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="{{k.d}}"></path></svg></span>
+            <span style="display: flex; flex-direction: column; line-height: 1.2; gap: 3px; min-width: 0">
+              <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600; white-space: nowrap">{{k.title}}</span>
+              <span style="display: flex; align-items: baseline; gap: 4px; white-space: nowrap"><span class="num" style="font-size: 22px">{{k.value}}</span><span style="font-size: 11px; color: var(--text-secondary)">{{k.unit}}</span></span>
+              <span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{k.note}}</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- Tabs + side -->
+      <div style="flex: 1; min-height: 0; display: flex; gap: 20px">
+        <div class="card" style="flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; border-bottom-left-radius: 0; border-bottom-right-radius: 0">
+          <div style="height: 44px; flex: none; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--divider)">
+            <sc-for list="{{tabs}}" as="t" hint-placeholder-count="6"><button class="tab {{t.cls}}" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}<sc-if value="{{t.count}}" hint-placeholder-val="{{ true }}"><span class="lbl" style="height: 18px; padding: 0 5px; font-size: 10px; background: {{t.cbg}}; color: {{t.cfg}}">{{t.count}}</span></sc-if></button></sc-for>
+            <sc-if value="{{isLocks}}" hint-placeholder-val="{{ false }}"><button class="btno" onClick="{{openLegal}}" style="margin-right: auto; height: 32px; margin-left: 4px; border-color: var(--error-main); color: var(--error-text)"><svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2"></path></svg>اعمال مسدودی قانونی</button></sc-if>
+          </div>
+
+          <!-- TAB: دارایی -->
+          <sc-if value="{{isAssets}}" hint-placeholder-val="{{ true }}">
+          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+            <div class="th" style="height: 36px; grid-template-columns: minmax(0, 1fr) 104px 104px 104px 92px"><span>دارایی</span><span>کل</span><span>آزاد</span><span>قفل</span><span>آزاد / قفل</span></div>
+            <sc-for list="{{holdings}}" as="w" hint-placeholder-count="6">
+              <div class="tr" style="height: 40px; grid-template-columns: minmax(0, 1fr) 104px 104px 104px 92px">
+                <span style="display: flex; align-items: center; gap: 10px; min-width: 0"><span style="width: 30px; height: 30px; border-radius: 8px; background: {{w.bg}}; color: {{w.fg}}; display: grid; place-items: center; flex: none"><svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="{{w.d}}"></path></svg></span><span style="display: flex; flex-direction: column; line-height: 1.25; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{w.name}}</span><span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{w.sub}}</span></span></span>
+                <span class="num" style="font-weight: 500">{{w.total}}</span>
+                <span class="num" style="color: var({{w.freeC}})">{{w.free}}</span>
+                <span class="num" style="display: inline-flex; align-items: center; gap: 4px; color: var({{w.lockC}})"><sc-if value="{{w.hasLock}}" hint-placeholder-val="{{ true }}"><svg class="ico" width="12" height="12" viewBox="0 0 24 24"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2"></path></svg></sc-if>{{w.locked}}</span>
+                <span style="display: flex; flex-direction: column; gap: 4px"><span class="lkbar" role="img" aria-label="آزاد {{w.free}} · قفل {{w.locked}}"><sc-if value="{{w.hasFree}}" hint-placeholder-val="{{ true }}"><span class="f" style="width: {{w.freePct}}%"></span></sc-if><sc-if value="{{w.hasLock}}" hint-placeholder-val="{{ true }}"><span class="l" style="flex: 1"></span></sc-if></span><span style="font-size: 10px; color: var(--text-secondary); white-space: nowrap">{{w.chips}}</span></span>
+              </div>
+            </sc-for>
+            <div class="tr" style="height: 40px; grid-template-columns: minmax(0, 1fr) 104px 104px 104px 92px; border-bottom: 0; background: var(--table-head)">
+              <span style="font-weight: 700">جمع دارایی</span>
+              <span class="num" style="font-weight: 700">{{sum.total}}</span>
+              <span class="num" style="font-weight: 600">{{sum.free}}</span>
+              <span class="num" style="font-weight: 600">{{sum.locked}}</span>
+              <span class="num" style="font-size: 12px; color: var(--text-secondary)">{{sum.freePctFa}} آزاد</span>
+            </div>
+            <div style="box-sizing: border-box; padding: 10px 16px 0; display: flex; flex-direction: column; gap: 4px">
+              <div class="lkbar" role="img" aria-label="آزاد {{sum.free}} · قفل {{sum.locked}}"><span class="f" style="width: {{sum.freePct}}%"></span><span class="l" style="flex: 1"></span></div>
+              <div class="lkleg"><span><span class="lkdot"></span>آزاد <b>{{sum.free}}</b></span><span style="display: inline-flex; align-items: center; gap: 4px"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2"></path></svg>قفل <b>{{sum.locked}}</b></span><button class="btnt" onClick="{{goLocks}}" style="margin-right: auto; height: 28px; padding: 0 8px; font-size: 12px">{{lockLinkLabel}}<svg class="ico" width="14" height="14" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"></path></svg></button></div>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- TAB: قفل‌ها -->
+          <sc-if value="{{isLocks}}" hint-placeholder-val="{{ false }}">
+          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+            <div class="th" style="height: 36px; column-gap: 12px; grid-template-columns: 96px 116px 100px 100px minmax(0, 1fr) 76px 96px"><span>نوع</span><span>دارایی</span><span>مبلغ قفل</span><span>ایجادکننده</span><span>شرط آزادسازی</span><span>تاریخ</span><span></span></div>
+            <div style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column">
+            <sc-for list="{{lockRows}}" as="r" hint-placeholder-count="6">
+              <div class="tr" style="min-height: 46px; padding-top: 5px; padding-bottom: 5px; box-sizing: border-box; column-gap: 12px; grid-template-columns: 96px 116px 100px 100px minmax(0, 1fr) 76px 96px; background: {{r.rowBg}}">
+                <span><span class="lktype" style="background: {{r.t.bg}}; color: {{r.t.fg}}"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" style="stroke-width: 2"><path d="{{r.t.d}}"></path></svg>{{r.t.short}}</span></span>
+                <span style="display: flex; flex-direction: column; line-height: 1.3; min-width: 0"><span style="font-weight: 600; white-space: nowrap">{{r.holding}}</span><span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap">{{r.units}}</span></span>
+                <span class="num" style="font-weight: 500">{{r.amount}}</span>
+                <span style="display: flex; flex-direction: column; line-height: 1.3; font-size: 12px; min-width: 0"><span style="font-weight: 600; white-space: nowrap">{{r.by}}</span><span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap">{{r.byRole}}</span></span>
+                <span style="display: flex; flex-direction: column; gap: 4px; line-height: 1.35; min-width: 0">
+                  <span style="font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.title}}</span>
+                  <span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.cond}}</span>
+                  <sc-if value="{{r.isMs}}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 8px"><span style="display: inline-flex; gap: 3px"><sc-for list="{{r.steps}}" as="p" hint-placeholder-count="5"><span class="lkstep" style="background: {{p.bg}}; box-shadow: {{p.bd}}"></span></sc-for></span><span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap">{{r.msNote}}</span></span></sc-if>
+                </span>
+                <span class="num" style="font-size: 12px; color: var(--text-secondary)">{{r.date}}</span>
+                <span style="display: flex; justify-content: flex-end"><sc-if value="{{r.isLegal}}" hint-placeholder-val="{{ false }}"><button class="btno" onClick="{{removeLegal}}" style="height: 30px; padding: 0 10px; font-size: 12px">رفع مسدودی</button></sc-if><sc-if value="{{r.isMs}}" hint-placeholder-val="{{ false }}"><a href="op-organization.dc.html" class="lbl" style="height: 22px; padding: 0 7px; font-size: 11px; background: var(--soft-default); color: var(--default-text)">قرارداد سازمان</a></sc-if><sc-if value="{{r.isLoan}}" hint-placeholder-val="{{ false }}"><button class="lbl" onClick="{{goCredit}}" style="height: 22px; padding: 0 7px; font-size: 11px; border: 0; cursor: pointer; font-family: inherit; background: var(--soft-default); color: var(--default-text)">تسهیلات</button></sc-if></span>
+              </div>
+            </sc-for>
+            </div>
+            <div style="height: 44px; flex: none; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 16px; border-top: 1px solid var(--divider); font-size: 12px; color: var(--text-secondary)">
+              <span style="white-space: nowrap; font-weight: 600; color: var(--text-primary)">{{lockCountLabel}}</span>
+              <sc-for list="{{lockByType}}" as="b" hint-placeholder-count="4"><span style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap"><span style="width: 8px; height: 8px; border-radius: 2px; background: var({{b.col}})"></span>{{b.short}} <b class="num" style="font-weight: 500; color: var(--text-primary)">{{b.amount}}</b></span></sc-for>
+              <span style="margin-right: auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">آزادسازی فقط با تحقق شرط یا دستور مرجع</span>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- TAB: تراکنش‌ها -->
+          <sc-if value="{{isTx}}" hint-placeholder-val="{{ false }}">
+          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+            <div class="th" style="height: 36px; grid-template-columns: minmax(0, 1fr) 100px 120px 110px 90px"><span>تراکنش</span><span>نوع</span><span>مبلغ</span><span>تاریخ</span><span>وضعیت</span></div>
+            <sc-for list="{{txns}}" as="x" hint-placeholder-count="6">
+              <div class="tr" style="height: 42px; grid-template-columns: minmax(0, 1fr) 100px 120px 110px 90px">
+                <span style="display: flex; flex-direction: column; line-height: 1.25; min-width: 0"><span style="font-weight: 600; white-space: nowrap">{{x.title}}</span><span class="num" dir="ltr" style="font-size: 11px; color: var(--text-secondary); text-align: right">{{x.code}}</span></span>
+                <span><span class="lbl" style="height: 20px; padding: 0 6px; font-size: 11px; background: {{x.tbg}}; color: {{x.tfg}}">{{x.type}}</span></span>
+                <span class="num" style="font-weight: 500; color: var({{x.ac}})">{{x.amount}}</span>
+                <span class="num" dir="ltr" style="font-size: 12px; color: var(--text-secondary); text-align: right">{{x.date}}</span>
+                <span><span class="lbl" style="height: 20px; padding: 0 6px; font-size: 11px; background: {{x.sbg}}; color: {{x.sfg}}">{{x.status}}</span></span>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+
+          <!-- TAB: تسهیلات -->
+          <sc-if value="{{isCredit}}" hint-placeholder-val="{{ false }}">
+          <div style="flex: 1; min-height: 0; box-sizing: border-box; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-content: start">
+            <sc-for list="{{facilities}}" as="c" hint-placeholder-count="2">
+              <div style="box-sizing: border-box; padding: 14px 16px; border-radius: 12px; background: var(--bg-neutral); display: flex; flex-direction: column; gap: 10px">
+                <div style="display: flex; align-items: center; gap: 8px"><span class="lbl" style="background: {{c.tbg}}; color: {{c.tfg}}">{{c.type}}</span><span style="font-size: 13px; font-weight: 700">{{c.title}}</span><span class="lbl" style="margin-right: auto; height: 20px; padding: 0 6px; font-size: 11px; background: {{c.sbg}}; color: {{c.sfg}}">{{c.status}}</span></div>
+                <div style="display: flex; align-items: baseline; gap: 6px"><span class="num" style="font-size: 22px">{{c.amount}}</span><span style="font-size: 11px; color: var(--text-secondary)">{{c.unit}}</span></div>
+                <div style="height: 6px; border-radius: 3px; background: var(--progress-track); overflow: hidden; display: flex"><span style="width: {{c.pct}}%; background: var({{c.col}})"></span></div>
+                <sc-for list="{{c.rows}}" as="r" hint-placeholder-count="3"><div style="height: 26px; display: flex; align-items: center; gap: 8px; font-size: 12px"><span style="color: var(--text-secondary)">{{r.k}}</span><span class="num" style="margin-right: auto; font-weight: 500">{{r.v}}</span></div></sc-for>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+
+          <!-- TAB: ریسک -->
+          <sc-if value="{{isRisk}}" hint-placeholder-val="{{ false }}">
+          <div style="flex: 1; min-height: 0; box-sizing: border-box; padding: 16px; display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-content: start">
+            <div style="box-sizing: border-box; padding: 16px; border-radius: 12px; background: var(--bg-neutral); display: flex; flex-direction: column; align-items: center; gap: 8px">
+              <span style="font-size: 12px; color: var(--text-secondary)">امتیاز ریسک</span>
+              <svg viewBox="0 0 120 120" width="104" height="104" aria-hidden="true"><circle cx="60" cy="60" r="48" fill="none" style="stroke: var(--chart-grid)" stroke-width="10"></circle><circle cx="60" cy="60" r="48" fill="none" style="stroke: var(--success-main)" stroke-width="10" stroke-linecap="round" stroke-dasharray="84 302" transform="rotate(-90 60 60)"></circle><text x="60" y="58" text-anchor="middle" font-size="26" font-weight="300" style="fill: var(--text-primary); font-family: inherit">۲۸</text><text x="60" y="76" text-anchor="middle" font-size="11" style="fill: var(--text-secondary); font-family: inherit">کم · از ۱۰۰</text></svg>
+              <span style="font-size: 11px; color: var(--text-secondary); text-align: center; line-height: 1.5">آخرین محاسبه امروز ۰۶:۰۰</span>
+            </div>
+            <div style="display: flex; flex-direction: column">
+              <span class="sec">نشانه‌ها و هشدارها</span>
+              <sc-for list="{{riskFlags}}" as="f" hint-placeholder-count="4">
+                <div style="height: 44px; display: flex; align-items: center; gap: 10px; font-size: 13px; border-bottom: 1px dashed var(--divider)">
+                  <span style="width: 28px; height: 28px; border-radius: 8px; background: {{f.bg}}; color: {{f.fg}}; display: grid; place-items: center; flex: none"><svg class="ico" width="15" height="15" viewBox="0 0 24 24"><path d="{{f.d}}"></path></svg></span>
+                  <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.25; min-width: 0"><span style="font-weight: 600; white-space: nowrap">{{f.title}}</span><span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.sub}}</span></span>
+                  <span class="num" style="font-size: 11px; color: var(--text-secondary)">{{f.when}}</span>
+                  <span class="lbl" style="height: 20px; padding: 0 6px; font-size: 11px; background: {{f.bg}}; color: {{f.fg}}">{{f.level}}</span>
+                </div>
+              </sc-for>
+              <a href="op-risk.dc.html" style="height: 36px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600">همهٔ رویدادها در ریسک و تقلب<svg class="ico" width="14" height="14" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"></path></svg></a>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- TAB: لاگ -->
+          <sc-if value="{{isLog}}" hint-placeholder-val="{{ false }}">
+          <div style="flex: 1; min-height: 0; box-sizing: border-box; padding: 8px 16px 0; display: flex; flex-direction: column; overflow: hidden">
+            <sc-for list="{{logs}}" as="l" hint-placeholder-count="6">
+              <div style="height: 44px; display: flex; align-items: center; gap: 12px; font-size: 13px; border-bottom: 1px dashed var(--divider)">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var({{l.dot}}); flex: none"></span>
+                <span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{l.text}}</span>
+                <span style="font-size: 12px; color: var(--text-secondary); white-space: nowrap">{{l.by}}</span>
+                <span class="num" dir="ltr" style="font-size: 12px; color: var(--text-secondary); width: 120px; text-align: right">{{l.at}}</span>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+        </div>
+
+        <!-- Side: allocation -->
+        <sc-if value="{{showSide}}" hint-placeholder-val="{{ true }}">
+        <div class="card" style="width: 300px; flex: none; box-sizing: border-box; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px">
+          <div style="height: 24px; display: flex; align-items: center; gap: 8px">
+            <h6 style="margin: 0; font-size: 15px; font-weight: 700; line-height: 1.2">ترکیب دارایی</h6>
+            <span class="lbl" style="margin-right: auto; height: 20px; padding: 0 6px; background: var(--soft-warning); color: var(--warning-text)">قفل {{sum.lockedPctFa}}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px">
+            <svg viewBox="0 0 120 120" width="112" height="112" aria-hidden="true" style="flex: none">
+              <circle cx="60" cy="60" r="48" fill="none" style="stroke: var(--chart-grid)" stroke-width="12"></circle>
+              <sc-for list="{{alloc}}" as="m" hint-placeholder-count="3"><circle cx="60" cy="60" r="48" fill="none" style="stroke: var({{m.col}})" stroke-width="12" stroke-dasharray="{{m.dash}}" stroke-dashoffset="{{m.off}}" transform="rotate(-90 60 60)"></circle></sc-for>
+              <text x="60" y="58" text-anchor="middle" font-size="18" font-weight="300" style="fill: var(--text-primary); font-family: inherit">۲۰۲٫۵</text>
+              <text x="60" y="74" text-anchor="middle" font-size="10" style="fill: var(--text-secondary); font-family: inherit">میلیون تومان</text>
+            </svg>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+              <sc-for list="{{alloc}}" as="m" hint-placeholder-count="4"><div style="height: 26px; display: flex; align-items: center; gap: 8px; font-size: 12px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var({{m.col}}); flex: none"></span><span style="flex: 1; color: var(--text-secondary); white-space: nowrap">{{m.name}}</span><span class="num" style="font-weight: 500">{{m.pct}}</span></div></sc-for>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; border-top: 1px dashed var(--divider); padding-top: 6px">
+            <span class="sec">اعتبار</span>
+            <div class="kv" style="height: 32px; font-size: 12px"><span class="k">امتیاز اعتباری</span><span class="v num" style="font-size: 12px; color: var(--success-text)">۷۴۲ · عالی</span></div>
+            <div class="kv" style="height: 32px; font-size: 12px"><span class="k">سقف قرارداد سازمان</span><span class="v num" style="font-size: 12px">وام ۴۰٪ · کارت ۲۵٪</span></div>
+            <div class="kv" style="height: 32px; font-size: 12px; border-bottom: 0"><span class="k">ظرفیت وام (از دارایی آزاد)</span><span class="v num" style="font-size: 12px">۴۴٬۵۶۰٬۰۰۰</span></div>
+          </div>
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 4px">
+            <span class="sec">یادداشت‌های بهره‌بردار</span>
+            <sc-for list="{{notes}}" as="n" hint-placeholder-count="1">
+              <div style="box-sizing: border-box; padding: 8px 10px; border-radius: 8px; background: var(--bg-neutral); font-size: 12px; line-height: 1.5; display: flex; flex-direction: column; gap: 2px"><span>{{n.text}}</span><span style="font-size: 11px; color: var(--text-secondary)">{{n.meta}}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+    </main>
+
+  </div>
+
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+    <div class="glass" style="position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); height: 48px; padding: 0 16px 0 20px; border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--text-primary); z-index: 20">
+      <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--soft-success); color: var(--success-text); display: grid; place-items: center; flex: none"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" style="stroke-width: 2.4"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+  <sc-if value="{{isNote}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(20,24,38,.48); display: grid; place-items: center; z-index: 30">
+      <div class="glass" style="width: 480px; box-sizing: border-box; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow-z24)">
+        <div style="height: 32px; display: flex; align-items: center; gap: 10px">
+          <h6 style="margin: 0; font-size: 16px; font-weight: 700; line-height: 1.2">یادداشت داخلی — سارا محمدی</h6>
+          <button class="ibtn" aria-label="بستن" onClick="{{closeModal}}" style="margin-right: auto; width: 32px; height: 32px"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px; line-height: 1.6">
+          <label for="note-text" style="display: flex; flex-direction: column; gap: 6px"><span class="fl">متن یادداشت (فقط برای تیم بهره‌بردار)</span><input id="note-text" class="fi" value="پیگیری ورود از دستگاه جدید — تماس تأیید شد"></label>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span class="fl">برچسب</span>
+            <sc-for list="{{noteTags}}" as="g" hint-placeholder-count="3"><button class="chip {{g.cls}}" aria-pressed="{{g.on}}" onClick="{{g.pick}}">{{g.label}}</button></sc-for>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-start">
+          <button class="btnp" onClick="{{saveNote}}">ثبت یادداشت</button>
+          <button class="btno" onClick="{{closeModal}}">انصراف</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isLegalModal}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(20,24,38,.48); display: grid; place-items: center; z-index: 30">
+      <div class="glass" style="width: 540px; box-sizing: border-box; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow-z24)">
+        <div style="height: 32px; display: flex; align-items: center; gap: 10px">
+          <span style="width: 32px; height: 32px; border-radius: 8px; background: var(--soft-error); color: var(--error-text); display: grid; place-items: center; flex: none"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2"></path></svg></span>
+          <h6 style="margin: 0; font-size: 16px; font-weight: 700; line-height: 1.2">اعمال مسدودی قانونی — سارا محمدی</h6>
+          <button class="ibtn" aria-label="بستن" onClick="{{closeModal}}" style="margin-right: auto; width: 32px; height: 32px"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span class="fl">دارایی</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{lhHoldings}}" as="h" hint-placeholder-count="5"><button class="chip {{h.cls}}" aria-pressed="{{h.on}}" onClick="{{h.pick}}">{{h.label}}</button></sc-for></div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; background: var(--bg-neutral)">
+            <div class="lkbar" role="img" aria-label="آزاد {{lh.free}} · قفل {{lh.locked}}"><sc-if value="{{lh.hasFree}}" hint-placeholder-val="{{ true }}"><span class="f" style="width: {{lh.freePct}}%"></span></sc-if><sc-if value="{{lh.hasLock}}" hint-placeholder-val="{{ true }}"><span class="l" style="flex: 1"></span></sc-if></div>
+            <div class="lkleg"><span><span class="lkdot"></span>آزاد <b>{{lh.free}}</b></span><span style="display: inline-flex; align-items: center; gap: 4px"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2"></path></svg>قفل <b>{{lh.locked}}</b></span><span style="margin-right: auto">کل <b>{{lh.total}}</b></span></div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <label for="lh-amount" class="fg"><span class="fl">مبلغ مسدودی (تومان)</span><input id="lh-amount" class="fi" value="۱۰٬۰۰۰٬۰۰۰"><span style="font-size: 11px; color: var(--text-secondary)">حداکثر: کل بخش آزاد · {{lh.free}}</span></label>
+          <label for="lh-ref" class="fg"><span class="fl">شماره مرجع / دستور (الزامی)</span><input id="lh-ref" class="fi" value="۱۴۰۵۰۰۹۸۴۵۲۱"><span style="font-size: 11px; color: var(--text-secondary)">بدون شماره مرجع قابل ثبت نیست</span></label>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span class="fl">دلیل</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{lhReasons}}" as="g" hint-placeholder-count="3"><button class="chip {{g.cls}}" aria-pressed="{{g.on}}" onClick="{{g.pick}}">{{g.label}}</button></sc-for></div>
+        </div>
+        <div style="display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--soft-error); color: var(--error-text); font-size: 12px; line-height: 1.6">
+          <svg class="ico" width="16" height="16" viewBox="0 0 24 24" style="margin-top: 2px"><path d="M12 3l9 16H3zM12 10v4M12 17.5h.01"></path></svg>
+          <span>مبلغ از بخش آزاد «{{lh.name}}» کسر و قفل می‌شود؛ تا رفع دستور مرجع قابل فروش یا برداشت نیست. کاربر اعلان «مسدودی قانونی» می‌بیند.</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-start">
+          <button class="btnd" onClick="{{applyLegal}}">اعمال مسدودی</button>
+          <button class="btno" onClick="{{closeModal}}">انصراف</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  componentDidMount() { try { if (localStorage.getItem('nm-theme-dark') === '1' && !(this.state && this.state.dark)) this.setState({ dark: true }); } catch (e) {} }
+  componentDidUpdate(pp, ps) { try { const d = !!(this.state && this.state.dark); if (!!(ps && ps.dark) !== d) localStorage.setItem('nm-theme-dark', d ? '1' : '0'); } catch (e) {} }
+
+  renderVals() {
+    var ICON = {
+      dashboard: 'M4 4h7v7H4zM13 4h7v4h-7zM13 11h7v9h-7zM4 14h7v6H4z',
+      building: 'M5 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17M15 9h3a1 1 0 0 1 1 1v11M3 21h18M9 7h2M9 11h2M9 15h2',
+      users: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M15 4.2a3.5 3.5 0 0 1 0 6.6',
+      inbox: 'M3 13l2.5-7h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 13h5l1.5 2.5h5L16 13h5',
+      funds: 'M12 8c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+      card: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18M7 15h4',
+      rules: 'M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1M15 5v4M9 10v4M17 15v4',
+      risk: 'M12 3l8 3v6c0 4.5-3.4 8.3-8 9.5C7.4 20.3 4 16.5 4 12V6zM12 9v4M12 16.5h.01',
+      reports: 'M4 20h16M7 16V10M12 16V5M17 16v-3',
+      settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1',
+      check: 'M5 12.5l4.5 4.5L19 7',
+      pen: 'M4 20h4l10-10-4-4L4 16zM13 7l4 4',
+      pause: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M10 9v6M14 9v6',
+      percent: 'M19 5L5 19M7.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M16.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3',
+      bag: 'M6 8h12l1 13H5zM9 8V6a3 3 0 0 1 6 0v2',
+      gold: 'M4 17l2-6h5l1 6zM12 17l1-6h5l2 6zM8 11l2-6h4l2 6',
+      bond: 'M4 19l5-6 4 3 7-9M4 5v14h16',
+      energy: 'M13 3L5 14h6l-1 7 8-11h-6z',
+      user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 20v-1a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v1',
+      id: 'M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8 13a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M4.5 18c.6-1.8 2-3 3.5-3s2.9 1.2 3.5 3M14 9h5M14 13h5',
+      wallet: 'M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2M16 14h.01',
+      lock: 'M6 11V8a6 6 0 0 1 12 0v3M5 11h14v10H5zM12 15v2',
+      clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3 2',
+      alert: 'M12 3l9 16H3zM12 10v4M12 17.5h.01',
+      download: 'M12 4v11M7 10l5 5 5-5M4 20h16',
+      file: 'M6 3h8l5 5v13H6zM14 3v5h5M9 13h6M9 17h6',
+      plus: 'M12 5v14M5 12h14',
+      x: 'M6 6l12 12M18 6L6 18',
+      dots: 'M12 5.5h.01M12 12h.01M12 18.5h.01',
+      chev: 'M7 10l5 5 5-5',
+      back: 'M10 6l6 6-6 6',
+      search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4',
+      calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+      excel: 'M6 3h8l5 5v13H6zM14 3v5h5M9 12l6 6M15 12l-6 6',
+      key: 'M14 10a4 4 0 1 0-3.9 3.1L4 19v1h3l1-1v-2h2l1-1 .5-.5a4 4 0 0 0 2.5.5M15.5 8.5h.01',
+      shield: 'M12 3l8 3v6c0 4.5-3.4 8.3-8 9.5C7.4 20.3 4 16.5 4 12V6zM9 12l2 2 4-4',
+      mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
+      refresh: 'M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5',
+      trend: 'M4 17l5-6 4 3 7-9M15 5h5v5',
+      flag: 'M5 21V4M5 4h12l-2 4 2 4H5',
+      ban: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M5.5 5.5l13 13',
+      store: 'M4 9l1.5-5h13L20 9M4 9h16v11H4zM4 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 4 0M10 20v-6h4v6',
+      bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4',
+      globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+      code: 'M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14'
+    };
+    function nav(label, icon, active, badge, href) {
+      return {
+        label: label, d: ICON[icon], badge: badge || '',
+        href: href || '', hasHref: !!href, noHref: !href,
+        bg: active ? 'var(--nav-active)' : 'transparent',
+        c: active ? '--primary-text' : '--text-secondary',
+        w: active ? 600 : 500
+      };
+    }
+    function navs(a) {
+      return {
+        navOps: [
+          nav('نمای کلی', 'dashboard', a === 'نمای کلی', '', 'op-overview.dc.html'),
+          nav('سازمان‌ها و قراردادها', 'building', a === 'سازمان‌ها و قراردادها', '', 'op-organizations.dc.html'),
+          nav('کاربران', 'users', a === 'کاربران', '', 'op-users.dc.html'),
+          nav('درخواست‌ها', 'inbox', a === 'درخواست‌ها', '۲۳', 'op-requests.dc.html')
+        ],
+        navProduct: [
+          nav('صندوق‌ها', 'funds', a === 'صندوق‌ها', '', 'op-funds.dc.html'),
+          nav('محصولات اعتباری', 'card', a === 'محصولات اعتباری', '', 'op-products.dc.html'),
+          nav('قوانین و محدودیت‌ها', 'rules', a === 'قوانین و محدودیت‌ها', '', 'op-rules.dc.html')
+        ],
+        navSystem: [
+          nav('ریسک و تقلب', 'risk', a === 'ریسک و تقلب', '', 'op-risk.dc.html'),
+          nav('گزارش‌ها', 'reports', a === 'گزارش‌ها', '', 'op-reports.dc.html'),
+          nav('تنظیمات', 'settings', a === 'تنظیمات', '', 'op-settings.dc.html')
+        ]
+      };
+    }
+    var self = this;
+    var st = this.state || {};
+    function base(active) {
+      var N = navs(active);
+      return {
+        themeCls: st.dark ? 'th-dark' : 'th-light',
+        isDark: !!st.dark, isLight: !st.dark,
+        toggleTheme: function () { self.setState({ dark: !((self.state || {}).dark) }); },
+        navOps: N.navOps, navProduct: N.navProduct, navSystem: N.navSystem,
+        toast: st.toast || '', hasToast: !!st.toast
+      };
+    }
+    function toast(msg) {
+      return function () {
+        self.setState({ toast: msg, modal: '' });
+        setTimeout(function () { self.setState({ toast: '' }); }, 2600);
+      };
+    }
+    function set(obj) { return function () { self.setState(obj); }; }
+    function sw(on) {
+      return { on: on ? 'true' : 'false', swBg: on ? 'var(--primary-main)' : 'var(--grey-400)', knob: on ? '3px' : '19px' };
+    }
+
+    var out = base('کاربران');
+
+    var LKT = {
+      collateral: { key: 'collateral', label: 'وثیقه اعتبار و وام', short: 'وثیقه', bg: 'var(--soft-info)', fg: 'var(--info-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--info-main' },
+      vesting: { key: 'vesting', label: 'قفل زمانی سازمان', short: 'قفل زمانی', bg: 'var(--soft-warning)', fg: 'var(--warning-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--warning-main' },
+      installment: { key: 'installment', label: 'وثیقه خرید اقساطی', short: 'اقساطی', bg: 'var(--soft-secondary)', fg: 'var(--secondary-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--secondary-main' },
+      milestone: { key: 'milestone', label: 'آزادسازی مرحله‌ای', short: 'مرحله‌ای', bg: 'var(--soft-primary)', fg: 'var(--primary-text)', d: 'M5 21V4M5 4h11l-2 4 2 4H5', col: '--primary-main' },
+      legal: { key: 'legal', label: 'مسدودی قانونی', short: 'مسدودی', bg: 'var(--soft-error)', fg: 'var(--error-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--error-main' }
+    };
+    function lkD(s) { return String(s).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.charAt(+d); }); }
+    function lkN(n) { var neg = n < 0; var s = String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '٬'); return (neg ? '−' : '') + lkD(s); }
+    function lkM(n, dec) { var v = n / 1e6; var p = dec == null ? 1 : dec; var s = v.toFixed(p); if (p > 0) s = s.replace(/\.?0+$/, ''); return lkD(s.replace('.', '٫')); }
+    function lkB(n, dec) { var v = n / 1e9; var p = dec == null ? 1 : dec; var s = v.toFixed(p); if (p > 0) s = s.replace(/\.?0+$/, ''); return lkD(s.replace('.', '٫')); }
+    function lkPct(a, b) { return b > 0 ? Math.round(a / b * 1000) / 10 : 0; }
+    function lkSplit(total, locked, fmt) {
+      var f = fmt || lkN; var free = total - locked; var fp = total > 0 ? Math.round(free / total * 1000) / 10 : 0;
+      return { total: f(total), free: f(free), locked: f(locked), freePct: fp, lockedPct: Math.round((100 - fp) * 10) / 10, freePctFa: lkD(String(Math.round(fp))) + '٪', lockedPctFa: lkD(String(Math.round(100 - fp))) + '٪',
+        hasLock: locked > 0, noLock: !(locked > 0), allLocked: free <= 0 && total > 0, hasFree: free > 0, mixed: free > 0 && locked > 0 };
+    }
+    function lkSteps(n, released, pending) {
+      var a = [];
+      for (var i = 0; i < n; i++) {
+        var st = i < released ? 'r' : (i < released + pending ? 'p' : 'f');
+        a.push({ bg: st === 'r' ? 'var(--primary-main)' : (st === 'p' ? 'transparent' : 'var(--progress-track)'), bd: st === 'p' ? 'inset 0 0 0 1.5px var(--warning-main)' : 'none' });
+      }
+      return a;
+    }
+    var tab = st.tab || 'assets';
+    var blocked = !!st.blocked;
+    var notes = st.notes || [{ text: 'درخواست افزایش سقف کارت در بررسی — سقف از دارایی آزاد محاسبه می‌شود، نه کل.', meta: 'علی نادری · ۱۴۰۵/۰۷/۱۲' }];
+    out.acct = blocked
+      ? { label: 'مسدود موقت', bg: 'var(--soft-error)', fg: 'var(--error-text)', active: false, blocked: true }
+      : { label: 'فعال', bg: 'var(--soft-success)', fg: 'var(--success-text)', active: true, blocked: false };
+    var legalOn = !!st.legalOn;
+    var lhKey = st.lhKey || 'gold';
+    var LH_AMT = 10000000;
+    var H = [
+      { key: 'rial', name: 'کیف پول ریالی', sub: 'تومان', total: 24400000, d: ICON.wallet, bg: 'var(--soft-default)', fg: 'var(--default-text)' },
+      { key: 'gold', name: 'صندوق طلا', sub: 'طلانو · ۳۲٫۵ واحد', total: 98000000, d: ICON.gold, bg: 'var(--soft-warning)', fg: 'var(--warning-text)' },
+      { key: 'fixed', name: 'صندوق درآمد ثابت', sub: '۴۲۱٫۴ واحد · سود مؤثر ۳۱٪', total: 64000000, d: ICON.bond, bg: 'var(--soft-info)', fg: 'var(--info-text)' },
+      { key: 'index', name: 'صندوق سهامی شاخصی', sub: '۱۸٫۲ واحد', total: 8200000, d: ICON.trend, bg: 'var(--soft-success)', fg: 'var(--success-text)' },
+      { key: 'mixed', name: 'صندوق مختلط', sub: '۲۹٫۴ واحد', total: 5800000, d: ICON.funds, bg: 'var(--soft-primary)', fg: 'var(--primary-text)' },
+      { key: 'silver', name: 'صندوق نقره', sub: '۶۱٫۸ واحد', total: 2100000, d: ICON.gold, bg: 'var(--soft-default)', fg: 'var(--default-text)' }
+    ];
+    var HN = {}; H.forEach(function (h) { HN[h.key] = h; });
+    var L = [
+      { t: 'collateral', h: 'rial', amt: 4000000, title: 'رزرو تسویه اعتبار کارت', cond: 'آزاد با تسویه صورت‌حساب آبان', by: 'سیستم', byRole: 'اعتبار کارت نمادنو', date: '۱۴۰۵/۰۷/۰۱', units: 'تومان', loan: true },
+      { t: 'collateral', h: 'gold', amt: 30000000, title: 'وثیقه وام با پشتوانه دارایی', cond: 'آزاد با تسویه وام (۱۲ قسط، ۹ مانده)', by: 'سیستم', byRole: 'وام LN-3012', date: '۱۴۰۵/۰۴/۱۵', units: '۹٫۹۵ واحد', loan: true },
+      { t: 'milestone', h: 'gold', amt: 12000000, title: 'قرارداد پرتال منابع انسانی · کل ۲۰ م', cond: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود', by: 'هلدینگ آرمان', byRole: 'سازمان', date: '۱۴۰۵/۰۶/۰۱', units: '۳٫۹۸ واحد', ms: { n: 5, rel: 2, pend: 1, note: '۲ از ۵ مرحله · ۴۰٪ آزاد شده' } },
+      { t: 'vesting', h: 'fixed', amt: 20000000, title: 'پاداش تیر ۱۴۰۵', cond: 'آزاد در ۱۴۰۵/۱۰/۱۵', by: 'هلدینگ آرمان', byRole: 'سازمان', date: '۱۴۰۵/۰۴/۳۱', units: '۱۳۱٫۷ واحد' },
+      { t: 'installment', h: 'mixed', amt: 3500000, title: 'خرید اقساطی دیجی‌کالا — ۴ قسط مانده', cond: 'با پرداخت هر قسط، بخشی آزاد می‌شود', by: 'سیستم', byRole: 'خرید اقساطی', date: '۱۴۰۵/۰۵/۲۰', units: '۱۷٫۷ واحد' },
+      { t: 'vesting', h: 'silver', amt: 2100000, title: 'هدیه عضویت سازمانی', cond: 'آزاد در ۱۴۰۵/۱۲/۰۱', by: 'هلدینگ آرمان', byRole: 'سازمان', date: '۱۴۰۵/۰۶/۱۰', units: '۶۱٫۸ واحد' }
+    ];
+    if (legalOn) L.unshift({ t: 'legal', h: st.lhApplied || 'gold', amt: LH_AMT, title: 'مرجع قضایی — شماره ۱۴۰۵۰۰۹۸۴۵۲۱', cond: 'تا رفع دستور مرجع / بررسی ریسک', by: 'علی نادری', byRole: 'بهره‌بردار', date: '۱۴۰۵/۰۷/۱۵', units: '۳٫۳۲ واحد' });
+    var lockedBy = {}; L.forEach(function (x) { lockedBy[x.h] = (lockedBy[x.h] || 0) + x.amt; });
+    var typesBy = {}; L.forEach(function (x) { (typesBy[x.h] = typesBy[x.h] || []); if (typesBy[x.h].indexOf(LKT[x.t].short) < 0) typesBy[x.h].push(LKT[x.t].short); });
+    var TOT = 0, LOCK = 0;
+    out.holdings = H.map(function (h) {
+      var lk = lockedBy[h.key] || 0; TOT += h.total; LOCK += lk;
+      var sp = lkSplit(h.total, lk);
+      return { name: h.name, sub: h.sub, d: h.d, bg: h.bg, fg: h.fg, total: sp.total, free: sp.free, locked: lk ? sp.locked : '—', freePct: sp.freePct, hasLock: sp.hasLock, hasFree: sp.hasFree,
+        freeC: sp.hasFree ? '--text-primary' : '--text-disabled', lockC: lk ? '--text-primary' : '--text-disabled', chips: lk ? (typesBy[h.key] || []).join(' + ') : 'همه آزاد' };
+    });
+    out.sum = lkSplit(TOT, LOCK);
+    out.lockLinkLabel = 'جزئیات ' + lkD(String(L.length)) + ' قلم قفل';
+    out.lockCountLabel = lkD(String(L.length)) + ' قلم قفل · جمع ' + lkN(LOCK);
+    var lf = st.lf || 'all';
+    out.lockFilters = [['all', 'همه'], ['collateral', 'وثیقه'], ['vesting', 'قفل زمانی'], ['installment', 'اقساطی'], ['milestone', 'مرحله‌ای'], ['legal', 'مسدودی']].map(function (g) { var on = lf === g[0]; return { label: g[1], on: on ? 'true' : 'false', cls: on ? 'on' : '', pick: set({ lf: g[0] }) }; });
+    out.lockRows = L.filter(function (x) { return lf === 'all' || x.t === lf; }).map(function (x) {
+      return { t: LKT[x.t], holding: HN[x.h].name, units: x.units, amount: lkN(x.amt), by: x.by, byRole: x.byRole, title: x.title, cond: x.cond, date: x.date,
+        isMs: !!x.ms, steps: x.ms ? lkSteps(x.ms.n, x.ms.rel, x.ms.pend) : [], msNote: x.ms ? x.ms.note : '', isLegal: x.t === 'legal', isLoan: !!x.loan,
+        rowBg: x.t === 'legal' ? 'rgb(var(--error-main-rgb) / .05)' : 'transparent' };
+    });
+    var bt = {}; L.forEach(function (x) { bt[x.t] = (bt[x.t] || 0) + x.amt; });
+    out.lockByType = ['collateral', 'vesting', 'milestone', 'installment', 'legal'].filter(function (k) { return bt[k]; }).map(function (k) { return { short: LKT[k].short, col: LKT[k].col, amount: lkM(bt[k]) + ' م' }; });
+    out.legalOn = legalOn;
+    out.goLocks = set({ tab: 'locks' });
+    out.goCredit = set({ tab: 'credit' });
+    // legal-hold dialog
+    out.isLegalModal = st.modal === 'legal';
+    out.openLegal = set({ modal: 'legal' });
+    out.lhHoldings = H.filter(function (h) { return h.total - (lockedBy[h.key] || 0) > 0; }).map(function (h) { var on = lhKey === h.key; return { label: h.name, on: on ? 'true' : 'false', cls: on ? 'on' : '', pick: set({ lhKey: h.key }) }; });
+    var lhH = HN[lhKey]; out.lh = lkSplit(lhH.total, lockedBy[lhKey] || 0); out.lh.name = lhH.name;
+    var rs = st.lhReason || 'court';
+    out.lhReasons = [['court', 'دستور مرجع قضایی'], ['risk', 'بررسی ریسک و تقلب'], ['reg', 'درخواست نهاد ناظر']].map(function (g) { var on = rs === g[0]; return { label: g[1], on: on ? 'true' : 'false', cls: on ? 'on' : '', pick: set({ lhReason: g[0] }) }; });
+    out.applyLegal = function () { self.setState({ legalOn: true, lhApplied: lhKey, modal: '', tab: 'locks', lf: 'all', toast: 'مسدودی قانونی ۱۰٬۰۰۰٬۰۰۰ روی «' + lhH.name + '» اعمال شد' }); setTimeout(function () { self.setState({ toast: '' }); }, 2600); };
+    out.removeLegal = function () { self.setState({ legalOn: false, toast: 'رفع مسدودی قانونی · +۱۰٬۰۰۰٬۰۰۰ آزاد شد' }); setTimeout(function () { self.setState({ toast: '' }); }, 2600); };
+    out.kpis = [
+      { title: 'دارایی کل', value: lkM(TOT), unit: 'میلیون تومان', note: 'آزاد ' + lkSplit(TOT, LOCK).freePctFa + ' · قفل ' + lkSplit(TOT, LOCK).lockedPctFa, d: ICON.wallet, bg: 'var(--soft-primary)', fg: 'var(--primary-text)' },
+      { title: 'دارایی آزاد', value: lkM(TOT - LOCK), unit: 'میلیون', note: 'قابل فروش و برداشت', d: ICON.check, bg: 'var(--soft-success)', fg: 'var(--success-text)' },
+      { title: 'قفل‌شده', value: lkM(LOCK), unit: 'میلیون', note: lkD(String(L.length)) + ' قلم در ' + lkD(String(Object.keys(lockedBy).length)) + ' دارایی', d: ICON.lock, bg: 'var(--soft-warning)', fg: 'var(--warning-text)' },
+      { title: 'تسهیلات فعال', value: '۶۵', unit: 'میلیون', note: 'وام ۳۰ م · کارت ۳۵ م', d: ICON.percent, bg: 'var(--soft-info)', fg: 'var(--info-text)' }
+    ];
+    out.tabs = [['assets', 'دارایی', '', ''], ['locks', 'قفل‌ها', lkD(String(L.length)), legalOn ? 'error' : 'default'], ['tx', 'تراکنش‌ها', '۶', 'default'], ['credit', 'تسهیلات', '۲', 'default'], ['risk', 'ریسک', '۱', 'warning'], ['log', 'لاگ', '', '']].map(function (t) {
+      var on = tab === t[0];
+      return { label: t[1], count: t[2], cls: on ? 'on' : '', on: on ? 'true' : 'false', pick: set({ tab: t[0] }),
+        cbg: t[3] === 'warning' ? 'var(--soft-warning)' : (t[3] === 'error' ? 'var(--soft-error)' : 'var(--soft-default)'), cfg: t[3] === 'warning' ? 'var(--warning-text)' : (t[3] === 'error' ? 'var(--error-text)' : 'var(--default-text)') };
+    });
+    out.isAssets = tab === 'assets'; out.isLocks = tab === 'locks'; out.isTx = tab === 'tx'; out.isCredit = tab === 'credit'; out.isRisk = tab === 'risk'; out.isLog = tab === 'log';
+    out.showSide = tab !== 'locks';
+    var TT = { buy: { type: 'خرید واحد', tbg: 'var(--soft-warning)', tfg: 'var(--warning-text)' }, pkg: { type: 'آزادسازی', tbg: 'var(--soft-primary)', tfg: 'var(--primary-text)' }, card: { type: 'کارت', tbg: 'var(--soft-info)', tfg: 'var(--info-text)' }, inst: { type: 'قسط', tbg: 'var(--soft-default)', tfg: 'var(--default-text)' }, out: { type: 'برداشت', tbg: 'var(--soft-error)', tfg: 'var(--error-text)' }, yield: { type: 'سود', tbg: 'var(--soft-success)', tfg: 'var(--success-text)' } };
+    var okS = { status: 'موفق', sbg: 'var(--soft-success)', sfg: 'var(--success-text)' }, pend = { status: 'در حال تسویه', sbg: 'var(--soft-warning)', sfg: 'var(--warning-text)' };
+    out.txns = [
+      ['خرید با کارت — فروشگاه آنلاین', 'TX-8F21A', 'card', '−۲٬۳۴۰٬۰۰۰', '--error-text', '۱۴۰۵/۰۷/۱۵ ۱۴:۰۲', okS],
+      ['آزادسازی مرحله ۲ «طراحی رابط کاربری» · +۴٬۰۰۰٬۰۰۰ آزاد شد', 'MS-1042-02', 'pkg', '+۴٬۰۰۰٬۰۰۰', '--success-text', '۱۴۰۵/۰۷/۰۵ ۱۰:۲۰', okS],
+      ['خرید ۳٫۳۱ واحد صندوق طلا', 'OR-55120', 'buy', '−۱۰٬۰۰۰٬۰۰۰', '--text-primary', '۱۴۰۵/۰۷/۱۲ ۰۹:۳۱', pend],
+      ['پرداخت قسط ۳ از ۱۲', 'LN-3012-03', 'inst', '−۲٬۸۵۰٬۰۰۰', '--error-text', '۱۴۰۵/۰۷/۱۵ ۰۸:۰۰', okS],
+      ['سود روزانه درآمد ثابت', 'YD-0715', 'yield', '+۵۲٬۰۰۰', '--success-text', '۱۴۰۵/۰۷/۱۵ ۰۰:۱۰', okS],
+      ['برداشت به بانک ملت •••• ۸۸۱۲', 'WD-7781', 'out', '−۵٬۰۰۰٬۰۰۰', '--error-text', '۱۴۰۵/۰۷/۰۸ ۱۸:۰۰', okS]
+    ].map(function (x) { var t = TT[x[2]]; return { title: x[0], code: x[1], type: t.type, tbg: t.tbg, tfg: t.tfg, amount: x[3], ac: x[4], date: x[5], status: x[6].status, sbg: x[6].sbg, sfg: x[6].sfg }; });
+    out.facilities = [
+      { type: 'وام', tbg: 'var(--soft-info)', tfg: 'var(--info-text)', title: 'وام با پشتوانه دارایی', status: 'جاری', sbg: 'var(--soft-success)', sfg: 'var(--success-text)', amount: '۳۰٬۰۰۰٬۰۰۰', unit: 'تومان · ۱۲ ماهه', pct: 25, col: '--primary-main',
+        rows: [{ k: 'پرداخت‌شده', v: '۳ از ۱۲ · ۹ قسط مانده' }, { k: 'قسط بعدی', v: '۲٬۸۵۰٬۰۰۰ · ۱۵ آبان' }, { k: 'وثیقه (قفل)', v: 'صندوق طلا · ۳۰٬۰۰۰٬۰۰۰' }] },
+      { type: 'اعتبار کارت', tbg: 'var(--soft-primary)', tfg: 'var(--primary-text)', title: 'کارت نمادنو', status: 'فعال', sbg: 'var(--soft-success)', sfg: 'var(--success-text)', amount: '۳۵٬۰۰۰٬۰۰۰', unit: 'تومان سقف · ۲۵٪ دارایی', pct: 35, col: '--info-main',
+        rows: [{ k: 'استفاده‌شده', v: '۱۲٬۴۰۰٬۰۰۰' }, { k: 'تسویه خودکار', v: '۵ آبان · کیف پول ریالی' }, { k: 'رزرو قفل‌شده', v: 'کیف ریالی · ۴٬۰۰۰٬۰۰۰' }] }
+    ];
+    out.riskFlags = [
+      { title: 'ورود از دستگاه جدید', sub: 'iPhone · تهران · تأیید با OTP', when: 'امروز', level: 'کم', d: ICON.alert, bg: 'var(--soft-warning)', fg: 'var(--warning-text)' },
+      { title: 'الگوی خرید عادی', sub: 'میانگین ۳ تراکنش کارت در هفته', when: '۷ روز', level: 'عادی', d: ICON.check, bg: 'var(--soft-success)', fg: 'var(--success-text)' },
+      { title: 'نسبت وثیقه', sub: 'LTV ۳۱٪ از سقف ۷۰٪ صندوق طلا', when: 'لحظه‌ای', level: 'سالم', d: ICON.shield, bg: 'var(--soft-success)', fg: 'var(--success-text)' },
+      { title: 'پرداخت اقساط', sub: '۴ قسط به‌موقع · بدون تأخیر', when: '۴ ماه', level: 'مثبت', d: ICON.clock, bg: 'var(--soft-primary)', fg: 'var(--primary-text)' }
+    ];
+    out.logs = [
+      { text: 'ورود موفق از دستگاه جدید (iPhone) — تأیید دومرحله‌ای', by: 'سیستم', at: '۱۴۰۵/۰۷/۱۵ ۰۹:۱۲', dot: '--warning-main' },
+      { text: 'خرید ۳٫۳۱ واحد صندوق طلا از کیف پول ریالی', by: 'کاربر', at: '۱۴۰۵/۰۷/۱۲ ۰۹:۳۱', dot: '--primary-main' },
+      { text: 'آزادسازی مرحله ۲ قرارداد پرتال منابع انسانی · +۴٬۰۰۰٬۰۰۰ آزاد شد (صندوق طلا)', by: 'هلدینگ آرمان', at: '۱۴۰۵/۰۷/۰۵ ۱۰:۲۰', dot: '--success-main' },
+      { text: 'یادداشت داخلی ثبت شد', by: 'علی نادری', at: '۱۴۰۵/۰۷/۱۲ ۱۱:۰۰', dot: '--grey-500' },
+      { text: 'KYC سطح ۲ تأیید شد (تطبیق چهره ۹۸٪)', by: 'سمیرا توکلی', at: '۱۴۰۴/۰۲/۱۱ ۱۰:۲۰', dot: '--success-main' },
+      { text: 'حساب با کد فعال‌سازی سازمانی ایجاد شد', by: 'سیستم', at: '۱۴۰۴/۰۲/۱۰ ۰۸:۴۵', dot: '--grey-500' }
+    ];
+    out.alloc = [
+      { name: 'صندوق طلا', pct: '۴۸٪', col: '--warning-main', dash: '145 302', off: '0' },
+      { name: 'درآمد ثابت', pct: '۳۲٪', col: '--secondary-main', dash: '94 302', off: '-147' },
+      { name: 'ریال', pct: '۱۲٪', col: '--grey-500', dash: '34 302', off: '-243' },
+      { name: 'سایر صندوق‌ها', pct: '۸٪', col: '--primary-main', dash: '21 302', off: '-279' }
+    ];
+    out.notes = notes; out.hasNotes = notes.length > 0; out.noteCount = ['۰', '۱', '۲', '۳', '۴'][Math.min(4, notes.length)];
+    var tag = st.tag || 'security';
+    out.noteTags = [['security', 'امنیت'], ['credit', 'اعتبار'], ['support', 'پشتیبانی']].map(function (g) { var on = tag === g[0]; return { label: g[1], on: on ? 'true' : 'false', cls: on ? 'on' : '', pick: set({ tag: g[0] }) }; });
+    out.openNote = set({ modal: 'note' });
+    out.closeModal = set({ modal: '' });
+    out.isNote = st.modal === 'note';
+    out.saveNote = function () {
+      var tagLabel = { security: 'امنیت', credit: 'اعتبار', support: 'پشتیبانی' }[tag];
+      self.setState({ notes: [{ text: 'پیگیری ورود از دستگاه جدید — تماس تأیید شد', meta: 'علی نادری · امروز · ' + tagLabel }].concat(notes).slice(0, 2), modal: '', toast: 'یادداشت ثبت شد' });
+      setTimeout(function () { self.setState({ toast: '' }); }, 2600);
+    };
+    out.block = function () { self.setState({ blocked: true, toast: 'حساب سارا محمدی به‌طور موقت مسدود شد' }); setTimeout(function () { self.setState({ toast: '' }); }, 2600); };
+    out.unblock = function () { self.setState({ blocked: false, toast: 'مسدودی حساب برداشته شد' }); setTimeout(function () { self.setState({ toast: '' }); }, 2600); };
+    return out;
+
+  }
+}
+</script>
+</body>
+</html>

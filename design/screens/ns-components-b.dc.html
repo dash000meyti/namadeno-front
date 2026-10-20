@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Namadno UI — Components B · Data · Feedback · Navigation</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.th-light,.th-dark{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-contrast:#FFFFFF;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-darker:#153F5E;--info-contrast:#FFFFFF;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-darker:#66430A;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-darker:#6E1A1A;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--font-family:'IRANSansX',Tahoma,sans-serif;--font-display:'Divan','IRANSansX',Tahoma,sans-serif;--radius-xs:4px;--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%}
+.th-light{--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:#F1F3F8;--bg-canvas:#F8F9FC;--bg-aurora:radial-gradient(900px 520px at 85% -10%,rgb(58 71 205 / .07),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgb(70 134 166 / .06),transparent 60%);--text-primary:#1F2433;--text-secondary:#636B7F;--text-disabled:#8F97AA;--divider:rgb(143 151 170 / .20);--action-hover:rgb(143 151 170 / .08);--action-selected:rgb(143 151 170 / .16);--action-disabled:rgb(143 151 170 / .80);--action-disabled-bg:rgb(143 151 170 / .24);--action-focus:rgb(143 151 170 / .24);--glass-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(143 151 170 / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(143 151 170 / .16);--shadow-z4:0 4px 8px 0 rgb(143 151 170 / .16);--shadow-z8:0 8px 16px 0 rgb(143 151 170 / .16);--shadow-z12:0 12px 24px -4px rgb(143 151 170 / .16);--shadow-z16:0 16px 32px -4px rgb(143 151 170 / .16);--shadow-z20:0 20px 40px -4px rgb(143 151 170 / .16);--shadow-z24:0 24px 48px 0 rgb(143 151 170 / .16);--shadow-card:0 0 2px 0 rgb(143 151 170 / .20),0 12px 24px -4px rgb(143 151 170 / .12);--shadow-dropdown:0 0 2px 0 rgb(143 151 170 / .24),-20px 20px 40px -4px rgb(143 151 170 / .24);--shadow-dialog:-40px 40px 80px -8px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(58 71 205 / .24);--shadow-success:0 8px 16px 0 rgb(85 176 140 / .24);--shadow-error:0 8px 16px 0 rgb(217 74 74 / .24);--shadow-glass:0 0 0 1px rgb(143 151 170 / .12),0 12px 32px -8px rgb(143 151 170 / .20);--chart-1:#3A47CD;--chart-2:#55B08C;--chart-3:#4686A6;--chart-4:#C3C9D6;--chart-5:#636B7F;--chart-grid:rgb(143 151 170 / .16);--primary-text:#3A47CD;--secondary-text:#2F6480;--info-text:#25628F;--success-text:#2F7D5C;--warning-text:#9E6A14;--error-text:#A32C2C;--inh-main:#1F2433;--inh-on:#FFFFFF;--table-head:#F1F3F8;--tip-bg:#454C5E;--tip-text:#FFFFFF;--skeleton:rgb(143 151 170 / .16);--alpha-fill:.14}
+.th-dark{--bg-default:#141826;--bg-paper:#1F2433;--bg-neutral:rgb(143 151 170 / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%,rgb(58 71 205 / .20),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgb(70 134 166 / .12),transparent 60%);--text-primary:#FFFFFF;--text-secondary:#8F97AA;--text-disabled:#636B7F;--divider:rgb(143 151 170 / .20);--action-hover:rgb(143 151 170 / .08);--action-selected:rgb(143 151 170 / .16);--action-disabled:rgb(143 151 170 / .80);--action-disabled-bg:rgb(143 151 170 / .24);--action-focus:rgb(143 151 170 / .24);--glass-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z4:0 4px 8px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z12:0 12px 24px -4px rgb(0 0 0 / .16);--shadow-z16:0 16px 32px -4px rgb(0 0 0 / .16);--shadow-z20:0 20px 40px -4px rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20),0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24),-20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-dialog:-40px 40px 80px -8px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(58 71 205 / .24);--shadow-success:0 8px 16px 0 rgb(85 176 140 / .24);--shadow-error:0 8px 16px 0 rgb(217 74 74 / .24);--shadow-glass:0 0 0 1px rgb(255 255 255 / .06),0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:#8E97F0;--chart-2:#7CCBA8;--chart-3:#8FC1D6;--chart-4:#636B7F;--chart-5:#C3C9D6;--chart-grid:rgb(143 151 170 / .16);--primary-text:#8E97F0;--secondary-text:#8FC1D6;--info-text:#7FC0E6;--success-text:#7CCBA8;--warning-text:#F0CB7C;--error-text:#F09A9A;--inh-main:#FFFFFF;--inh-on:#1F2433;--table-head:rgb(143 151 170 / .12);--tip-bg:#DEE2EB;--tip-text:#1F2433;--skeleton:rgb(143 151 170 / .16);--alpha-fill:.22}
+.c-default{--c:var(--inh-main);--c-on:var(--inh-on);--c-txt:var(--text-primary);--c-rgb:var(--grey-500-rgb)}
+.c-primary{--c:var(--primary-main);--c-on:var(--primary-contrast);--c-txt:var(--primary-text);--c-rgb:var(--primary-main-rgb)}
+.c-secondary{--c:var(--secondary-main);--c-on:var(--secondary-contrast);--c-txt:var(--secondary-text);--c-rgb:var(--secondary-main-rgb)}
+.c-info{--c:var(--info-main);--c-on:var(--info-contrast);--c-txt:var(--info-text);--c-rgb:var(--info-main-rgb)}
+.c-success{--c:var(--success-main);--c-on:var(--success-contrast);--c-txt:var(--success-text);--c-rgb:var(--success-main-rgb)}
+.c-warning{--c:var(--warning-main);--c-on:var(--warning-contrast);--c-txt:var(--warning-text);--c-rgb:var(--warning-main-rgb)}
+.c-error{--c:var(--error-main);--c-on:var(--error-contrast);--c-txt:var(--error-text);--c-rgb:var(--error-main-rgb)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none;width:20px;height:20px}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.paper{background:var(--bg-paper);border-radius:16px;box-shadow:var(--shadow-card)}
+.gcard{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.sec{display:flex;align-items:center;gap:12px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--grey-500);text-transform:uppercase;white-space:nowrap}
+.sec::after{content:"";flex:1;height:1px;background:var(--divider)}
+.cap{font-size:12px;line-height:1.5;color:var(--text-secondary)}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;line-height:1;border:0;cursor:pointer;background:transparent;color:var(--c-txt);white-space:nowrap;box-sizing:border-box}
+.btn.sm{height:30px;padding:0 10px;font-size:13px}.btn.lg{height:48px;padding:0 22px;font-size:15px}
+.btn.contained{background:var(--c);color:var(--c-on)}.btn.contained.hover{box-shadow:var(--shadow-primary)}
+.btn.outlined{border:1px solid rgb(var(--c-rgb) / .48)}
+.btn.soft{background:rgb(var(--c-rgb) / .16)}
+.btn[disabled]{background:var(--action-disabled-bg);color:var(--action-disabled);border-color:transparent;cursor:default}
+.btn.text[disabled]{background:transparent}
+.ibtn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--text-secondary);cursor:pointer;box-sizing:border-box}
+.ibtn.sm{width:36px;height:36px}.ibtn.soft{background:rgb(var(--c-rgb) / .16);color:var(--c-txt)}.ibtn.outlined{border:1px solid rgb(var(--c-rgb) / .48);color:var(--c-txt)}.ibtn.contained{background:var(--c);color:var(--c-on)}
+.lbl{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;line-height:1;white-space:nowrap;box-sizing:border-box}
+.lbl.filled{background:var(--c);color:var(--c-on)}.lbl.outlined{border:2px solid var(--c);color:var(--c-txt)}.lbl.soft{background:rgb(var(--c-rgb) / .16);color:var(--c-txt)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:500;line-height:1;box-sizing:border-box;white-space:nowrap}
+.chip.filled{background:var(--c);color:var(--c-on)}.chip.outlined{border:1px solid rgb(var(--c-rgb) / .48);color:var(--c-txt)}.chip.soft{background:rgb(var(--c-rgb) / .16);color:var(--c-txt)}
+.tf{position:relative;display:flex;align-items:center;gap:8px;height:56px;padding:0 14px;border:1px solid rgb(var(--grey-500-rgb) / .20);border-radius:8px;box-sizing:border-box;background:transparent;color:var(--text-primary);font-size:14px}
+.tf.sm{height:40px;padding:0 12px}.tf.focus{border:2px solid var(--text-primary);padding:0 13px}.tf.err{border-color:var(--error-main)}.tf.filled{background:rgb(var(--grey-500-rgb) / .08);border-color:transparent}.tf.dis{color:var(--text-disabled);border-style:dashed}
+.tf input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;color:inherit;padding:0}
+.tf .fl{position:absolute;top:-8px;right:10px;padding:0 4px;background:var(--bg-default);font-size:12px;font-weight:600;line-height:16px;color:var(--text-secondary)}
+.tf.err .fl{color:var(--error-main)}
+.tf .ph{flex:1;color:var(--text-disabled)}
+.chk{width:20px;height:20px;border-radius:5px;border:2px solid var(--text-secondary);box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.chk.on{background:var(--primary-main);border-color:var(--primary-main);color:#FFFFFF}
+.rad{width:20px;height:20px;border-radius:50%;border:2px solid var(--text-secondary);box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.rad.on{border-color:var(--primary-main)}
+.sw{width:33px;height:20px;border-radius:10px;background:rgb(var(--grey-500-rgb) / .48);display:flex;align-items:center;justify-content:flex-start;padding:3px;box-sizing:border-box;border:0;cursor:pointer;flex:none}
+.sw.on{background:var(--primary-main);justify-content:flex-end}.sw .kn{width:14px;height:14px;border-radius:50%;background:#FFFFFF;box-shadow:var(--shadow-z1)}
+.sw.off-dis{opacity:.48}
+.nav-item{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:8px;font-size:14px;font-weight:500;color:var(--text-secondary);box-sizing:border-box}
+.nav-item.active{background:rgb(var(--primary-main-rgb) / .08);color:var(--primary-text);font-weight:600}
+.tr{display:grid;grid-template-columns:44px 1fr 110px 130px 110px 48px;align-items:center;height:56px;padding:0 8px;border-bottom:1px dashed var(--divider);font-size:14px;box-sizing:border-box}
+.tr.hover{background:var(--action-hover)}
+.alert{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;box-sizing:border-box}
+.alert.standard{background:rgb(var(--c-rgb) / var(--alpha-fill));color:var(--c-txt)}.alert.filled{background:var(--c);color:var(--c-on)}.alert.outlined{border:1px solid rgb(var(--c-rgb) / .48);color:var(--c-txt);background:var(--bg-paper)}.alert.soft{background:rgb(var(--c-rgb) / .16);color:var(--c-txt)}
+.alert .ico{width:22px;height:22px}
+.skl{background:var(--skeleton);border-radius:6px}
+.lkbar{height:6px;border-radius:6px;display:flex;overflow:hidden;background:rgb(var(--grey-500-rgb) / .16);gap:2px}
+.lkbar>.f{background:var(--primary-main);border-radius:6px}
+.lkbar>.l{border-radius:6px;background:repeating-linear-gradient(135deg,rgb(var(--grey-500-rgb) / .55) 0 3px,rgb(var(--grey-500-rgb) / .22) 3px 6px)}
+.lkleg{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.lkleg b{font-weight:500;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.lkdot{width:8px;height:8px;border-radius:50%;background:var(--primary-main);display:inline-block;margin-left:4px}
+.lktype{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.lkstep{width:18px;height:6px;border-radius:3px;box-sizing:border-box;flex:none;display:inline-block}
+.th-light,.th-dark{--soft-secondary:rgb(var(--secondary-main-rgb) / .16);--soft-primary:rgb(var(--primary-main-rgb) / .16);--soft-info:rgb(var(--info-main-rgb) / .16);--soft-warning:rgb(var(--warning-main-rgb) / .16);--soft-error:rgb(var(--error-main-rgb) / .16);--progress-track:rgb(var(--primary-main-rgb) / .16)}
+.th-light{--secondary-text:var(--secondary-dark)}
+.th-dark{--secondary-text:var(--secondary-light)}
+</style>
+</helmet>
+<div dir="rtl" style="width: 1640px; height: 3180px; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: row; font-family: 'IRANSansX', Tahoma, sans-serif">
+  <sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+    <section class="{{t.cls}}" style="width: 820px; height: 3180px; box-sizing: border-box; padding: 40px; background-color: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); display: flex; flex-direction: column; gap: 14px; overflow: hidden; font-size: 14px; line-height: 1.57">
+
+      <!-- Column header -->
+      <header style="display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 40px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--brand-gradient); display: grid; place-items: center; color: #FFFFFF">
+            <svg viewBox="0 0 64 40" width="26" height="16" aria-hidden="true"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 1px">
+            <div style="font-size: 15px; font-weight: 700; line-height: 1.3">Namadno UI · Components B</div>
+            <div class="cap">Data display · Feedback · Navigation</div>
+          </div>
+        </div>
+        <div class="glass" style="display: flex; align-items: center; gap: 8px; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 700">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-main)"></span>{{t.label}}
+        </div>
+      </header>
+
+      <!-- Card + Stat -->
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div class="sec">Card · CardHeader · Widget summary</div>
+        <div style="display: grid; grid-template-columns: 1fr 250px; gap: 16px; align-items: stretch">
+          <div class="paper gcard" style="display: flex; flex-direction: column; overflow: hidden">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 16px 20px 8px">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+                <div style="font-size: 16px; font-weight: 700; line-height: 1.4">حجم تراکنش‌ها</div>
+                <div class="cap">امروز در مقایسه با دیروز · میلیارد تومان</div>
+              </div>
+              <div style="display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary)">
+                <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: var(--chart-1)"></span>امروز</span>
+                <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: var(--chart-2)"></span>دیروز</span>
+              </div>
+              <button type="button" class="ibtn sm" aria-label="گزینه‌ها"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"></circle><circle cx="12" cy="12" r="1.2"></circle><circle cx="12" cy="19" r="1.2"></circle></svg></button>
+            </div>
+            <div dir="ltr" style="padding: 0 12px 12px">
+              <svg viewBox="0 0 440 150" width="100%" height="150" aria-hidden="true" style="display: block">
+                <defs>
+                  <linearGradient id="g1-{{t.cls}}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart-1)" stop-opacity=".18"></stop><stop offset="1" stop-color="var(--chart-1)" stop-opacity="0"></stop></linearGradient>
+                  <linearGradient id="g2-{{t.cls}}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart-2)" stop-opacity=".14"></stop><stop offset="1" stop-color="var(--chart-2)" stop-opacity="0"></stop></linearGradient>
+                </defs>
+                <g style="stroke: var(--chart-grid)" stroke-dasharray="3 4"><line x1="30" y1="20" x2="430" y2="20"></line><line x1="30" y1="55" x2="430" y2="55"></line><line x1="30" y1="90" x2="430" y2="90"></line><line x1="30" y1="125" x2="430" y2="125"></line></g>
+                <g style="fill: var(--text-secondary)" font-size="10" font-family="IRANSansX, Tahoma, sans-serif"><text x="24" y="24" text-anchor="end">۹۰۰</text><text x="24" y="59" text-anchor="end">۶۰۰</text><text x="24" y="94" text-anchor="end">۳۰۰</text><text x="24" y="129" text-anchor="end">۰</text><text x="30" y="145">۰۰</text><text x="130" y="145">۰۶</text><text x="230" y="145">۱۲</text><text x="330" y="145">۱۸</text><text x="424" y="145">۲۴</text></g>
+                <path d="M30 112 C70 108 90 100 130 96 S190 92 230 84 S290 60 330 54 S390 70 430 62 V125 H30 Z" fill="url(#g2-{{t.cls}})"></path>
+                <path d="M30 112 C70 108 90 100 130 96 S190 92 230 84 S290 60 330 54 S390 70 430 62" fill="none" stroke-width="2" style="stroke: var(--chart-2)"></path>
+                <path d="M30 118 C60 110 90 96 130 86 S190 78 230 60 S290 42 330 38 S390 30 430 24 V125 H30 Z" fill="url(#g1-{{t.cls}})"></path>
+                <path d="M30 118 C60 110 90 96 130 86 S190 78 230 60 S290 42 330 38 S390 30 430 24" fill="none" stroke-width="2" style="stroke: var(--chart-1)"></path>
+                <circle cx="330" cy="38" r="4" style="fill: var(--bg-paper); stroke: var(--chart-1)" stroke-width="2"></circle>
+              </svg>
+            </div>
+          </div>
+          <div class="paper gcard" style="padding: 20px; display: flex; flex-direction: column; gap: 8px; justify-content: space-between">
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-secondary)">کاربران فعال</div>
+            <div class="num" style="font-size: 30px; line-height: 1.2">۱٫۲۸ <span style="font-size: 14px; font-weight: 500; color: var(--text-secondary)">میلیون</span></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+              <span class="lbl soft c-success"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.2"><path d="M5 15l7-7 7 7"></path></svg>+۲٫۶٪</span>
+              <svg dir="ltr" viewBox="0 0 110 36" width="110" height="36" aria-hidden="true"><path d="M2 30 L14 24 L26 27 L38 18 L50 20 L62 12 L74 15 L86 8 L98 10 L108 4" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" style="stroke: var(--chart-2)"></path></svg>
+            </div>
+            <span class="cap">نسبت به هفتهٔ گذشته</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+          <span class="cap">paper radius ۱۶ · shadow-card · header: title + subheader + action · chart: indigo/green ۲px + faint fill</span>
+          <span class="cap">Card: شیشه‌ای (پیش‌فرض اپ) / جامد (High contrast)</span>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div class="sec">Table</div>
+        <div class="paper" style="overflow: hidden; display: flex; flex-direction: column">
+          <div class="tr" style="height: 48px; background: var(--table-head); border-bottom: 0; font-size: 13px; font-weight: 700; color: var(--grey-600)">
+            <span class="chk" style="width: 18px; height: 18px; border-radius: 4px"></span>
+            <span>کارمند</span><span>واحد</span><span>مبلغ (تومان)</span><span>وضعیت</span><span></span>
+          </div>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+            <div class="tr {{r.cls}}">
+              <span class="chk {{r.chk}}" style="width: 18px; height: 18px; border-radius: 4px"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 3; opacity: {{r.chkOp}}"><path d="M5 12l5 5 9-10"></path></svg></span>
+              <span style="display: flex; align-items: center; gap: 10px; min-width: 0">
+                <span style="width: 36px; height: 36px; border-radius: 50%; background: {{r.av}}; color: #FFFFFF; font-size: 13px; font-weight: 700; display: grid; place-items: center; flex: none">{{r.ini}}</span>
+                <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-weight: 600; line-height: 1.3">{{r.name}}</span><span class="cap" style="line-height: 1.3">{{r.role}}</span></span>
+              </span>
+              <span>{{r.unit}}</span>
+              <span class="num" style="font-weight: 400">{{r.amount}}</span>
+              <span><span class="lbl soft {{r.sc}}">{{r.status}}</span></span>
+              <button type="button" class="ibtn sm" aria-label="عملیات"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"></circle><circle cx="12" cy="12" r="1.2"></circle><circle cx="12" cy="19" r="1.2"></circle></svg></button>
+            </div>
+          </sc-for>
+          <div style="display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 16px; font-size: 13px; color: var(--text-secondary)">
+            <div style="display: flex; align-items: center; gap: 10px"><span>ردیف در صفحه:</span><span style="display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--divider); border-radius: 6px; padding: 2px 6px" class="num">۵<svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px"><path d="M6 9l6 6 6-6"></path></svg></span><span class="num">۱–۵ از ۳۸۴</span></div>
+            <div style="display: flex; align-items: center; gap: 4px">
+              <button type="button" class="ibtn sm" aria-label="صفحهٔ قبل" style="width: 32px; height: 32px"><svg class="ico" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></button>
+              <button type="button" class="btn sm contained c-primary num" style="width: 32px; padding: 0; height: 32px; font-weight: 500">۱</button>
+              <button type="button" class="btn sm text c-default num" style="width: 32px; padding: 0; height: 32px; font-weight: 500">۲</button>
+              <button type="button" class="btn sm text c-default num" style="width: 32px; padding: 0; height: 32px; font-weight: 500">۳</button>
+              <span class="num">…</span>
+              <button type="button" class="btn sm text c-default num" style="width: 32px; padding: 0; height: 32px; font-weight: 500">۷۷</button>
+              <button type="button" class="ibtn sm" aria-label="صفحهٔ بعد" style="width: 32px; height: 32px"><svg class="ico" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"></path></svg></button>
+            </div>
+          </div>
+        </div>
+        <span class="cap">head grey bg · bold ۱۳ grey-600 · rows ۵۶ · hover · checkbox column · tabular amounts · status Label soft · kebab</span>
+      </div>
+
+      <!-- Lock / Free split -->
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div class="sec">Lock / Free split · آزاد و قفل‌شده</div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+          <sc-for list="{{lkStates}}" as="k" hint-placeholder-count="3">
+            <div class="paper" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0">
+              <div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 13px; font-weight: 600; white-space: nowrap">{{k.name}}</span><span class="lbl soft {{k.cc}}" style="margin-right: auto; height: 20px; padding: 0 6px; font-size: 11px">{{k.state}}</span></div>
+              <div style="display: flex; align-items: baseline; gap: 4px"><span class="num" style="font-size: 20px; line-height: 1.2">{{k.total}}</span><span class="cap">تومان</span></div>
+              <div class="lkbar" role="img" aria-label="آزاد {{k.free}} · قفل {{k.locked}}"><sc-if value="{{k.hasFree}}" hint-placeholder-val="{{ true }}"><span class="f" style="width: {{k.freePct}}%"></span></sc-if><sc-if value="{{k.hasLock}}" hint-placeholder-val="{{ true }}"><span class="l" style="flex: 1"></span></sc-if></div>
+              <div class="lkleg">
+                <sc-if value="{{k.mixed}}" hint-placeholder-val="{{ true }}"><span><span class="lkdot"></span>آزاد <b>{{k.free}}</b></span></sc-if>
+                <sc-if value="{{k.hasLock}}" hint-placeholder-val="{{ true }}"><span style="display: inline-flex; align-items: center; gap: 4px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width: 12px; height: 12px"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2"></path></svg>قفل <b>{{k.locked}}</b></span></sc-if>
+                <sc-if value="{{k.noLock}}" hint-placeholder-val="{{ false }}"><span><span class="lkdot"></span>همه آزاد <b>{{k.free}}</b></span></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{lkTypes}}" as="t" hint-placeholder-count="5"><span style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0"><span class="lktype" style="background: {{t.bg}}; color: {{t.fg}}"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 2"><path d="{{t.d}}"></path></svg>{{t.short}}</span><span class="cap" style="font-size: 11px; line-height: 1.3; white-space: nowrap">{{t.label}}</span></span></sc-for>
+        </div>
+        <div class="paper" style="overflow: hidden; display: flex; flex-direction: column">
+          <sc-for list="{{lkRows}}" as="r" hint-placeholder-count="3">
+            <div style="min-height: 56px; box-sizing: border-box; padding: 8px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px dashed var(--divider)">
+              <span class="lktype" style="background: {{r.t.bg}}; color: {{r.t.fg}}"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 2"><path d="{{r.t.d}}"></path></svg>{{r.t.short}}</span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; line-height: 1.35">
+                <span style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.title}}</span>
+                <span class="cap" style="line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.cond}}</span>
+                <sc-if value="{{r.isMs}}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 8px"><span style="display: inline-flex; gap: 3px"><sc-for list="{{r.steps}}" as="p" hint-placeholder-count="5"><span class="lkstep" style="background: {{p.bg}}; box-shadow: {{p.bd}}"></span></sc-for></span><span class="cap" style="font-size: 11px">۲ از ۵ مرحله · ۴۰٪ آزاد شده</span></span></sc-if>
+              </span>
+              <span style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.35"><span class="num" style="font-size: 14px; font-weight: 500">{{r.amount}}</span><span class="cap" style="font-size: 11px">{{r.holding}}</span></span>
+            </div>
+          </sc-for>
+          <div style="height: 36px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 14px; font-size: 11px; color: var(--text-secondary)">
+            <span style="font-weight: 700">مراحل:</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span class="lkstep" style="background: var(--primary-main)"></span>آزاد شده</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span class="lkstep" style="box-shadow: inset 0 0 0 1.5px var(--warning-main)"></span>در انتظار تأیید سازمان</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span class="lkstep" style="background: var(--progress-track)"></span>آینده</span>
+          </div>
+        </div>
+        <span class="cap">bar ۶ · free = primary solid · locked = grey stripes ۱۳۵° · legend «آزاد / قفل» زیر جمع · chip ۲۲ radius ۶ (soft bg / text) · lock-item: chip · title · release condition · amount · step ۱۸×۶ — available amounts everywhere = free only</span>
+      </div>
+
+      <!-- List / Avatars / Badges / Progress -->
+      <div style="display: grid; grid-template-columns: 250px 1fr 1fr; gap: 20px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">List</div>
+          <div class="paper" style="padding: 6px; display: flex; flex-direction: column">
+            <sc-for list="{{listItems}}" as="li" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 8px; border-radius: 8px">
+                <span style="width: 36px; height: 36px; border-radius: 50%; background: {{li.av}}; color: #FFFFFF; font-size: 13px; font-weight: 700; display: grid; place-items: center; flex: none">{{li.ini}}</span>
+                <span style="display: flex; flex-direction: column; min-width: 0; flex: 1"><span style="font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{li.title}}</span><span class="cap" style="line-height: 1.3">{{li.sub}}</span></span>
+                <span class="num" style="font-size: 13px; font-weight: 500; color: {{li.col}}">{{li.amt}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <span class="cap">avatar · primary + secondary text · amount</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Avatars · Badges · Tooltip</div>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--secondary-main); color: #FFFFFF; font-size: 10px; font-weight: 700; display: grid; place-items: center">س</span>
+            <span style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-main); color: #FFFFFF; font-size: 12px; font-weight: 700; display: grid; place-items: center">م</span>
+            <span style="width: 40px; height: 40px; border-radius: 50%; background: var(--success-main); color: var(--success-contrast); font-size: 14px; font-weight: 700; display: grid; place-items: center">ر</span>
+            <span style="width: 48px; height: 48px; border-radius: 50%; background: var(--warning-main); color: var(--warning-contrast); font-size: 16px; font-weight: 700; display: grid; place-items: center">ن</span>
+            <span style="display: flex; align-items: center; margin-right: 8px">
+              <span style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-main); color: #FFFFFF; font-size: 12px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--bg-paper); margin-left: -8px">ع</span>
+              <span style="width: 32px; height: 32px; border-radius: 50%; background: var(--secondary-main); color: #FFFFFF; font-size: 12px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--bg-paper); margin-left: -8px">م</span>
+              <span style="width: 32px; height: 32px; border-radius: 50%; background: var(--success-main); color: var(--success-contrast); font-size: 12px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--bg-paper); margin-left: -8px">ا</span>
+              <span style="width: 32px; height: 32px; border-radius: 50%; background: var(--error-main); color: #FFFFFF; font-size: 12px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--bg-paper); margin-left: -8px">ن</span>
+              <span class="num" style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-neutral); color: var(--text-secondary); font-size: 12px; font-weight: 500; display: grid; place-items: center; border: 2px solid var(--bg-paper)">+۳</span>
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 22px">
+            <span style="position: relative; display: inline-flex"><span style="width: 32px; height: 32px; border-radius: 50%; background: var(--grey-500); color: #FFFFFF; font-size: 12px; font-weight: 700; display: grid; place-items: center">ک</span><span style="position: absolute; top: 1px; left: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--success-main); border: 2px solid var(--bg-default)"></span></span>
+            <span style="position: relative; display: inline-flex"><svg class="ico" viewBox="0 0 24 24" style="width: 24px; height: 24px"><path d="M4 7h16v12H4zM4 7l8 6 8-6"></path></svg><span class="num" style="position: absolute; top: -8px; left: -10px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--error-main); color: #FFFFFF; font-size: 11px; font-weight: 600; display: grid; place-items: center; padding: 0 5px; box-sizing: border-box">۱۷</span></span>
+            <span style="position: relative; display: inline-flex"><button type="button" class="ibtn sm" aria-label="اعلان‌ها"><svg class="ico" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"></path></svg></button><span style="position: absolute; top: 6px; left: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--error-main); border: 2px solid var(--bg-default)"></span></span>
+            <span style="position: relative; display: inline-flex; align-items: center; margin-right: 10px">
+              <span style="position: absolute; bottom: calc(100% + 8px); right: 50%; transform: translateX(50%); background: var(--tip-bg); color: var(--tip-text); font-size: 12px; font-weight: 500; padding: 4px 8px; border-radius: 6px; white-space: nowrap; line-height: 1.5">کپی شناسهٔ تراکنش</span>
+              <span style="position: absolute; bottom: calc(100% + 3px); right: 50%; transform: translateX(50%); width: 10px; height: 10px; background: var(--tip-bg); clip-path: polygon(0 0, 100% 0, 50% 100%)"></span>
+              <button type="button" class="ibtn sm" aria-label="کپی"><svg class="ico" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"></path></svg></button>
+            </span>
+          </div>
+          <span class="cap">۲۴ · ۳۲ · ۴۰ · ۴۸ · group +۳ — badge dot · number · on icon button · tooltip</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Progress · Skeleton</div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="height: 6px; border-radius: 3px; background: rgb(var(--primary-main-rgb) / .16); overflow: hidden"><div style="width: 62%; height: 100%; border-radius: 3px; background: var(--primary-main)"></div></div>
+            <div style="display: flex; align-items: center; gap: 10px"><div style="flex: 1; height: 6px; border-radius: 3px; background: rgb(var(--success-main-rgb) / .16); overflow: hidden"><div style="width: 80%; height: 100%; border-radius: 3px; background: var(--success-main)"></div></div><span class="cap num" style="font-weight: 500; color: var(--text-primary)">۸۰٪</span></div>
+            <div style="display: flex; align-items: center; gap: 14px">
+              <svg dir="ltr" viewBox="0 0 40 40" width="24" height="24" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" style="stroke: rgb(var(--primary-main-rgb) / .16)"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="35" transform="rotate(-90 20 20)" style="stroke: var(--primary-main)"></circle></svg>
+              <svg dir="ltr" viewBox="0 0 40 40" width="32" height="32" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" style="stroke: rgb(var(--primary-main-rgb) / .16)"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="35" transform="rotate(-90 20 20)" style="stroke: var(--primary-main)"></circle></svg>
+              <svg dir="ltr" viewBox="0 0 40 40" width="44" height="44" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" style="stroke: rgb(var(--success-main-rgb) / .16)"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="20" transform="rotate(-90 20 20)" style="stroke: var(--success-main)"></circle><text x="20" y="24" text-anchor="middle" font-size="10" font-weight="500" font-family="IRANSansX, Tahoma, sans-serif" style="fill: var(--text-primary)">۸۰</text></svg>
+              <div style="display: flex; align-items: center; gap: 10px; flex: 1"><span class="skl" style="width: 36px; height: 36px; border-radius: 50%; flex: none"></span><span style="display: flex; flex-direction: column; gap: 6px; flex: 1"><span class="skl" style="height: 10px; width: 80%"></span><span class="skl" style="height: 10px; width: 55%"></span></span></div>
+            </div>
+          </div>
+          <span class="cap">linear primary · success with label · circular ۲۴/۳۲/۴۴ · skeleton row</span>
+        </div>
+      </div>
+
+      <!-- Alerts + Snackbar + Dialog -->
+      <div style="display: grid; grid-template-columns: 1fr 420px; gap: 20px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Alert</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+            <sc-for list="{{alerts}}" as="al" hint-placeholder-count="8">
+              <div class="alert {{al.v}} {{al.c}}" role="alert">
+                <svg class="ico" viewBox="0 0 24 24"><path d="{{al.path}}"></path></svg>
+                <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><div style="font-weight: 700; display: {{al.titleDisp}}">{{al.title}}</div><div style="opacity: .92">{{al.text}}</div></div>
+              </div>
+            </sc-for>
+          </div>
+          <span class="cap">standard · filled · outlined · soft × info · success · warning · error</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Dialog</div>
+          <div role="dialog" aria-labelledby="{{t.cls}}-dlg" style="width: 420px; background: var(--bg-paper); border-radius: 16px; box-shadow: var(--shadow-dialog); padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+            <div id="{{t.cls}}-dlg" style="font-size: 18px; font-weight: 700; line-height: 1.5">تأیید پرداخت حقوق مهر ۱۴۰۵</div>
+            <div style="font-size: 14px; color: var(--text-secondary)">با تأیید، دستور واریز برای <span class="num" style="color: var(--text-primary); font-weight: 500">۳۸۴</span> کارمند به مبلغ کل <span class="num" style="color: var(--text-primary); font-weight: 500">۱۸٫۶ میلیارد تومان</span> ارسال می‌شود. این عملیات قابل بازگشت نیست.</div>
+            <div class="alert soft c-warning" style="padding: 8px 12px; font-size: 12px"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px"><path d="M12 3l10 18H2zM12 10v5M12 18h.01"></path></svg><div>موجودی حساب سازمان پس از واریز: ۲٫۱ میلیارد تومان</div></div>
+            <div style="display: flex; justify-content: flex-start; gap: 8px; flex-direction: row-reverse">
+              <button type="button" class="btn contained c-primary">تأیید و ارسال</button>
+              <button type="button" class="btn text c-default">انصراف</button>
+            </div>
+          </div>
+          <span class="cap">paper ۴۲۰ · radius ۱۶ · shadow-dialog · text + contained</span>
+        </div>
+      </div>
+
+      <!-- Tabs / Breadcrumbs / Pagination / Stepper / Accordion -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 20px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Tabs</div>
+          <div role="tablist" style="display: flex; gap: 24px; border-bottom: 1px solid var(--divider); font-size: 14px; font-weight: 600; color: var(--text-secondary)">
+            <button type="button" role="tab" aria-selected="true" class="btn text c-default" style="padding: 0; height: 40px; border-radius: 0; border-bottom: 2px solid var(--primary-main); color: var(--text-primary); margin-bottom: -1px">همه</button>
+            <button type="button" role="tab" aria-selected="false" class="btn text c-default" style="padding: 0; height: 40px; border-radius: 0; color: var(--text-secondary); font-weight: 600">واریز</button>
+            <button type="button" role="tab" aria-selected="false" class="btn text c-default" style="padding: 0; height: 40px; border-radius: 0; color: var(--text-secondary); font-weight: 600">برداشت</button>
+            <button type="button" role="tab" aria-selected="false" class="btn text c-default" style="padding: 0; height: 40px; border-radius: 0; color: var(--text-secondary); font-weight: 600; gap: 6px">قبض<span class="lbl soft c-default num" style="height: 20px; padding: 0 6px; font-weight: 600">۴</span></button>
+          </div>
+          <div role="tablist" style="display: flex; gap: 6px; padding: 4px; border-radius: 10px; background: var(--bg-neutral); width: max-content">
+            <button type="button" role="tab" aria-selected="true" class="btn sm contained c-default" style="border-radius: 7px">روز</button>
+            <button type="button" role="tab" aria-selected="false" class="btn sm text c-default" style="color: var(--text-secondary); font-weight: 600">هفته</button>
+            <button type="button" role="tab" aria-selected="false" class="btn sm text c-default" style="color: var(--text-secondary); font-weight: 600">ماه</button>
+            <button type="button" role="tab" aria-selected="false" class="btn sm text c-default" style="color: var(--text-secondary); font-weight: 600">سال</button>
+          </div>
+          <span class="cap">underline · indicator ۲px primary — pill style</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Breadcrumbs · Pagination</div>
+          <nav aria-label="مسیر" style="display: flex; align-items: center; gap: 10px; font-size: 14px; height: 40px">
+            <a href="#" style="color: var(--text-primary)">داشبورد</a>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--grey-500)"></span>
+            <a href="#" style="color: var(--text-primary)">کارکنان</a>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--grey-500)"></span>
+            <span style="color: var(--text-disabled)">سارا محمدی</span>
+          </nav>
+          <nav aria-label="صفحه‌بندی" style="display: flex; align-items: center; gap: 6px">
+            <button type="button" class="ibtn sm" aria-label="قبلی" style="width: 32px; height: 32px; border: 1px solid var(--divider); border-radius: 8px"><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px"><path d="M9 6l6 6-6 6"></path></svg></button>
+            <button type="button" class="btn sm text c-default num" style="width: 32px; height: 32px; padding: 0; font-weight: 500; border: 1px solid var(--divider)">۱</button>
+            <button type="button" class="btn sm soft c-primary num" style="width: 32px; height: 32px; padding: 0; font-weight: 600" aria-current="page">۲</button>
+            <button type="button" class="btn sm text c-default num" style="width: 32px; height: 32px; padding: 0; font-weight: 500; border: 1px solid var(--divider)">۳</button>
+            <button type="button" class="btn sm text c-default num" style="width: 32px; height: 32px; padding: 0; font-weight: 500; border: 1px solid var(--divider)">۴</button>
+            <span class="num" style="color: var(--text-secondary); padding: 0 4px">…</span>
+            <button type="button" class="btn sm text c-default num" style="width: 32px; height: 32px; padding: 0; font-weight: 500; border: 1px solid var(--divider)">۱۲</button>
+            <button type="button" class="ibtn sm" aria-label="بعدی" style="width: 32px; height: 32px; border: 1px solid var(--divider); border-radius: 8px"><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          </nav>
+          <span class="cap">dot separators · rounded outlined pagination · soft active</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Stepper · Accordion</div>
+          <div style="display: flex; align-items: flex-start; height: 40px">
+            <sc-for list="{{steps}}" as="st" hint-placeholder-count="4">
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; min-width: 0">
+                <div style="position: absolute; top: 11px; right: 50%; width: 100%; height: 1px; background: {{st.line}}; display: {{st.lineDisp}}"></div>
+                <span class="num" style="position: relative; width: 22px; height: 22px; border-radius: 50%; background: {{st.bg}}; color: {{st.fg}}; border: 2px solid {{st.bd}}; box-sizing: border-box; font-size: 11px; font-weight: 600; display: grid; place-items: center">{{st.n}}</span>
+                <span style="font-size: 11px; font-weight: {{st.fw}}; color: {{st.tc}}; white-space: nowrap">{{st.label}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-direction: column">
+            <div style="display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 4px; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--divider)"><span>سقف انتقال روزانه چقدر است؟</span><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--text-secondary); transform: rotate(180deg)"><path d="M6 9l6 6 6-6"></path></svg></div>
+            <div class="cap" style="padding: 6px 4px 8px; border-bottom: 1px solid var(--divider)">کارت به کارت تا ۱۰ میلیون و پایا تا ۱۰۰ میلیون تومان در روز.</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 4px; font-size: 13px; font-weight: 600"><span>کارمزد انتقال؟</span><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--text-secondary)"><path d="M6 9l6 6 6-6"></path></svg></div>
+          </div>
+          <span class="cap">completed · current · pending — accordion one open</span>
+        </div>
+      </div>
+
+      <!-- Vertical nav / Mini nav / Menu + Empty -->
+      <div style="display: grid; grid-template-columns: 300px 88px 1fr; gap: 20px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Vertical nav · ۳۰۰</div>
+          <nav class="glass" aria-label="منوی اصلی" style="border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 4px">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--grey-500); padding: 4px 12px 6px">مدیریت</div>
+            <a href="#" class="nav-item active"><svg class="ico" viewBox="0 0 24 24" style="width: 24px; height: 24px"><rect x="3" y="3" width="8" height="8" rx="2"></rect><rect x="13" y="3" width="8" height="8" rx="2"></rect><rect x="3" y="13" width="8" height="8" rx="2"></rect><rect x="13" y="13" width="8" height="8" rx="2"></rect></svg><span style="flex: 1">داشبورد</span></a>
+            <a href="#" class="nav-item"><svg class="ico" viewBox="0 0 24 24" style="width: 24px; height: 24px"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 19a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M21.5 19a6.5 6.5 0 0 0-4-6"></path></svg><span style="flex: 1">کارکنان</span></a>
+            <a href="#" class="nav-item" aria-expanded="true" style="color: var(--text-primary)"><svg class="ico" viewBox="0 0 24 24" style="width: 24px; height: 24px"><rect x="2" y="6" width="20" height="13" rx="3"></rect><path d="M2 11h20M6 15h4"></path></svg><span style="flex: 1">حقوق و دستمزد</span><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px; transform: rotate(180deg)"><path d="M6 9l6 6 6-6"></path></svg></a>
+            <a href="#" class="nav-item" style="height: 34px; padding-right: 32px; font-size: 13px"><span style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-secondary)"></span><span style="flex: 1">پرداخت ماهانه</span></a>
+            <a href="#" class="nav-item" style="height: 34px; padding-right: 32px; font-size: 13px; color: var(--text-primary)"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--primary-main)"></span><span style="flex: 1">مساعده</span></a>
+            <a href="#" class="nav-item"><svg class="ico" viewBox="0 0 24 24" style="width: 24px; height: 24px"><path d="M4 7h16v12H4zM8 3v4M16 3v4M8 12h8"></path></svg><span style="flex: 1">درخواست‌ها</span><span class="lbl soft c-error num" style="height: 22px; font-weight: 600">۱۷</span></a>
+            <a href="#" class="nav-item"><svg class="ico" viewBox="0 0 24 24" style="width: 24px; height: 24px"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg><span style="flex: 1">تنظیمات</span></a>
+          </nav>
+          <span class="cap">NavItem ۴۴ · radius ۸ · active soft primary · sub-items · Label · section caption</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Mini</div>
+          <nav class="glass" aria-label="منوی کوچک" style="border-radius: 16px; padding: 8px; display: flex; flex-direction: column; gap: 4px; width: 88px; box-sizing: border-box">
+            <sc-for list="{{mini}}" as="mi" hint-placeholder-count="4">
+              <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 56px; justify-content: center; border-radius: 8px; background: {{mi.bg}}; color: {{mi.fg}}; font-size: 10px; font-weight: 600"><svg class="ico" viewBox="0 0 24 24" style="width: 22px; height: 22px"><path d="{{mi.path}}"></path></svg>{{mi.label}}</a>
+            </sc-for>
+          </nav>
+          <span class="cap">۸۸ wide</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Menu · Empty state</div>
+          <div class="glass" role="menu" style="border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; width: 220px; box-shadow: var(--shadow-dropdown), var(--glass-highlight)">
+            <sc-for list="{{menu}}" as="me" hint-placeholder-count="4">
+              <button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 8px; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 500; color: {{me.fg}}; cursor: pointer; text-align: right; border-top: {{me.bt}}"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px"><path d="{{me.path}}"></path></svg><span style="flex: 1">{{me.label}}</span></button>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px; padding: 4px 0">
+            <svg viewBox="0 0 96 72" width="96" height="72" aria-hidden="true" style="flex: none"><ellipse cx="48" cy="64" rx="36" ry="5" style="fill: var(--action-hover)"></ellipse><rect x="22" y="14" width="52" height="40" rx="8" fill="none" stroke-width="1.5" style="stroke: var(--grey-400)"></rect><path d="M22 26h52" stroke-width="1.5" style="stroke: var(--grey-400)"></path><rect x="30" y="34" width="22" height="4" rx="2" style="fill: var(--primary-light); opacity: .6"></rect><rect x="30" y="42" width="34" height="4" rx="2" style="fill: var(--grey-300)"></rect><circle cx="70" cy="18" r="9" style="fill: var(--primary-main)"></circle><path d="M66 18h8M70 14v8" stroke-width="1.8" stroke-linecap="round" style="stroke: #FFFFFF"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start">
+              <div style="font-size: 15px; font-weight: 700; line-height: 1.3">هنوز تراکنشی ندارید</div>
+              <div class="cap">اولین انتقال یا پرداخت را از اینجا شروع کنید.</div>
+              <button type="button" class="btn sm contained c-primary"><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px"><path d="M12 5v14M5 12h14"></path></svg>تراکنش جدید</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Header bar + Horizontal nav -->
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div class="sec">Header ۷۲ · Horizontal nav</div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <header class="glass" style="height: 72px; border-radius: 16px; padding: 0 20px; display: flex; align-items: center; gap: 16px; box-sizing: border-box">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--brand-gradient); display: grid; place-items: center; color: #FFFFFF"><svg viewBox="0 0 64 40" width="26" height="16" aria-hidden="true"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg></div>
+              <span style="font-family: 'Divan', 'IRANSansX', sans-serif; font-size: 20px; font-weight: 700; line-height: 1">نمادنو</span>
+            </div>
+            <div class="tf sm" style="width: 260px; height: 40px; background: rgb(var(--grey-500-rgb) / .08); border-color: transparent; margin-right: 12px"><svg class="ico" viewBox="0 0 24 24" style="color: var(--text-secondary)"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4.5-4.5"></path></svg><input type="search" value="" placeholder="جست‌وجو…" aria-label="جست‌وجو"><span class="cap" style="border: 1px solid var(--divider); border-radius: 6px; padding: 1px 6px; font-size: 11px" dir="ltr">⌘K</span></div>
+            <div style="flex: 1"></div>
+            <span class="lbl soft c-default" style="height: 26px">Production</span>
+            <span style="position: relative; display: inline-flex"><button type="button" class="ibtn" aria-label="اعلان‌ها"><svg class="ico" viewBox="0 0 24 24" style="width: 22px; height: 22px"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"></path></svg></button><span class="num" style="position: absolute; top: 2px; left: 2px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--error-main); color: #FFFFFF; font-size: 10px; font-weight: 600; display: grid; place-items: center; padding: 0 4px; box-sizing: border-box">۴</span></span>
+            <button type="button" class="ibtn" aria-label="مخاطبین"><svg class="ico" viewBox="0 0 24 24" style="width: 22px; height: 22px"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 19a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M21.5 19a6.5 6.5 0 0 0-4-6"></path></svg></button>
+            <button type="button" class="ibtn" aria-label="تنظیمات"><svg class="ico" viewBox="0 0 24 24" style="width: 22px; height: 22px"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg></button>
+            <button type="button" aria-label="حساب کاربری" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgb(var(--primary-main-rgb) / .32); padding: 2px; background: transparent; cursor: pointer"><span style="display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--secondary-main); color: #FFFFFF; font-size: 13px; font-weight: 700">س</span></button>
+          </header>
+          <nav class="glass" aria-label="منوی افقی" style="height: 48px; border-radius: 12px; padding: 0 12px; display: flex; align-items: center; gap: 6px; box-sizing: border-box">
+            <sc-for list="{{hnav}}" as="hn" hint-placeholder-count="5">
+              <a href="#" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 8px; background: {{hn.bg}}; color: {{hn.fg}}; font-size: 13px; font-weight: 600"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px"><path d="{{hn.path}}"></path></svg>{{hn.label}}</a>
+            </sc-for>
+          </nav>
+        </div>
+        <span class="cap">glass AppBar: logo · search · env chip · bell with badge · contacts · settings · avatar — horizontal nav ۴۸</span>
+      </div>
+
+      <!-- Mobile bottom nav + Snackbar -->
+      <div style="display: grid; grid-template-columns: 390px 1fr; gap: 20px; align-items: start">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Mobile bottom nav · ۳۹۰</div>
+          <nav class="glass" aria-label="منوی موبایل" style="width: 390px; height: 64px; border-radius: 20px; display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; box-sizing: border-box; padding: 0 6px">
+            <sc-for list="{{bnav}}" as="bn" hint-placeholder-count="5">
+              <a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: 56px; border-radius: 12px; color: {{bn.fg}}; font-size: 10px; font-weight: {{bn.fw}}"><svg class="ico" viewBox="0 0 24 24" style="width: 24px; height: 24px; stroke-width: {{bn.sw}}"><path d="{{bn.path}}"></path></svg>{{bn.label}}</a>
+            </sc-for>
+          </nav>
+          <span class="cap">glass ۶۴ · ۵ items · active primary · ۱۰px label</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="sec">Snackbar · Toast</div>
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 330px">
+            <div class="glass" role="status" style="border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px">
+              <span style="width: 32px; height: 32px; border-radius: 8px; background: rgb(var(--success-main-rgb) / .16); color: var(--success-text); display: grid; place-items: center; flex: none"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px"><path d="M5 12l5 5 9-10"></path></svg></span>
+              <span style="flex: 1; font-weight: 500">انتقال ۱۲٬۵۰۰٬۰۰۰ تومان انجام شد</span>
+              <a href="#" style="font-size: 13px; font-weight: 700">رسید</a>
+              <button type="button" class="ibtn sm" aria-label="بستن" style="width: 28px; height: 28px"><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            </div>
+            <div class="glass" role="status" style="border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px">
+              <span style="width: 32px; height: 32px; border-radius: 8px; background: rgb(var(--error-main-rgb) / .16); color: var(--error-text); display: grid; place-items: center; flex: none"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></span>
+              <span style="flex: 1; font-weight: 500">اتصال به شبکهٔ شتاب برقرار نشد</span>
+              <button type="button" class="btn sm text c-error">تلاش مجدد</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":3180}}'>
+class Component extends DCLogic {
+  renderVals() {
+
+    var LKT = {
+      collateral: { key: 'collateral', label: 'وثیقه اعتبار و وام', short: 'وثیقه', bg: 'var(--soft-info)', fg: 'var(--info-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--info-main' },
+      vesting: { key: 'vesting', label: 'قفل زمانی سازمان', short: 'قفل زمانی', bg: 'var(--soft-warning)', fg: 'var(--warning-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--warning-main' },
+      installment: { key: 'installment', label: 'وثیقه خرید اقساطی', short: 'اقساطی', bg: 'var(--soft-secondary)', fg: 'var(--secondary-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--secondary-main' },
+      milestone: { key: 'milestone', label: 'آزادسازی مرحله‌ای', short: 'مرحله‌ای', bg: 'var(--soft-primary)', fg: 'var(--primary-text)', d: 'M5 21V4M5 4h11l-2 4 2 4H5', col: '--primary-main' },
+      legal: { key: 'legal', label: 'مسدودی قانونی', short: 'مسدودی', bg: 'var(--soft-error)', fg: 'var(--error-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--error-main' }
+    };
+    function lkD(s) { return String(s).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.charAt(+d); }); }
+    function lkN(n) { var neg = n < 0; var s = String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '٬'); return (neg ? '−' : '') + lkD(s); }
+    function lkM(n, dec) { var v = n / 1e6; var p = dec == null ? 1 : dec; var s = v.toFixed(p); if (p > 0) s = s.replace(/\.?0+$/, ''); return lkD(s.replace('.', '٫')); }
+    function lkB(n, dec) { var v = n / 1e9; var p = dec == null ? 1 : dec; var s = v.toFixed(p); if (p > 0) s = s.replace(/\.?0+$/, ''); return lkD(s.replace('.', '٫')); }
+    function lkPct(a, b) { return b > 0 ? Math.round(a / b * 1000) / 10 : 0; }
+    function lkSplit(total, locked, fmt) {
+      var f = fmt || lkN; var free = total - locked; var fp = total > 0 ? Math.round(free / total * 1000) / 10 : 0;
+      return { total: f(total), free: f(free), locked: f(locked), freePct: fp, lockedPct: Math.round((100 - fp) * 10) / 10, freePctFa: lkD(String(Math.round(fp))) + '٪', lockedPctFa: lkD(String(Math.round(100 - fp))) + '٪',
+        hasLock: locked > 0, noLock: !(locked > 0), allLocked: free <= 0 && total > 0, hasFree: free > 0, mixed: free > 0 && locked > 0 };
+    }
+    function lkSteps(n, released, pending) {
+      var a = [];
+      for (var i = 0; i < n; i++) {
+        var st = i < released ? 'r' : (i < released + pending ? 'p' : 'f');
+        a.push({ bg: st === 'r' ? 'var(--primary-main)' : (st === 'p' ? 'transparent' : 'var(--progress-track)'), bd: st === 'p' ? 'inset 0 0 0 1.5px var(--warning-main)' : 'none' });
+      }
+      return a;
+    }
+    var lkStates = [['صندوق سهامی شاخصی', 8200000, 0, 'همه آزاد', 'c-success'], ['صندوق طلا', 98000000, 42000000, 'آزاد + قفل', 'c-primary'], ['صندوق نقره', 2100000, 2100000, 'همه قفل', 'c-warning']].map(function (x) {
+      var sp = lkSplit(x[1], x[2]); sp.name = x[0]; sp.state = x[3]; sp.cc = x[4]; return sp; });
+    var lkTypes = ['collateral', 'vesting', 'installment', 'milestone', 'legal'].map(function (k) { return LKT[k]; });
+    var lkRows = [
+      { t: LKT.collateral, title: 'وثیقه وام با پشتوانه دارایی', cond: 'آزاد با تسویه وام (۱۲ قسط، ۹ مانده)', amount: '۳۰٬۰۰۰٬۰۰۰', holding: 'صندوق طلا', isMs: false, steps: [] },
+      { t: LKT.milestone, title: 'قرارداد پروژه پرتال منابع انسانی · کل ۲۰٬۰۰۰٬۰۰۰', cond: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود · هلدینگ آرمان', amount: '۱۲٬۰۰۰٬۰۰۰', holding: 'صندوق طلا', isMs: true, steps: lkSteps(5, 2, 1) },
+      { t: LKT.legal, title: 'مسدودی قانونی · مرجع قضایی', cond: 'تا رفع دستور مرجع / بررسی ریسک · فقط پنل بهره‌بردار', amount: '۱۰٬۰۰۰٬۰۰۰', holding: 'کیف پول ریالی', isMs: false, steps: [] }
+    ];
+    var P = {
+      home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
+      card: 'M2 6h20v13H2zM2 11h20M6 15h4',
+      credit: 'M4 7h16v12H4zM8 3v4M16 3v4M8 12h8',
+      invest: 'M3 17l5-6 4 3 5-7 4 4M3 21h18',
+      more: 'M5 12h.01M12 12h.01M19 12h.01',
+      users: 'M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 19a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M21.5 19a6.5 6.5 0 0 0-4-6',
+      report: 'M4 20V9M10 20V4M16 20v-7M22 20H2',
+      settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2',
+      dash: 'M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z',
+      eye: 'M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+      edit: 'M4 20h4l10-10-4-4L4 16v4zM13 7l4 4',
+      copy: 'M8 8h12v12H8zM16 8V4H4v12h4',
+      trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
+      info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01',
+      ok: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12l3 3 5-6',
+      warn: 'M12 3l10 18H2zM12 10v5M12 18h.01',
+      err: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6'
+    };
+    var av1 = 'var(--primary-main)', av2 = 'var(--secondary-main)', av3 = 'var(--success-dark)', av4 = 'var(--warning-dark)', av5 = 'var(--grey-600)';
+    return {
+      themes: [{ cls: 'th-light', label: 'Light' }, { cls: 'th-dark', label: 'Dark' }],
+      lkStates: lkStates, lkTypes: lkTypes, lkRows: lkRows,
+      rows: [
+        { cls: '', chk: 'on', chkOp: '1', av: av1, ini: 'ع', name: 'علی کریمی', role: 'توسعه‌دهنده ارشد', unit: 'فنی', amount: '۴۸٬۰۰۰٬۰۰۰', sc: 'c-success', status: 'فعال' },
+        { cls: 'hover', chk: '', chkOp: '0', av: av2, ini: 'م', name: 'مریم احمدی', role: 'مدیر فروش', unit: 'فروش', amount: '۵۲٬۵۰۰٬۰۰۰', sc: 'c-success', status: 'فعال' },
+        { cls: '', chk: '', chkOp: '0', av: av3, ini: 'ر', name: 'رضا حسینی', role: 'کارشناس مالی', unit: 'مالی', amount: '۳۶٬۲۰۰٬۰۰۰', sc: 'c-warning', status: 'در انتظار' },
+        { cls: '', chk: '', chkOp: '0', av: av4, ini: 'ن', name: 'نگار موسوی', role: 'طراح محصول', unit: 'محصول', amount: '۴۱٬۸۰۰٬۰۰۰', sc: 'c-success', status: 'فعال' },
+        { cls: '', chk: '', chkOp: '0', av: av5, ini: 'ا', name: 'امیر جعفری', role: 'کارشناس عملیات', unit: 'عملیات', amount: '۲۹٬۶۰۰٬۰۰۰', sc: 'c-error', status: 'تعلیق' }
+      ],
+      listItems: [
+        { av: av1, ini: 'هآ', title: 'واریز حقوق — هلدینگ آرمان', sub: 'امروز · ۰۹:۱۲', amt: '+۴۸٬۰۰۰٬۰۰۰', col: 'var(--success-text)' },
+        { av: av5, ini: 'ت', title: 'تاکسی اینترنتی', sub: 'دیروز · ۱۸:۴۰', amt: '−۱۸۵٬۰۰۰', col: 'var(--text-primary)' },
+        { av: av2, ini: 'ف', title: 'فروشگاه آنلاین', sub: '۱۲ مهر · ۲۱:۰۵', amt: '−۲٬۳۴۰٬۰۰۰', col: 'var(--text-primary)' }
+      ],
+      alerts: [
+        { v: 'standard', c: 'c-info', path: P.info, titleDisp: 'none', title: '', text: 'نسخهٔ ۲٫۸٫۰ منتشر شد.' },
+        { v: 'standard', c: 'c-success', path: P.ok, titleDisp: 'none', title: '', text: 'فایل حقوق با موفقیت بارگذاری شد.' },
+        { v: 'filled', c: 'c-warning', path: P.warn, titleDisp: 'block', title: 'سقف اعتبار نزدیک است', text: '۹۲٪ از سقف ماهانه استفاده شده.' },
+        { v: 'filled', c: 'c-error', path: P.err, titleDisp: 'none', title: '', text: 'اتصال به شبکهٔ شتاب برقرار نشد.' },
+        { v: 'outlined', c: 'c-info', path: P.info, titleDisp: 'none', title: '', text: 'به‌روزرسانی ساعت ۰۲:۰۰ انجام می‌شود.' },
+        { v: 'outlined', c: 'c-success', path: P.ok, titleDisp: 'none', title: '', text: 'احراز هویت ۲۴۰ کاربر تأیید شد.' },
+        { v: 'soft', c: 'c-warning', path: P.warn, titleDisp: 'none', title: '', text: '۱۷ درخواست در انتظار بررسی است.' },
+        { v: 'soft', c: 'c-error', path: P.err, titleDisp: 'block', title: 'پرداخت ناموفق', text: 'موجودی حساب کافی نیست.' }
+      ],
+      steps: [
+        { n: '✓', label: 'بارگذاری فایل', bg: 'var(--primary-main)', fg: '#FFFFFF', bd: 'var(--primary-main)', line: 'var(--primary-main)', lineDisp: 'none', fw: '600', tc: 'var(--text-primary)' },
+        { n: '✓', label: 'اعتبارسنجی', bg: 'var(--primary-main)', fg: '#FFFFFF', bd: 'var(--primary-main)', line: 'var(--primary-main)', lineDisp: 'block', fw: '600', tc: 'var(--text-primary)' },
+        { n: '۳', label: 'تأیید مدیر مالی', bg: 'var(--bg-paper)', fg: 'var(--primary-text)', bd: 'var(--primary-main)', line: 'var(--primary-main)', lineDisp: 'block', fw: '700', tc: 'var(--primary-text)' },
+        { n: '۴', label: 'واریز', bg: 'transparent', fg: 'var(--text-disabled)', bd: 'var(--divider)', line: 'var(--divider)', lineDisp: 'block', fw: '500', tc: 'var(--text-disabled)' }
+      ],
+      mini: [
+        { label: 'داشبورد', path: P.dash, bg: 'rgb(var(--primary-main-rgb) / .08)', fg: 'var(--primary-text)' },
+        { label: 'کارکنان', path: P.users, bg: 'transparent', fg: 'var(--text-secondary)' },
+        { label: 'گزارش‌ها', path: P.report, bg: 'transparent', fg: 'var(--text-secondary)' },
+        { label: 'تنظیمات', path: P.settings, bg: 'transparent', fg: 'var(--text-secondary)' }
+      ],
+      menu: [
+        { label: 'مشاهدهٔ جزئیات', path: P.eye, fg: 'var(--text-primary)', bt: '0' },
+        { label: 'ویرایش', path: P.edit, fg: 'var(--text-primary)', bt: '0' },
+        { label: 'کپی شناسه', path: P.copy, fg: 'var(--text-primary)', bt: '0' },
+        { label: 'حذف', path: P.trash, fg: 'var(--error-text)', bt: '1px dashed var(--divider)' }
+      ],
+      hnav: [
+        { label: 'داشبورد', path: P.dash, bg: 'rgb(var(--primary-main-rgb) / .08)', fg: 'var(--primary-text)' },
+        { label: 'کارکنان', path: P.users, bg: 'transparent', fg: 'var(--text-secondary)' },
+        { label: 'حقوق و دستمزد', path: P.card, bg: 'transparent', fg: 'var(--text-secondary)' },
+        { label: 'گزارش‌ها', path: P.report, bg: 'transparent', fg: 'var(--text-secondary)' },
+        { label: 'تنظیمات', path: P.settings, bg: 'transparent', fg: 'var(--text-secondary)' }
+      ],
+      bnav: [
+        { label: 'خانه', path: P.home, fg: 'var(--primary-text)', fw: '700', sw: '1.8' },
+        { label: 'کارت‌ها', path: P.card, fg: 'var(--text-secondary)', fw: '500', sw: '1.5' },
+        { label: 'اعتبار', path: P.credit, fg: 'var(--text-secondary)', fw: '500', sw: '1.5' },
+        { label: 'سرمایه', path: P.invest, fg: 'var(--text-secondary)', fw: '500', sw: '1.5' },
+        { label: 'بیشتر', path: P.more, fg: 'var(--text-secondary)', fw: '500', sw: '1.5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

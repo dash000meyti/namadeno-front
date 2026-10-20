@@ -1,0 +1,20 @@
+@import './fonts.css';
+@import './tokens.css';
+@import './base.css';
+
+html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: 'IRANSansX', Tahoma, sans-serif;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+*, *::before, *::after { box-sizing: border-box; }
+button, input, select, textarea { font-family: inherit; }
+/* Focus ring consistent with the design system */
+:focus-visible { outline: 2px solid var(--primary-main); outline-offset: 2px; }
+/* Persian digits in inputs that show numbers */
+.ltr { direction: ltr; unicode-bidi: isolate; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }

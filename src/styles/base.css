@@ -1,0 +1,27 @@
+/* Shared utility classes used across all surfaces */
+
+a{color:var(--primary-text);text-decoration:none}
+a:hover{color:var(--primary-dark)}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.card{background:var(--card-bg);border-radius:16px;border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.wm{font-family:'Divan','IRANSansX',Tahoma,sans-serif}
+.lkbar{height:6px;border-radius:6px;display:flex;overflow:hidden;background:rgb(var(--grey-500-rgb) / .16);gap:2px}
+.lkbar>.f{background:var(--primary-main);border-radius:6px}
+.lkbar>.l{border-radius:6px;background:repeating-linear-gradient(135deg,rgb(var(--grey-500-rgb) / .55) 0 3px,rgb(var(--grey-500-rgb) / .22) 3px 6px)}
+.lkleg{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.lkleg b{font-weight:500;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.lkdot{width:8px;height:8px;border-radius:50%;background:var(--primary-main);display:inline-block;margin-left:4px}
+.lktype{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.ibtn:hover{background:var(--action-hover)}
+@keyframes nm-ping{0%{transform:scale(1);opacity:.55}80%,100%{transform:scale(2);opacity:0}}
+@keyframes nmHeroLeave{0%{transform:none;z-index:20;opacity:1}42%{transform:translateX(-38%) rotate(-5deg);z-index:20;opacity:1}43%{z-index:0}100%{transform:translateY(18px) scale(.91);z-index:0;opacity:0}}
+@keyframes nmInfoUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes nmUp{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes kycIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes nm-up{from{transform:translateY(100%)}to{transform:none}}
+@keyframes nm-fwd{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@keyframes nm-back{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes nm-note{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}

@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>محصولات اعتباری</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.th-light,.th-dark{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%;--soft-primary:rgb(var(--primary-main-rgb) / .16);--soft-success:rgb(var(--success-main-rgb) / .16);--soft-warning:rgb(var(--warning-main-rgb) / .16);--soft-error:rgb(var(--error-main-rgb) / .16);--soft-info:rgb(var(--info-main-rgb) / .16);--soft-default:rgb(var(--grey-500-rgb) / .16);--nav-active:rgb(var(--primary-main-rgb) / .08);--outline-border:rgb(var(--grey-500-rgb) / .32);--progress-track:rgb(var(--primary-main-rgb) / .16)}
+.th-light{color-scheme:light;--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:var(--grey-200);--bg-canvas:var(--grey-100);--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .16), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .12), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .10), transparent 70%);--text-primary:var(--grey-800);--text-secondary:var(--grey-600);--text-disabled:var(--grey-500);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(255 255 255 / .78);--card-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(var(--grey-500-rgb) / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z8:0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z24:0 24px 48px 0 rgb(var(--grey-500-rgb) / .16);--shadow-card:0 0 2px 0 rgb(var(--grey-500-rgb) / .20), 0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);--shadow-dropdown:0 0 2px 0 rgb(var(--grey-500-rgb) / .24), -20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);--chart-1:var(--primary-main);--chart-2:var(--success-main);--chart-3:var(--secondary-main);--chart-4:var(--grey-400);--chart-5:var(--grey-600);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-main);--success-text:var(--success-dark);--warning-text:var(--warning-dark);--error-text:var(--error-dark);--info-text:var(--info-dark);--default-text:var(--grey-700);--table-head:rgb(var(--grey-500-rgb) / .12);--contained-default:var(--grey-800);--contained-default-text:#FFFFFF;--step-pending:var(--grey-300);--step-pending-text:var(--grey-600)}
+.th-dark{color-scheme:dark;--bg-default:var(--grey-900);--bg-paper:var(--grey-800);--bg-neutral:rgb(var(--grey-500-rgb) / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .32), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .20), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .16), transparent 70%);--text-primary:#FFFFFF;--text-secondary:var(--grey-500);--text-disabled:var(--grey-600);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(31 36 51 / .72);--card-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20), 0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24), -20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:var(--primary-light);--chart-2:#7CCBA8;--chart-3:var(--secondary-light);--chart-4:var(--grey-600);--chart-5:var(--grey-400);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-light);--success-text:#7CCBA8;--warning-text:var(--warning-light);--error-text:var(--error-light);--info-text:var(--info-light);--default-text:var(--grey-400);--table-head:rgb(var(--grey-500-rgb) / .12);--contained-default:#FFFFFF;--contained-default-text:var(--grey-800);--step-pending:rgb(var(--grey-500-rgb) / .24);--step-pending-text:var(--grey-400)}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.card{background:var(--card-bg);border-radius:16px;border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ibtn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--text-secondary);display:grid;place-items:center;cursor:pointer;padding:0}
+.ibtn:hover{background:var(--action-hover)}
+.wm{font-family:'Divan','IRANSansX',Tahoma,sans-serif}
+.btnp{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;border:0;background:var(--primary-main);color:var(--primary-contrast);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btnp:hover{color:var(--primary-contrast);background:var(--primary-dark)}
+.btno{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--outline-border);background:transparent;color:var(--text-primary);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btno:hover{color:var(--text-primary);background:var(--action-hover)}
+.btnt{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px;border-radius:8px;border:0;background:transparent;color:var(--primary-text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btnt:hover{background:var(--action-hover)}
+.btnd{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;border:0;background:var(--error-main);color:var(--error-contrast);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.sw{width:40px;height:24px;border-radius:12px;border:0;position:relative;cursor:pointer;padding:0;flex:none}
+.sw span{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#FFFFFF;box-shadow:var(--shadow-z1)}
+.sec{height:24px;line-height:24px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--grey-500)}
+.ck{width:18px;height:18px;border-radius:4px;box-sizing:border-box;border:2px solid var(--grey-500);background:transparent;display:grid;place-items:center;color:#FFFFFF;flex:none;padding:0;cursor:pointer}
+.ck.on{border-color:var(--primary-main);background:var(--primary-main)}
+.fi{height:40px;box-sizing:border-box;border:1px solid var(--outline-border);border-radius:8px;background:var(--bg-paper);color:var(--text-primary);font-family:inherit;font-size:13px;padding:0 12px;outline:0;width:100%;font-variant-numeric:tabular-nums}
+.fi:disabled{color:var(--text-disabled);background:var(--bg-neutral)}
+.fl{font-size:12px;font-weight:600;color:var(--text-secondary);line-height:1.3}
+.fg{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sel{display:flex;align-items:center;gap:8px;text-align:right;cursor:pointer}
+.fld{display:inline-flex;align-items:center;height:36px;box-sizing:border-box;border:1px solid var(--outline-border);border-radius:8px;overflow:hidden;background:var(--bg-paper)}
+.fld input{height:34px;border:0;background:transparent;color:var(--text-primary);font-family:inherit;font-size:13px;font-variant-numeric:tabular-nums;text-align:center;padding:0;outline:0}
+.sfx{height:100%;display:flex;align-items:center;padding:0 8px;border-right:1px solid var(--divider);font-size:11px;color:var(--text-secondary);white-space:nowrap}
+.lkbar{height:6px;border-radius:6px;display:flex;overflow:hidden;background:rgb(var(--grey-500-rgb) / .16);gap:2px}
+.lkbar>.f{background:var(--primary-main);border-radius:6px}
+.lkbar>.l{border-radius:6px;background:repeating-linear-gradient(135deg,rgb(var(--grey-500-rgb) / .55) 0 3px,rgb(var(--grey-500-rgb) / .22) 3px 6px)}
+.lkleg{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.lkleg b{font-weight:500;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.lkdot{width:8px;height:8px;border-radius:50%;background:var(--primary-main);display:inline-block;margin-left:4px}
+.lktype{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.lkstep{width:18px;height:6px;border-radius:3px;box-sizing:border-box;flex:none;display:inline-block}
+.th-light,.th-dark{--soft-secondary:rgb(var(--secondary-main-rgb) / .16)}
+.th-light{--secondary-text:var(--secondary-dark)}
+.th-dark{--secondary-text:var(--secondary-light)}
+</style>
+</helmet>
+<div dir="rtl" class="{{themeCls}}" style="width: 1280px; height: 800px; overflow: hidden; position: relative; background: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); font-family: 'IRANSansX', Tahoma, sans-serif; display: flex; flex-direction: row">
+
+  <!-- Vertical nav (right, RTL) -->
+  <aside class="glass" style="width: 300px; flex: none; box-sizing: border-box; border: 0; border-left: 1px solid var(--divider); box-shadow: none; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 0 4px; height: 40px">
+      <span style="width: 40px; height: 40px; border-radius: 10px; background: var(--brand-gradient); display: grid; place-items: center; color: #FFFFFF; flex: none"><svg viewBox="0 0 64 40" width="26" height="16" aria-hidden="true"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg></span>
+      <span style="display: flex; flex-direction: column; line-height: 1.1; gap: 2px"><span class="wm" style="font-size: 22px; font-weight: 700">نمادنو</span><span style="font-size: 11px; font-weight: 600; color: var(--text-secondary)">پنل بهره‌بردار</span></span>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <span style="display: block; height: 24px; line-height: 24px; padding: 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--grey-500)">عملیات</span>
+      <sc-for list="{{navOps}}" as="n" hint-placeholder-count="4">
+        <sc-if value="{{n.hasHref}}" hint-placeholder-val="{{ true }}">
+          <a href="{{n.href}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 8px; background: {{n.bg}}; color: var({{n.c}}); font-size: 14px; font-weight: {{n.w}}; text-decoration: none">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+            <sc-if value="{{n.badge}}" hint-placeholder-val="{{ true }}">
+              <span class="lbl" style="height: 22px; padding: 0 7px; background: var(--error-main); color: var(--error-contrast)">{{n.badge}}</span>
+            </sc-if>
+          </a>
+        </sc-if>
+        <sc-if value="{{n.noHref}}" hint-placeholder-val="{{ false }}">
+          <button style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 0; background: {{n.bg}}; color: var({{n.c}}); font-family: inherit; font-size: 14px; font-weight: {{n.w}}; cursor: pointer; text-align: right">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+            <sc-if value="{{n.badge}}" hint-placeholder-val="{{ true }}">
+              <span class="lbl" style="height: 22px; padding: 0 7px; background: var(--error-main); color: var(--error-contrast)">{{n.badge}}</span>
+            </sc-if>
+          </button>
+        </sc-if>
+      </sc-for>
+    </nav>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <span style="display: block; height: 24px; line-height: 24px; padding: 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--grey-500)">محصول</span>
+      <sc-for list="{{navProduct}}" as="n" hint-placeholder-count="3">
+        <sc-if value="{{n.hasHref}}" hint-placeholder-val="{{ true }}">
+          <a href="{{n.href}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 8px; background: {{n.bg}}; color: var({{n.c}}); font-size: 14px; font-weight: {{n.w}}; text-decoration: none">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+          </a>
+        </sc-if>
+        <sc-if value="{{n.noHref}}" hint-placeholder-val="{{ false }}">
+          <button style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 0; background: {{n.bg}}; color: var({{n.c}}); font-family: inherit; font-size: 14px; font-weight: {{n.w}}; cursor: pointer; text-align: right">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+          </button>
+        </sc-if>
+      </sc-for>
+    </nav>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <span style="display: block; height: 24px; line-height: 24px; padding: 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--grey-500)">سیستم</span>
+      <sc-for list="{{navSystem}}" as="n" hint-placeholder-count="3">
+        <sc-if value="{{n.hasHref}}" hint-placeholder-val="{{ true }}">
+          <a href="{{n.href}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 8px; background: {{n.bg}}; color: var({{n.c}}); font-size: 14px; font-weight: {{n.w}}; text-decoration: none">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+          </a>
+        </sc-if>
+        <sc-if value="{{n.noHref}}" hint-placeholder-val="{{ false }}">
+          <button style="display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 0; background: {{n.bg}}; color: var({{n.c}}); font-family: inherit; font-size: 14px; font-weight: {{n.w}}; cursor: pointer; text-align: right">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="{{n.d}}"></path></svg>
+            <span style="flex: 1">{{n.label}}</span>
+          </button>
+        </sc-if>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--bg-neutral)">
+      <span style="width: 40px; height: 40px; border-radius: 50%; background: var(--soft-primary); color: var(--primary-text); display: grid; place-items: center; font-size: 15px; font-weight: 700; flex: none">ع</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">علی نادری</span><span style="font-size: 12px; color: var(--text-secondary); white-space: nowrap">مدیر محصول</span></span>
+      <a href="op-login.dc.html" aria-label="خروج" style="display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 8px; border-radius: 8px; color: var(--text-secondary); font-size: 12px; font-weight: 600; text-decoration: none; flex: none"><svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M13 12H4M8 8l-4 4 4 4"></path></svg>خروج</a>
+    </div>
+  </aside>
+
+  <!-- Main column -->
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+
+    <!-- Header 72 glass -->
+    <header class="glass" style="height: 72px; flex: none; box-sizing: border-box; border: 0; border-bottom: 1px solid var(--glass-edge); box-shadow: var(--glass-highlight); padding: 0 24px; display: flex; align-items: center; gap: 8px">
+      <button class="ibtn" aria-label="جمع کردن منو"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+      <button style="display: flex; align-items: center; gap: 10px; height: 40px; width: 280px; padding: 0 14px 0 6px; border-radius: 999px; border: 0; background: var(--action-hover); color: var(--text-secondary); font-family: inherit; font-size: 14px; cursor: pointer; text-align: right">
+        <svg class="ico" width="20" height="20" viewBox="0 0 24 24"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"></path></svg>
+        <span style="flex: 1">جستجوی سازمان، کاربر، تراکنش…</span>
+        <span class="lbl" dir="ltr" style="height: 22px; padding: 0 6px; border-radius: 6px; background: var(--bg-paper); color: var(--text-secondary); font-size: 11px; box-shadow: 0 0 0 1px var(--divider)">⌘K</span>
+      </button>
+
+      <div style="margin-right: auto; display: flex; align-items: center; gap: 8px">
+        <span class="lbl" dir="ltr" style="gap: 6px; background: var(--soft-success); color: var(--success-text)"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--success-main)"></span>Production</span>
+        <button class="ibtn" aria-label="تغییر تم" onClick="{{toggleTheme}}" style="background: var(--glass-bg); box-shadow: 0 0 0 1px var(--glass-edge)"><sc-if value="{{isDark}}" hint-placeholder-val="{{ false }}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"></path></svg></sc-if><sc-if value="{{isLight}}" hint-placeholder-val="{{ true }}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7"></path></svg></sc-if></button>
+        <a href="op-requests.dc.html" class="ibtn" aria-label="اعلان‌ها" style="position: relative"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4"></path></svg><span style="position: absolute; top: 5px; left: 5px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--error-main); color: #FFFFFF; font-size: 11px; font-weight: 700; display: grid; place-items: center; line-height: 1">۳</span></a>
+        <a href="op-settings.dc.html" aria-label="حساب کاربری" style="width: 40px; height: 40px; border-radius: 50%; padding: 2px; box-sizing: border-box; display: grid; place-items: center; text-decoration: none"><span style="display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--soft-primary); color: var(--primary-text); font-size: 14px; font-weight: 700; box-shadow: 0 0 0 2px var(--bg-paper)">ع</span></a>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main style="flex: 1; min-height: 0; box-sizing: border-box; padding: 24px 24px 0; display: flex; flex-direction: column; gap: 24px; overflow: hidden">
+      <!-- Page heading -->
+      <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <h4 style="margin: 0; font-size: 20px; line-height: 1.3; font-weight: 700">محصولات اعتباری</h4>
+          <nav style="display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.3">
+            <a href="op-overview.dc.html" style="color: var(--text-primary)">بهره‌بردار</a>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-disabled)"></span>
+            <a href="op-funds.dc.html" style="color: var(--text-primary)">محصول</a>
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-disabled)"></span>
+            <span style="color: var(--text-disabled)">محصولات اعتباری</span>
+          </nav>
+        </div>
+        <div style="margin-right: auto; display: flex; align-items: center; gap: 8px">
+          <span style="position: relative; display: inline-flex; align-items: center; gap: 8px">
+            <span class="lbl" style="height: 22px; padding: 0 8px; font-size: 11px; background: var(--contained-default); color: var(--contained-default-text); border-radius: 6px; position: relative">به‌زودی<span style="position: absolute; left: -5px; top: 7px; width: 8px; height: 8px; background: var(--contained-default); transform: rotate(45deg)"></span></span>
+            <button class="btnp" disabled="" title="به‌زودی" aria-disabled="true" style="opacity: .5; cursor: not-allowed; font-size: 14px"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" style="stroke-width: 2"><path d="M12 5v14M5 12h14"></path></svg>افزودن محصول</button>
+          </span>
+        </div>
+      </div>
+
+        <!-- Product cards -->
+        <div style="height: 268px; flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
+          <sc-for list="{{products}}" as="p" hint-placeholder-count="3">
+            <div class="card" style="box-sizing: border-box; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px">
+              <div style="height: 36px; display: flex; align-items: center; gap: 10px">
+                <span style="width: 36px; height: 36px; border-radius: 10px; background: {{p.bg}}; color: {{p.fg}}; display: grid; place-items: center; flex: none"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><path d="{{p.d}}"></path></svg></span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25"><span style="font-size: 14px; font-weight: 700; white-space: nowrap">{{p.name}}</span><span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.type}}</span></span>
+                <span class="lbl" style="background: var(--soft-success); color: var(--success-text)">فعال</span>
+              </div>
+              <div style="display: flex; flex-direction: column">
+                <sc-for list="{{p.params}}" as="k" hint-placeholder-count="3">
+                  <div style="height: 30px; display: flex; align-items: center; gap: 10px; font-size: 12px; border-bottom: 1px dashed var(--divider)"><span style="color: var(--text-secondary); white-space: nowrap">{{k.k}}</span><span class="num" style="margin-right: auto; font-weight: 500; white-space: nowrap">{{k.v}}</span></div>
+                </sc-for>
+              </div>
+              <div style="display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg-neutral)">
+                <span class="lktype" style="background: {{p.lk.bg}}; color: {{p.lk.fg}}"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" style="stroke-width: 2"><path d="{{p.lk.d}}"></path></svg>{{p.lk.short}}</span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 11px; line-height: 1.5"><span style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.lockRule}}</span><span style="color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.lockRelease}}</span></span>
+              </div>
+              <div style="margin-top: auto; height: 32px; display: flex; align-items: center; gap: 8px">
+                <span style="display: flex; align-items: baseline; gap: 4px; font-size: 12px; color: var(--text-secondary)"><span class="num" style="font-size: 16px; color: var(--text-primary)">{{p.orgs}}</span>سازمان فعال</span>
+                <span style="font-size: 11px; color: var(--text-secondary)">· {{p.users}} کاربر</span>
+                <button class="btnt" onClick="{{p.edit}}" style="margin-right: auto; height: 32px; padding: 0 10px"><svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16zM13 7l4 4"></path></svg>ویرایش</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- Overrides table -->
+        <div class="card" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-bottom-left-radius: 0; border-bottom-right-radius: 0">
+          <div style="height: 48px; flex: none; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; gap: 10px">
+            <h6 style="margin: 0; font-size: 16px; font-weight: 700; line-height: 1.2">پارامترهای اختصاصی سازمان‌ها</h6>
+            <span class="lbl" style="background: var(--soft-default); color: var(--default-text)">۵ override</span>
+            <span style="margin-right: auto; font-size: 12px; color: var(--text-secondary)">هر override فقط می‌تواند پیش‌فرض را محدودتر کند</span>
+          </div>
+          <div style="height: 36px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) 132px 168px 120px 128px 88px 32px; align-items: center; padding: 0 20px; background: var(--table-head); color: var(--grey-600); font-size: 12px; font-weight: 700">
+            <span>سازمان</span><span>محصول</span><span>پارامتر</span><span>پیش‌فرض</span><span>مقدار اختصاصی</span><span>از تاریخ</span><span></span>
+          </div>
+          <sc-for list="{{overrides}}" as="o" hint-placeholder-count="5">
+            <div style="height: 48px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) 132px 168px 120px 128px 88px 32px; align-items: center; padding: 0 20px; border-bottom: 1px dashed var(--divider); font-size: 13px">
+              <a href="op-organization.dc.html" style="display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none"><span style="width: 28px; height: 28px; border-radius: 8px; background: {{o.bg}}; color: {{o.fg}}; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none">{{o.initial}}</span><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{o.org}}</span></a>
+              <span><span class="lbl" style="height: 22px; padding: 0 6px; font-size: 11px; background: {{o.pbg}}; color: {{o.pfg}}">{{o.product}}</span></span>
+              <span style="color: var(--text-secondary); white-space: nowrap">{{o.param}}</span>
+              <span class="num" style="color: var(--text-secondary)">{{o.def}}</span>
+              <span class="num" style="font-weight: 500">{{o.val}}</span>
+              <span class="num" dir="ltr" style="font-size: 12px; color: var(--text-secondary); text-align: right">{{o.date}}</span>
+              <span style="display: grid; place-items: center"><a href="op-organization.dc.html" class="ibtn" aria-label="مشاهده قرارداد سازمان" style="width: 28px; height: 28px"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"></path></svg></a></span>
+            </div>
+          </sc-for>
+        </div>
+    </main>
+
+  </div>
+
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+    <div class="glass" style="position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); height: 48px; padding: 0 16px 0 20px; border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--text-primary); z-index: 20">
+      <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--soft-success); color: var(--success-text); display: grid; place-items: center; flex: none"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" style="stroke-width: 2.4"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>
+      <span>{{toast}}</span>
+    </div>
+  </sc-if>
+  <sc-if value="{{isEdit}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(20,24,38,.48); z-index: 30">
+      <aside class="glass" style="position: absolute; left: 0; top: 0; bottom: 0; width: 420px; box-sizing: border-box; border: 0; border-right: 1px solid var(--glass-edge); box-shadow: var(--shadow-dropdown); padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+        <div style="height: 36px; display: flex; align-items: center; gap: 12px">
+          <span style="width: 36px; height: 36px; border-radius: 10px; background: {{ed.bg}}; color: {{ed.fg}}; display: grid; place-items: center; flex: none"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><path d="{{ed.d}}"></path></svg></span>
+          <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.25"><h6 style="margin: 0; font-size: 16px; font-weight: 700">ویرایش — {{ed.name}}</h6><span style="font-size: 12px; color: var(--text-secondary)">پارامترهای پیش‌فرض برای سازمان‌های جدید</span></span>
+          <button class="ibtn" aria-label="بستن" onClick="{{closeModal}}" style="width: 32px; height: 32px"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <sc-for list="{{ed.fields}}" as="f" hint-placeholder-count="5">
+            <div class="fg"><label class="fl" for="{{f.id}}">{{f.label}}</label><span style="display: flex; align-items: center; height: 40px; box-sizing: border-box; border: 1px solid var(--outline-border); border-radius: 8px; background: var(--bg-paper); overflow: hidden"><input id="{{f.id}}" value="{{f.value}}" class="fi" style="border: 0; background: transparent; flex: 1; height: 38px"><span class="sfx" style="height: 100%; font-size: 12px">{{f.suffix}}</span></span></div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ed.hasChips}}" hint-placeholder-val="{{ true }}">
+        <div class="fg"><span class="fl">{{ed.chipsLabel}}</span><div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap"><sc-for list="{{ed.chips}}" as="c" hint-placeholder-count="5"><button dir="ltr" aria-pressed="{{c.on}}" onClick="{{c.toggle}}" style="height: 30px; min-width: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid {{c.border}}; background: {{c.bg}}; color: {{c.fg}}; font-family: inherit; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer">{{c.label}}</button></sc-for></div></div>
+        </sc-if>
+        <sc-if value="{{ed.hasFreeze}}" hint-placeholder-val="{{ true }}">
+        <div style="height: 48px; display: flex; align-items: center; gap: 12px; border-top: 1px dashed var(--divider)">
+          <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.25"><span style="font-size: 13px; font-weight: 500">قفل خودکار هنگام تأیید · نوع «{{ed.lk.short}}»</span><span style="font-size: 11px; color: var(--text-secondary)">{{ed.lockRule}}؛ {{ed.lockRelease}}</span></span>
+          <button class="sw" aria-pressed="{{edFreeze.on}}" aria-label="قفل خودکار وثیقه" onClick="{{edFreeze.toggle}}" style="background: {{edFreeze.swBg}}"><span style="left: {{edFreeze.knob}}"></span></button>
+        </div>
+        </sc-if>
+        <div style="height: 48px; display: flex; align-items: center; gap: 12px; border-top: 1px dashed var(--divider)">
+          <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.25"><span style="font-size: 13px; font-weight: 500">محصول فعال</span><span style="font-size: 11px; color: var(--text-secondary)">غیرفعال‌سازی فقط روی درخواست‌های جدید اثر دارد</span></span>
+          <button class="sw" aria-pressed="{{edOn.on}}" aria-label="محصول فعال" onClick="{{edOn.toggle}}" style="background: {{edOn.swBg}}"><span style="left: {{edOn.knob}}"></span></button>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; background: var(--soft-info); color: var(--info-text); font-size: 12px; font-weight: 500; line-height: 1.5">
+          <svg class="ico" width="18" height="18" viewBox="0 0 24 24" style="flex: none; margin-top: 1px"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 11v5M12 8h.01"></path></svg>
+          <span>تغییر پیش‌فرض روی {{ed.orgs}} سازمان فعال اثر ندارد؛ قراردادهای موجود مقادیر خود را نگه می‌دارند.</span>
+        </div>
+        <div style="margin-top: auto; display: flex; align-items: center; gap: 8px">
+          <button class="btnp" onClick="{{saveEdit}}" style="flex: 1; height: 40px; box-shadow: var(--shadow-primary)">ذخیره تغییرات</button>
+          <button class="btno" onClick="{{closeModal}}" style="height: 40px">انصراف</button>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  componentDidMount() { try { if (localStorage.getItem('nm-theme-dark') === '1' && !(this.state && this.state.dark)) this.setState({ dark: true }); } catch (e) {} }
+  componentDidUpdate(pp, ps) { try { const d = !!(this.state && this.state.dark); if (!!(ps && ps.dark) !== d) localStorage.setItem('nm-theme-dark', d ? '1' : '0'); } catch (e) {} }
+
+  renderVals() {
+    var ICON = {
+      dashboard: 'M4 4h7v7H4zM13 4h7v4h-7zM13 11h7v9h-7zM4 14h7v6H4z',
+      building: 'M5 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17M15 9h3a1 1 0 0 1 1 1v11M3 21h18M9 7h2M9 11h2M9 15h2',
+      users: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M15 4.2a3.5 3.5 0 0 1 0 6.6',
+      inbox: 'M3 13l2.5-7h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 13h5l1.5 2.5h5L16 13h5',
+      funds: 'M12 8c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+      card: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18M7 15h4',
+      rules: 'M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1M15 5v4M9 10v4M17 15v4',
+      risk: 'M12 3l8 3v6c0 4.5-3.4 8.3-8 9.5C7.4 20.3 4 16.5 4 12V6zM12 9v4M12 16.5h.01',
+      reports: 'M4 20h16M7 16V10M12 16V5M17 16v-3',
+      settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1',
+      check: 'M5 12.5l4.5 4.5L19 7',
+      pen: 'M4 20h4l10-10-4-4L4 16zM13 7l4 4',
+      pause: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M10 9v6M14 9v6',
+      percent: 'M19 5L5 19M7.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M16.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3',
+      bag: 'M6 8h12l1 13H5zM9 8V6a3 3 0 0 1 6 0v2',
+      gold: 'M4 17l2-6h5l1 6zM12 17l1-6h5l2 6zM8 11l2-6h4l2 6',
+      bond: 'M4 19l5-6 4 3 7-9M4 5v14h16',
+      energy: 'M13 3L5 14h6l-1 7 8-11h-6z',
+      user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 20v-1a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v1',
+      id: 'M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8 13a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M4.5 18c.6-1.8 2-3 3.5-3s2.9 1.2 3.5 3M14 9h5M14 13h5',
+      wallet: 'M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2M16 14h.01',
+      lock: 'M6 11V8a6 6 0 0 1 12 0v3M5 11h14v10H5zM12 15v2',
+      clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3 2',
+      alert: 'M12 3l9 16H3zM12 10v4M12 17.5h.01',
+      download: 'M12 4v11M7 10l5 5 5-5M4 20h16',
+      file: 'M6 3h8l5 5v13H6zM14 3v5h5M9 13h6M9 17h6',
+      plus: 'M12 5v14M5 12h14',
+      x: 'M6 6l12 12M18 6L6 18',
+      dots: 'M12 5.5h.01M12 12h.01M12 18.5h.01',
+      chev: 'M7 10l5 5 5-5',
+      back: 'M10 6l6 6-6 6',
+      search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4',
+      calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+      excel: 'M6 3h8l5 5v13H6zM14 3v5h5M9 12l6 6M15 12l-6 6',
+      key: 'M14 10a4 4 0 1 0-3.9 3.1L4 19v1h3l1-1v-2h2l1-1 .5-.5a4 4 0 0 0 2.5.5M15.5 8.5h.01',
+      shield: 'M12 3l8 3v6c0 4.5-3.4 8.3-8 9.5C7.4 20.3 4 16.5 4 12V6zM9 12l2 2 4-4',
+      mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
+      refresh: 'M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5',
+      trend: 'M4 17l5-6 4 3 7-9M15 5h5v5',
+      flag: 'M5 21V4M5 4h12l-2 4 2 4H5',
+      ban: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M5.5 5.5l13 13',
+      store: 'M4 9l1.5-5h13L20 9M4 9h16v11H4zM4 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 4 0M10 20v-6h4v6',
+      bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4',
+      globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+      code: 'M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14'
+    };
+    function nav(label, icon, active, badge, href) {
+      return {
+        label: label, d: ICON[icon], badge: badge || '',
+        href: href || '', hasHref: !!href, noHref: !href,
+        bg: active ? 'var(--nav-active)' : 'transparent',
+        c: active ? '--primary-text' : '--text-secondary',
+        w: active ? 600 : 500
+      };
+    }
+    function navs(a) {
+      return {
+        navOps: [
+          nav('نمای کلی', 'dashboard', a === 'نمای کلی', '', 'op-overview.dc.html'),
+          nav('سازمان‌ها و قراردادها', 'building', a === 'سازمان‌ها و قراردادها', '', 'op-organizations.dc.html'),
+          nav('کاربران', 'users', a === 'کاربران', '', 'op-users.dc.html'),
+          nav('درخواست‌ها', 'inbox', a === 'درخواست‌ها', '۲۳', 'op-requests.dc.html')
+        ],
+        navProduct: [
+          nav('صندوق‌ها', 'funds', a === 'صندوق‌ها', '', 'op-funds.dc.html'),
+          nav('محصولات اعتباری', 'card', a === 'محصولات اعتباری', '', 'op-products.dc.html'),
+          nav('قوانین و محدودیت‌ها', 'rules', a === 'قوانین و محدودیت‌ها', '', 'op-rules.dc.html')
+        ],
+        navSystem: [
+          nav('ریسک و تقلب', 'risk', a === 'ریسک و تقلب', '', 'op-risk.dc.html'),
+          nav('گزارش‌ها', 'reports', a === 'گزارش‌ها', '', 'op-reports.dc.html'),
+          nav('تنظیمات', 'settings', a === 'تنظیمات', '', 'op-settings.dc.html')
+        ]
+      };
+    }
+    var self = this;
+    var st = this.state || {};
+    function base(active) {
+      var N = navs(active);
+      return {
+        themeCls: st.dark ? 'th-dark' : 'th-light',
+        isDark: !!st.dark, isLight: !st.dark,
+        toggleTheme: function () { self.setState({ dark: !((self.state || {}).dark) }); },
+        navOps: N.navOps, navProduct: N.navProduct, navSystem: N.navSystem,
+        toast: st.toast || '', hasToast: !!st.toast
+      };
+    }
+    function toast(msg) {
+      return function () {
+        self.setState({ toast: msg, modal: '' });
+        setTimeout(function () { self.setState({ toast: '' }); }, 2600);
+      };
+    }
+    function set(obj) { return function () { self.setState(obj); }; }
+    function sw(on) {
+      return { on: on ? 'true' : 'false', swBg: on ? 'var(--primary-main)' : 'var(--grey-400)', knob: on ? '3px' : '19px' };
+    }
+
+    var out = base('محصولات اعتباری');
+
+    var LKT = {
+      collateral: { key: 'collateral', label: 'وثیقه اعتبار و وام', short: 'وثیقه', bg: 'var(--soft-info)', fg: 'var(--info-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--info-main' },
+      vesting: { key: 'vesting', label: 'قفل زمانی سازمان', short: 'قفل زمانی', bg: 'var(--soft-warning)', fg: 'var(--warning-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--warning-main' },
+      installment: { key: 'installment', label: 'وثیقه خرید اقساطی', short: 'اقساطی', bg: 'var(--soft-secondary)', fg: 'var(--secondary-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--secondary-main' },
+      milestone: { key: 'milestone', label: 'آزادسازی مرحله‌ای', short: 'مرحله‌ای', bg: 'var(--soft-primary)', fg: 'var(--primary-text)', d: 'M5 21V4M5 4h11l-2 4 2 4H5', col: '--primary-main' },
+      legal: { key: 'legal', label: 'مسدودی قانونی', short: 'مسدودی', bg: 'var(--soft-error)', fg: 'var(--error-text)', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', col: '--error-main' }
+    };
+    function lkD(s) { return String(s).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.charAt(+d); }); }
+    function lkN(n) { var neg = n < 0; var s = String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '٬'); return (neg ? '−' : '') + lkD(s); }
+    function lkM(n, dec) { var v = n / 1e6; var p = dec == null ? 1 : dec; var s = v.toFixed(p); if (p > 0) s = s.replace(/\.?0+$/, ''); return lkD(s.replace('.', '٫')); }
+    function lkB(n, dec) { var v = n / 1e9; var p = dec == null ? 1 : dec; var s = v.toFixed(p); if (p > 0) s = s.replace(/\.?0+$/, ''); return lkD(s.replace('.', '٫')); }
+    function lkPct(a, b) { return b > 0 ? Math.round(a / b * 1000) / 10 : 0; }
+    function lkSplit(total, locked, fmt) {
+      var f = fmt || lkN; var free = total - locked; var fp = total > 0 ? Math.round(free / total * 1000) / 10 : 0;
+      return { total: f(total), free: f(free), locked: f(locked), freePct: fp, lockedPct: Math.round((100 - fp) * 10) / 10, freePctFa: lkD(String(Math.round(fp))) + '٪', lockedPctFa: lkD(String(Math.round(100 - fp))) + '٪',
+        hasLock: locked > 0, noLock: !(locked > 0), allLocked: free <= 0 && total > 0, hasFree: free > 0, mixed: free > 0 && locked > 0 };
+    }
+    function lkSteps(n, released, pending) {
+      var a = [];
+      for (var i = 0; i < n; i++) {
+        var st = i < released ? 'r' : (i < released + pending ? 'p' : 'f');
+        a.push({ bg: st === 'r' ? 'var(--primary-main)' : (st === 'p' ? 'transparent' : 'var(--progress-track)'), bd: st === 'p' ? 'inset 0 0 0 1.5px var(--warning-main)' : 'none' });
+      }
+      return a;
+    }
+    var edit = st.modal || '';
+    var P = {
+      credit: { id: 'credit', name: 'اعتبار کارت', type: 'اعتبار گردان روی کارت نمادنو', d: ICON.card, bg: 'var(--soft-primary)', fg: 'var(--primary-text)', orgs: '۴۲', users: '۱۱٬۲۰۰',
+        lockKey: 'collateral', lockRule: 'رزرو تسویه از کیف ریالی قفل می‌شود', lockRelease: 'آزاد با تسویه صورت‌حساب', freeze: true,
+        params: [['سقف نسبت به دارایی آزاد', 'تا ۲۵٪'], ['مهلت تسویه', '۳۰ روز'], ['نرخ جریمهٔ تأخیر', '۲٫۵٪ ماهانه']],
+        fields: [['c1', 'سقف نسبت به دارایی آزاد', '۲۵', '٪'], ['c2', 'مهلت تسویه', '۳۰', 'روز'], ['c3', 'نرخ جریمهٔ تأخیر', '۲٫۵', '٪ ماهانه'], ['c4', 'حداکثر سقف هر نفر', '۵۰٬۰۰۰٬۰۰۰', 'تومان'], ['c5', 'حداقل امتیاز اعتباری', '۵۵۰', 'امتیاز']] },
+      loan: { id: 'loan', name: 'وام با پشتوانه دارایی', type: 'وثیقه: قفل بخشی از دارایی آزاد', lockKey: 'collateral', lockRule: 'وثیقه از بخش آزاد قفل می‌شود', lockRelease: 'آزاد با تسویه کامل وام', d: ICON.percent, bg: 'var(--soft-info)', fg: 'var(--info-text)', orgs: '۳۸', users: '۲٬۹۸۰',
+        params: [['سقف LTV', 'تا ۴۰٪'], ['بازپرداخت', '۶ / ۱۲ / ۱۸ ماه'], ['نرخ مؤثر', '۲۳٪']],
+        fields: [['l1', 'سقف وام نسبت به دارایی آزاد', '۴۰', '٪'], ['l3', 'نرخ مؤثر سالانه', '۲۳', '٪'], ['l4', 'حداقل امتیاز اعتباری', '۶۰۰', 'امتیاز'], ['l5', 'نقد کردن وثیقه پس از', '۲', 'قسط معوق']],
+        chipsLabel: 'گزینه‌های مدت بازپرداخت (ماه)', chips: ['۶', '۱۲', '۱۸', '۲۴', '۳۶'], chipsDef: [true, true, true, false, false], freeze: true },
+      bnpl: { id: 'bnpl', name: 'خرید اقساطی', type: 'فروشگاه‌های طرف قرارداد', lockKey: 'installment', lockRule: '۱۰۰٪ مبلغ خرید قفل می‌شود', lockRelease: 'با هر قسط، بخشی آزاد می‌شود', d: ICON.bag, bg: 'var(--soft-success)', fg: 'var(--success-text)', orgs: '۲۹', users: '۱٬۴۱۰',
+        params: [['قفل اقساطی', '۱۰۰٪ مبلغ خرید'], ['تعداد اقساط', '۶ / ۱۰ / ۱۲'], ['فروشگاه‌ها', '۲۱ فروشگاه']],
+        fields: [['b1', 'نسبت قفل اقساطی به مبلغ خرید', '۱۰۰', '٪'], ['b3', 'کارمزد خرید', '۴', '٪'], ['b4', 'حداکثر مبلغ هر خرید', '۸۰٬۰۰۰٬۰۰۰', 'تومان'], ['b5', 'اعتبار کد خرید', '۷۲', 'ساعت']],
+        chipsLabel: 'گزینه‌های تعداد اقساط', chips: ['۶', '۱۰', '۱۲', '۱۸'], chipsDef: [true, true, true, false], freeze: true }
+    };
+    var chipSt = st.chips || {};
+    function prod(k) {
+      var p = P[k];
+      var cur = chipSt[k] || p.chipsDef || [];
+      return { id: p.id, name: p.name, type: p.type, d: p.d, bg: p.bg, fg: p.fg, orgs: p.orgs, users: p.users,
+        params: p.params.map(function (x) { return { k: x[0], v: x[1] }; }),
+        fields: p.fields.map(function (f) { return { id: f[0], label: f[1], value: f[2], suffix: f[3] }; }),
+        hasChips: !!p.chips, chipsLabel: p.chipsLabel || '', hasFreeze: !!p.freeze,
+        lk: LKT[p.lockKey], lockRule: p.lockRule, lockRelease: p.lockRelease,
+        chips: (p.chips || []).map(function (l, i) {
+          var on = !!cur[i]; var next = cur.slice(); next[i] = !on; var nc = Object.assign({}, chipSt); nc[k] = next;
+          return { label: l, on: on ? 'true' : 'false', toggle: set({ chips: nc }), border: on ? 'var(--primary-main)' : 'var(--outline-border)', bg: on ? 'var(--soft-primary)' : 'transparent', fg: on ? 'var(--primary-text)' : 'var(--text-secondary)' };
+        }),
+        edit: set({ modal: p.id, edOn: null, edFreeze: null }) };
+    }
+    out.products = ['credit', 'loan', 'bnpl'].map(prod);
+    out.isEdit = !!P[edit];
+    out.ed = prod(P[edit] ? edit : 'credit');
+    var edOn = st.edOn == null ? true : st.edOn;
+    out.edOn = Object.assign({ toggle: set({ edOn: !edOn }) }, sw(edOn));
+    var edFreeze = st.edFreeze == null ? true : st.edFreeze;
+    out.edFreeze = Object.assign({ toggle: set({ edFreeze: !edFreeze }) }, sw(edFreeze));
+    out.closeModal = set({ modal: '' });
+    out.saveEdit = toast('پارامترهای «' + out.ed.name + '» ذخیره شد');
+    var pl = { credit: ['var(--soft-primary)', 'var(--primary-text)'], loan: ['var(--soft-info)', 'var(--info-text)'], bnpl: ['var(--soft-success)', 'var(--success-text)'] };
+    var tiles = [['var(--soft-primary)', 'var(--primary-text)'], ['var(--soft-info)', 'var(--info-text)'], ['var(--soft-success)', 'var(--success-text)'], ['var(--soft-warning)', 'var(--warning-text)'], ['var(--soft-default)', 'var(--default-text)']];
+    out.overrides = [
+      ['هلدینگ آرمان', 'loan', 'سقف LTV', '۴۰٪', '۴۰٪، تا ۱۸ ماه', '۱۴۰۵/۰۷/۰۲'],
+      ['صنایع پارس', 'credit', 'سقف نسبت به دارایی آزاد', '۲۵٪', '۲۰٪', '۱۴۰۵/۰۵/۱۰'],
+      ['فناوری نوین', 'bnpl', 'حداکثر مبلغ هر خرید', '۸۰٬۰۰۰٬۰۰۰', '۶۰٬۰۰۰٬۰۰۰', '۱۴۰۵/۰۴/۲۲'],
+      ['بیمه آتیه', 'loan', 'سقف LTV', '۴۰٪', '۳۰٪', '۱۴۰۵/۰۷/۱۳'],
+      ['گروه سپهر', 'credit', 'مهلت تسویه', '۳۰ روز', '۲۰ روز', '۱۴۰۵/۰۲/۰۱']
+    ].map(function (o, i) {
+      return { initial: o[0].charAt(0), org: o[0], product: P[o[1]].name.split(' ')[0] === 'وام' ? 'وام' : P[o[1]].name, pbg: pl[o[1]][0], pfg: pl[o[1]][1], param: o[2], def: o[3], val: o[4], date: o[5], bg: tiles[i][0], fg: tiles[i][1] };
+    });
+    return out;
+
+  }
+}
+</script>
+</body>
+</html>

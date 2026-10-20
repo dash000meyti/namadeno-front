@@ -1,0 +1,7 @@
+/* Employees list — scoped under .pg-emps */
+.pg-emps .emp-row:hover{background:var(--action-hover)}
+.pg-emps .emp-row[aria-selected="true"]:hover{background:var(--nav-active)}
+.pg-emps .ibtn:disabled{opacity:.4;cursor:default}
+.pg-emps .btn:disabled{opacity:.6;cursor:default}
+/* Employee profile — scoped under .pg-emp */
+.pg-emp .btn:disabled{opacity:.6;cursor:default}

@@ -1,0 +1,8 @@
+/* Home (design: app-assets) — scoped under .pg-home */
+.th-light .pg-home{--sheet-bg:rgb(248 249 252 / .9)}
+.th-dark .pg-home{--sheet-bg:rgb(20 24 38 / .9)}
+.pg-home .home-sheet{position:relative;z-index:1;margin:14px -16px 0;min-height:100%;box-sizing:border-box;padding:8px 16px 100px;border-radius:28px 28px 0 0;background:var(--sheet-bg);-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);border-top:1px solid var(--glass-edge);box-shadow:0 -14px 32px -14px rgb(20 24 38 / .22);display:flex;flex-direction:column;gap:12px}
+.pg-home .home-sheet>*{flex:none}
+.pg-home .grab{align-self:center;width:40px;height:5px;border-radius:3px;background:var(--grey-400);margin-bottom:4px}
+.pg-home .hero-leave{animation:pgHomeHeroLeave .6s cubic-bezier(.3,.7,.3,1)}
+@keyframes pgHomeHeroLeave{0%{transform:none;z-index:20;opacity:1}42%{transform:translateX(-38%) rotate(-5deg);z-index:20;opacity:1}43%{z-index:0}100%{transform:translateY(18px) scale(.91);z-index:0;opacity:0}}

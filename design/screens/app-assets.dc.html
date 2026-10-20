@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>دارایی‌ها</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.th-light,.th-dark{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%;--soft-primary:rgb(var(--primary-main-rgb) / .16);--soft-secondary:rgb(var(--secondary-main-rgb) / .16);--soft-success:rgb(var(--success-main-rgb) / .16);--soft-warning:rgb(var(--warning-main-rgb) / .16);--soft-error:rgb(var(--error-main-rgb) / .16);--soft-info:rgb(var(--info-main-rgb) / .16);--soft-default:rgb(var(--grey-500-rgb) / .16);--outline-border:rgb(var(--grey-500-rgb) / .32);--progress-track:rgb(var(--primary-main-rgb) / .16);--switch-off:rgb(var(--grey-500-rgb) / .48);--ring-track:rgb(var(--grey-500-rgb) / .24)}
+.th-light{color-scheme:light;--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:var(--grey-200);--bg-canvas:var(--grey-100);--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .16), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .12), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .10), transparent 70%);--text-primary:var(--grey-800);--text-secondary:var(--grey-600);--text-disabled:var(--grey-500);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(255 255 255 / .78);--card-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(var(--grey-500-rgb) / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z8:0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z24:0 24px 48px 0 rgb(var(--grey-500-rgb) / .16);--shadow-card:0 0 2px 0 rgb(var(--grey-500-rgb) / .20), 0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);--shadow-dropdown:0 0 2px 0 rgb(var(--grey-500-rgb) / .24), -20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);--chart-1:var(--primary-main);--chart-2:var(--success-main);--chart-3:var(--secondary-main);--chart-4:var(--grey-400);--chart-5:var(--grey-600);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-main);--secondary-text:var(--secondary-dark);--success-text:var(--success-dark);--warning-text:var(--warning-dark);--error-text:var(--error-dark);--info-text:var(--info-dark);--default-text:var(--grey-700);--seg-active:#FFFFFF}
+.th-dark{color-scheme:dark;--bg-default:var(--grey-900);--bg-paper:var(--grey-800);--bg-neutral:rgb(var(--grey-500-rgb) / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .32), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .20), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .16), transparent 70%);--text-primary:#FFFFFF;--text-secondary:var(--grey-500);--text-disabled:var(--grey-600);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--glass-bg:rgb(31 36 51 / .72);--card-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20), 0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24), -20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge), 0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:var(--primary-light);--chart-2:#7CCBA8;--chart-3:var(--secondary-light);--chart-4:var(--grey-600);--chart-5:var(--grey-400);--chart-grid:rgb(var(--grey-500-rgb) / .16);--primary-text:var(--primary-light);--secondary-text:var(--secondary-light);--success-text:#7CCBA8;--warning-text:var(--warning-light);--error-text:var(--error-light);--info-text:var(--info-light);--default-text:var(--grey-400);--seg-active:var(--grey-700)}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.card{background:var(--card-bg);border-radius:16px;border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ibtn{width:44px;height:44px;border-radius:50%;border:0;background:transparent;color:var(--text-primary);display:grid;place-items:center;cursor:pointer;padding:0}
+.phone{position:relative;width:390px;height:844px;border-radius:44px;overflow:hidden;background:var(--bg-default);background-image:var(--bg-aurora);box-shadow:var(--shadow-z24),0 0 0 1px var(--divider);flex:none}
+.scr{position:absolute;inset:60px 0 0 0;box-sizing:border-box;padding:12px 16px 100px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}.scr::-webkit-scrollbar{display:none}
+.scr>*{flex:none}
+.sheet{position:relative;z-index:1;margin:14px -16px 0;min-height:100%;box-sizing:border-box;padding:8px 16px 100px;border-radius:28px 28px 0 0;background:var(--sheet-bg);-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);border-top:1px solid var(--glass-edge);box-shadow:0 -14px 32px -14px rgb(20 24 38 / .22);display:flex;flex-direction:column;gap:12px}
+.sheet>*{flex:none}.grab{align-self:center;width:40px;height:5px;border-radius:3px;background:var(--grey-400);margin-bottom:4px}
+.th-light{--sheet-bg:rgb(248 249 252 / .9)}.th-dark{--sheet-bg:rgb(20 24 38 / .9)}
+.top{position:absolute;top:0;left:0;right:0;height:60px;box-sizing:border-box;padding:8px 12px 0;border:0;border-radius:0;border-bottom:1px solid var(--glass-edge);display:flex;align-items:center;gap:6px;z-index:2}
+.bnav{position:absolute;bottom:0;left:0;right:0;height:84px;box-sizing:border-box;padding:0 8px 20px;border:0;border-radius:0;border-top:1px solid var(--glass-edge);display:flex;align-items:stretch;z-index:2}
+.bnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:600;line-height:1}
+.wm{font-family:'Divan','IRANSansX',Tahoma,sans-serif}
+.chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:var(--soft-default);color:var(--default-text);font-variant-numeric:tabular-nums}
+.btn{height:44px;border:0;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:0 16px;white-space:nowrap}
+.qa>span:first-child{transition:transform .18s ease}.qa:hover>span:first-child{transform:translateY(-2px)}.qa:active>span:first-child{transform:scale(.94)}
+@keyframes nm-ping{0%{transform:scale(1);opacity:.55}80%,100%{transform:scale(2);opacity:0}}
+.lkbar{height:6px;border-radius:6px;display:flex;overflow:hidden;background:rgb(var(--grey-500-rgb) / .16);gap:2px}
+.lkbar>.f{background:var(--primary-main);border-radius:6px}
+.lkbar>.l{border-radius:6px;background:repeating-linear-gradient(135deg,rgb(var(--grey-500-rgb) / .55) 0 3px,rgb(var(--grey-500-rgb) / .22) 3px 6px)}
+.lkleg{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.lkleg b{font-weight:500;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.lkdot{width:8px;height:8px;border-radius:50%;background:var(--primary-main);display:inline-block;margin-left:4px}
+.lktype{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+@keyframes nmHeroLeave{0%{transform:none;z-index:20;opacity:1}42%{transform:translateX(-38%) rotate(-5deg);z-index:20;opacity:1}43%{z-index:0}100%{transform:translateY(18px) scale(.91);z-index:0;opacity:0}}
+.hero-leave{animation:nmHeroLeave .6s cubic-bezier(.3,.7,.3,1)}
+</style>
+</helmet>
+<div dir="rtl" class="{{themeCls}}" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); font-family: 'IRANSansX', Tahoma, sans-serif">
+<div class="scr" style="gap: 12px; padding-bottom: 0">
+              <!-- hero deck: «دارایی کل» in front, each wallet / fund as a card behind it; tap empty card space to flip -->
+              <div style="flex: none; position: sticky; top: 12px; z-index: 0">
+                <div role="region" aria-roledescription="carousel" aria-label="دارایی کل و دارایی‌ها" style="position: relative; height: 214px">
+                  <sc-for list="{{hcards}}" as="c" hint-placeholder-count="7">
+                    <div class="card {{c.cls}}" aria-hidden="{{c.ariaHidden}}" style="position: absolute; left: 0; right: 0; top: 0; height: 196px; box-sizing: border-box; padding: 6px 16px 14px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; background: {{c.bg}}; color: {{c.fg}}; transform-origin: center bottom; transform: {{c.tf}}; opacity: {{c.op}}; z-index: {{c.z}}; transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s ease">
+                      <button onClick="{{c.flip}}" aria-label="{{c.flipAria}}" tabindex="{{c.tab}}" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0; margin: 0; padding: 0; background: transparent; cursor: pointer"></button>
+                      <span aria-hidden="true" style="position: absolute; left: -50px; top: -70px; width: 180px; height: 180px; border-radius: 50%; background: {{c.circle}}; pointer-events: none"></span>
+                      <div style="position: relative; display: flex; flex-direction: column; gap: 4px; pointer-events: none; opacity: {{c.inner}}; transition: opacity .3s">
+                        <div style="height: 44px; display: flex; align-items: center; gap: 8px">
+                          <span style="width: 8px; height: 8px; border-radius: 50%; background: {{c.dot}}; flex: none"></span>
+                          <span style="font-size: 13px; font-weight: 600; color: {{c.fg2}}; white-space: nowrap">{{c.title}}</span>
+                          <sc-if value="{{c.isTotal}}" hint-placeholder-val="{{ true }}"><button class="ibtn" aria-label="پنهان کردن موجودی" aria-pressed="false" style="margin-right: auto; margin-left: -12px; pointer-events: auto; color: var(--text-secondary)"><svg class="ico" width="22" height="22" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6"></path></svg></button></sc-if>
+                          <sc-if value="{{c.isAsset}}" hint-placeholder-val="{{ false }}"><a href="{{c.href}}" style="margin-right: auto; height: 32px; padding: 0 8px; border-radius: 9px; background: rgb(255 255 255 / .18); color: #FFFFFF; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 2px; pointer-events: auto; text-decoration: none">جزئیات<svg class="ico" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6"></path></svg></a></sc-if>
+                        </div>
+                        <div style="height: 40px; display: flex; align-items: center; gap: 8px">
+                          <span class="num" style="font-size: 30px; line-height: 36px; white-space: nowrap"><span style="color: {{c.amountColor}}; transition: color .9s ease">{{c.amount}}</span> <span style="font-size: 14px; font-weight: 400; color: {{c.fg2}}">تومان</span></span>
+                          <span aria-live="polite" style="margin-right: auto; height: 40px; box-sizing: border-box; padding: 3px 10px; border-radius: 8px; background: {{c.badgeBg}}; transition: background .9s ease; color: {{c.badgeFg}}; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap">
+                            <span dir="ltr" style="font-size: 11px; font-weight: 500">{{c.chg}}</span>
+                            <span style="font-size: 13px; font-weight: 700"><span dir="ltr">{{c.pct}}</span> {{c.period}}</span>
+                          </span>
+                        </div>
+                        <sc-if value="{{c.isTotal}}" hint-placeholder-val="{{ true }}"><nav aria-label="اکشن‌های سریع" style="margin-top: 16px; display: flex; align-items: flex-start; gap: 8px; pointer-events: auto">
+                  <sc-if value="{{c.hasPending}}" hint-placeholder-val="{{ true }}"><a href="app-inbox.dc.html" aria-label="دریافتی‌ها — ۱ دریافتی جدید" style="flex: 1; min-width: 0; height: 48px; border-radius: 14px; background: var(--primary-main); color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: var(--shadow-primary)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 1.8"><path d="M4 13h4l2 3h4l2-3h4M4 13l2.5-7h11L20 13v6H4z"></path></svg>دریافتی‌ها<span class="num" style="min-width: 20px; height: 20px; box-sizing: border-box; padding: 0 5px; border-radius: 999px; background: rgb(255 255 255 / .25); font-size: 11px; display: grid; place-items: center">۱</span></a></sc-if>
+                  <sc-if value="{{c.noPending}}" hint-placeholder-val="{{ false }}"><a href="app-deposit.dc.html" aria-label="افزایش دارایی — واریز از کارت بانکی" style="flex: 1; min-width: 0; height: 48px; border-radius: 14px; background: var(--primary-main); color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: var(--shadow-primary)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 1.8"><path d="M12 5v14M5 12h14"></path></svg>افزایش دارایی</a></sc-if>
+                    <sc-if value="{{c.hasPending}}" hint-placeholder-val="{{ true }}"><a href="app-deposit.dc.html" aria-label="واریز" class="qa" style="width: 48px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none"><span style="width: 48px; height: 48px; box-sizing: border-box; border: 1px solid var(--glass-edge); border-radius: 14px; background: var(--bg-paper); color: var(--primary-text); display: grid; place-items: center; box-shadow: var(--shadow-z1)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 1.8"><path d="M12 4v11M8 11l4 4 4-4M4 15v4h16v-4"></path></svg></span><span style="font-size: 11px; line-height: 13px; white-space: nowrap">واریز</span></a></sc-if><sc-if value="{{c.noPending}}" hint-placeholder-val="{{ false }}"><a href="app-inbox.dc.html" aria-label="دریافتی‌ها" class="qa" style="width: 48px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none"><span style="width: 48px; height: 48px; box-sizing: border-box; border: 1px solid var(--glass-edge); border-radius: 14px; background: var(--bg-paper); color: var(--primary-text); display: grid; place-items: center; box-shadow: var(--shadow-z1)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 1.8"><path d="M4 13h4l2 3h4l2-3h4M4 13l2.5-7h11L20 13v6H4z"></path></svg></span><span style="font-size: 11px; line-height: 13px; white-space: nowrap">دریافتی‌ها</span></a></sc-if>
+                    <a href="app-withdraw.dc.html" aria-label="برداشت" class="qa" style="width: 48px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none"><span style="width: 48px; height: 48px; box-sizing: border-box; border: 1px solid var(--glass-edge); border-radius: 14px; background: var(--bg-paper); color: var(--primary-text); display: grid; place-items: center; box-shadow: var(--shadow-z1)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 1.8"><path d="M12 15V4M8 8l4-4 4 4M4 15v4h16v-4"></path></svg></span><span style="font-size: 11px; line-height: 13px; white-space: nowrap">برداشت</span></a>
+                    <a href="app-credit.dc.html" aria-label="اعتبار" class="qa" style="width: 48px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none"><span style="width: 48px; height: 48px; box-sizing: border-box; border: 1px solid var(--glass-edge); border-radius: 14px; background: var(--bg-paper); color: var(--primary-text); display: grid; place-items: center; box-shadow: var(--shadow-z1)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 1.8"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM9.5 14.5l5-5"></path></svg></span><span style="font-size: 11px; line-height: 13px; white-space: nowrap">اعتبار</span></a>
+                </nav></sc-if>
+                        <sc-if value="{{c.isAsset}}" hint-placeholder-val="{{ false }}"><nav aria-label="{{c.navAria}}" style="margin-top: 16px; height: 67px; display: flex; align-items: flex-start; gap: 8px; pointer-events: auto">
+                          <a href="{{c.a1href}}" onClick="{{c.a1go}}" style="flex: 1; min-width: 0; height: 48px; border-radius: 14px; text-decoration: none; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; background: #FFFFFF; color: {{c.deep}}; box-shadow: 0 8px 18px -8px rgb(20 24 38 / .45)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 1.8"><path d="{{c.a1icon}}"></path></svg>{{c.a1}}</a>
+                          <a href="{{c.a2href}}" onClick="{{c.a2go}}" style="flex: 1; min-width: 0; height: 48px; border-radius: 14px; text-decoration: none; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgb(255 255 255 / .2); color: #FFFFFF; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .35)"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 1.8"><path d="{{c.a2icon}}"></path></svg>{{c.a2}}</a>
+                        </nav></sc-if>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="height: 12px; margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 5px" aria-label="انتخاب کارت">
+                  <sc-for list="{{hdots}}" as="d" hint-placeholder-count="7"><button onClick="{{d.pick}}" aria-label="{{d.aria}}" aria-current="{{d.cur}}" style="width: {{d.w}}px; height: 6px; padding: 0; border: 0; border-radius: 3px; background: {{d.bg}}; cursor: pointer; transition: width .3s, background .3s"></button></sc-for>
+                </div>
+              </div>
+
+
+              <!-- sheet: scrolls up over the pinned hero card -->
+              <section class="sheet" aria-label="کیف پول‌ها، دریافتی‌ها و فعالیت‌ها">
+              <span class="grab" aria-hidden="true"></span>
+              <!-- pending inbox packages (hidden once everything is confirmed) -->
+              <sc-if value="{{hasPending}}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-direction: column; gap: 6px; flex: none">
+                <div style="height: 24px; display: flex; align-items: center; gap: 8px">
+                  <span style="font-size: 15px; font-weight: 700">دریافتی‌های در انتظار</span>
+                  <span class="num" style="min-width: 20px; height: 20px; box-sizing: border-box; padding: 0 6px; border-radius: 999px; background: var(--error-main); color: #FFFFFF; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center">۱</span>
+                  <a href="app-inbox.dc.html" style="margin-right: auto; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 2px">همه<svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6"></path></svg></a>
+                </div>
+                <!-- pending inbox package, same shape as a wallet card -->
+                <a href="app-inbox.dc.html" class="card" aria-label="دریافتی جدید: پاداش مهر ۱۴۰۵ از هلدینگ آرمان، ۲۰٬۰۰۰٬۰۰۰ تومان، در انتظار تأیید" style="box-sizing: border-box; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; color: var(--text-primary); text-decoration: none; border-color: rgb(var(--primary-main-rgb) / .35); background-image: linear-gradient(135deg, rgb(var(--primary-main-rgb) / .08), transparent 60%)">
+                  <div style="height: 20px; display: flex; align-items: center; gap: 8px">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-main); flex: none"></span>
+                    <span style="font-size: 14px; font-weight: 600; white-space: nowrap">پاداش مهر ۱۴۰۵</span>
+                    <span class="num" style="margin-right: auto; font-size: 12px; color: var(--text-secondary); white-space: nowrap">۱۴۰۵/۰۷/۱۲</span>
+                  </div>
+                  <div style="height: 26px; display: flex; align-items: center; gap: 8px">
+                    <span class="num" style="font-size: 18px; line-height: 1; white-space: nowrap">۲۰٬۰۰۰٬۰۰۰ <span style="font-size: 11px; font-weight: 400; color: var(--text-secondary)">تومان</span></span>
+                    <span class="btn" style="margin-right: auto; height: 30px; padding: 0 14px; border-radius: 9px; background: var(--primary-main); color: var(--primary-contrast); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; box-shadow: var(--shadow-primary)"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2"><path d="M5 12l5 5 9-11"></path></svg>تأیید</span>
+                  </div>
+                </a>
+              </div>
+              </sc-if>
+
+              <!-- wallets & funds: every holding with its withdrawable / locked split -->
+              <div style="display: flex; flex-direction: column; gap: 8px; flex: none">
+                <div style="height: 24px; display: flex; align-items: center; gap: 8px">
+                  <span style="font-size: 15px; font-weight: 700">کیف پول‌ها و صندوق‌ها</span>
+                  <a href="app-funds.dc.html" style="margin-right: auto; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 2px">همه صندوق‌ها<svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6"></path></svg></a>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <sc-for list="{{wlist}}" as="w" hint-placeholder-count="6">
+                    <a href="{{w.href}}" class="card" style="box-sizing: border-box; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; color: var(--text-primary); text-decoration: none">
+                      <div style="height: 20px; display: flex; align-items: center; gap: 8px">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: {{w.dot}}; flex: none"></span>
+                        <span style="font-size: 14px; font-weight: 600; white-space: nowrap">{{w.name}}</span>
+                        <svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="margin-right: auto; color: var(--text-disabled)"><path d="M14 6l-6 6 6 6"></path></svg>
+                      </div>
+                      <div style="height: 26px; display: flex; align-items: center; gap: 8px">
+                        <span class="num" style="font-size: 18px; line-height: 1; white-space: nowrap">{{w.value}} <span style="font-size: 11px; font-weight: 400; color: var(--text-secondary)">تومان</span></span>
+                        <span style="margin-right: auto; display: inline-flex; align-items: center; gap: 8px">
+                          <sc-if value="{{w.hasSpark}}" hint-placeholder-val="{{ true }}">
+                            <span dir="ltr" style="width: 56px; height: 24px; display: block"><svg viewBox="0 0 56 24" width="56" height="24" aria-hidden="true" style="display: block; overflow: visible"><path d="{{w.spark}}" fill="none" style="stroke: var(--chart-1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+                          </sc-if>
+                          <sc-if value="{{w.hasDelta}}" hint-placeholder-val="{{ true }}">
+                            <span class="lbl" style="height: 22px; background: {{w.deltaBg}}; color: {{w.deltaFg}}">{{w.delta}}</span>
+                          </sc-if>
+                        </span>
+                      </div>
+                      <div class="lkleg" style="height: 20px; border-top: 1px dashed var(--divider); padding-top: 6px; margin-top: 2px">
+                        <span><span class="lkdot"></span>قابل برداشت <b>{{w.free}}</b></span>
+                        <sc-if value="{{w.hasLock}}" hint-placeholder-val="{{ true }}"><span style="display: inline-flex; align-items: center; gap: 4px"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2"></path></svg>قفل‌شده <b>{{w.locked}}</b></span></sc-if>
+                        <sc-if value="{{w.noLock}}" hint-placeholder-val="{{ false }}"><span>بدون قفل</span></sc-if>
+                      </div>
+                    </a>
+                  </sc-for>
+                </div>
+              </div>
+
+              <!-- recent activity (scroll continues under the nav) -->
+              <div style="display: flex; flex-direction: column; gap: 6px; flex: none">
+                <div style="height: 24px; display: flex; align-items: center">
+                  <span style="font-size: 15px; font-weight: 700">فعالیت اخیر</span>
+                  <a href="app-history.dc.html" style="margin-right: auto; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 2px">همه<svg class="ico" width="16" height="16" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"></path></svg></a>
+                </div>
+                <div class="card" style="padding: 0 14px; display: flex; flex-direction: column">
+                  <sc-for list="{{activity}}" as="ac" hint-placeholder-count="2">
+                    <a href="app-transaction.dc.html" style="height: 56px; display: flex; align-items: center; gap: 12px; border-bottom: 1px dashed {{ac.border}}; color: var(--text-primary); text-decoration: none">
+                      <span style="width: 36px; height: 36px; border-radius: 50%; background: {{ac.bg}}; color: {{ac.fg}}; display: grid; place-items: center; flex: none"><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="{{ac.d}}"></path></svg></span>
+                      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.3"><span style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ac.title}}</span><span style="font-size: 11px; color: var(--text-secondary)">{{ac.when}}</span></span>
+                      <span class="num" style="font-size: 14px; font-weight: 400; color: var({{ac.c}}); white-space: nowrap">{{ac.amount}}</span>
+                    </a>
+                  </sc-for>
+                </div>
+              </div>
+              </section>
+            </div>
+
+            <header class="glass top">
+              <a href="app-profile.dc.html" aria-label="حساب کاربری" style="width: 32px; height: 32px; border-radius: 50%; background: var(--soft-primary); color: var(--primary-text); display: grid; place-items: center; font-size: 13px; font-weight: 700; margin-right: 4px; text-decoration: none; flex: none">س</a>
+              <span style="display: flex; align-items: baseline; gap: 6px; margin-right: 4px; white-space: nowrap; min-width: 0"><span style="font-size: 15px; font-weight: 700">سلام، سارا</span><span style="font-size: 12px; color: var(--text-secondary)">هلدینگ آرمان</span></span>
+              <a href="app-notifications.dc.html" class="ibtn" aria-label="اعلان‌ها" style="width: 32px; height: 32px; flex: none; margin-right: auto; position: relative; color: var(--text-primary); text-decoration: none"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4"></path></svg><span style="position: absolute; top: 3px; left: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--error-main); box-shadow: 0 0 0 2px var(--bg-paper)"></span></a><a href="app-support.dc.html" class="ibtn" aria-label="راهنما و پشتیبانی" style="width: 32px; height: 32px; flex: none; margin-right: -8px; color: var(--text-primary); text-decoration: none"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M9.5 9.5a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.1-2.4 3.6M12 17h.01"></path></svg></a>
+              
+            </header>
+
+            <nav class="glass bnav" aria-label="منوی اصلی">
+  <a href="app-assets.dc.html" aria-current="page" style="color: var(--primary-text)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5zM3 12.5l9 5 9-5M3 17l9 5 9-5"></path></svg></span><span>دارایی‌ها</span></a>
+  <a href="app-inbox.dc.html" style="color: var(--text-secondary)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4M4 13l2.5-7h11L20 13v6H4z"></path></svg><sc-if value="{{hasPending}}" hint-placeholder-val="{{ true }}"><span style="position: absolute; top: -5px; left: -9px; min-width: 16px; height: 16px; box-sizing: border-box; padding: 0 4px; border-radius: 999px; background: var(--error-main); color: #FFFFFF; font-size: 10px; font-weight: 700; display: grid; place-items: center; line-height: 1; box-shadow: 0 0 0 2px var(--bg-paper)">۱</span></sc-if></span><span>دریافتی‌ها</span></a>
+  <a href="app-credit.dc.html" style="color: var(--text-secondary)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM9.5 14.5l5-5M9.5 9.5h.01M14.5 14.5h.01"></path></svg></span><span>اعتبار</span></a>
+  <a href="app-card.dc.html" style="color: var(--text-secondary)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h18M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 15h4"></path></svg></span><span>کارت</span></a>
+  <a href="app-history.dc.html" style="color: var(--text-secondary)"><span style="position: relative; display: inline-flex"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2"></path></svg></span><span>تاریخچه</span></a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  componentDidMount() {
+    try { if (localStorage.getItem('nm-theme-dark') === '1' && !(this.state && this.state.dark)) this.setState({ dark: true }); } catch (e) {}
+    // prototype: once the inbox package is confirmed, nm-pending is '0' and the screen switches to the no-inbox state
+    try { if (localStorage.getItem('nm-pending') === '0') this.setState({ pending: 0 }); } catch (e) {}
+    // live price ticks: every ~3.5s the portfolio value moves; a rise flashes green, then fades back
+    var self = this;
+    this._tick = setInterval(function () {
+      var st = self.state || {};
+      var step = Math.round((Math.random() < 0.8 ? 1 : -0.5) * (4000 + Math.random() * 14000));
+      self.setState({ gain: (st.gain || 0) + step, flash: step > 0 ? 'up' : 'down' });
+      clearTimeout(self._fade);
+      self._fade = setTimeout(function () { self.setState({ flash: '' }); }, 1100);
+    }, 3500);
+  }
+  componentWillUnmount() { clearInterval(this._tick); clearTimeout(this._fade); }
+  componentDidUpdate(pp, ps) { try { const d = !!(this.state && this.state.dark); if (!!(ps && ps.dark) !== d) localStorage.setItem('nm-theme-dark', d ? '1' : '0'); } catch (e) {} }
+
+  renderVals() {
+    function money(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '٬').replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.charAt(+d); }); }
+
+    function lkSplit(total, free, fmt) {
+      var locked = total - free, f = fmt || money;
+      return { free: f(free), locked: f(locked), freePct: Math.round(free / total * 1000) / 10, hasFree: free > 0, hasLocked: locked > 0, allFree: locked === 0, someLocked: locked > 0, lkAria: 'آزاد ' + f(free) + ' · قفل ' + f(locked) };
+    }
+    var I = {
+      assets: 'M12 3l9 5-9 5-9-5zM3 12.5l9 5 9-5M3 17l9 5 9-5',
+      inbox: 'M4 13h4l2 3h4l2-3h4M4 13l2.5-7h11L20 13v6H4z',
+      credit: 'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM9.5 14.5l5-5M9.5 9.5h.01M14.5 14.5h.01',
+      cards: 'M3 9h18M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 15h4',
+      swap: 'M4 8h13l-3-3M20 16H7l3 3',
+      withdraw: 'M12 15V4M8 8l4-4 4 4M4 15v4h16v-4',
+      check: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M8.5 12l2.5 2.5 5-5',
+      ban: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M5.6 5.6l12.8 12.8',
+      sliders: 'M4 7h10M18 7h2M4 17h4M12 17h8M14 4.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M8 14.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5',
+      lock: 'M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3',
+      gold: 'M12 9c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+      percent: 'M19 5L5 19M7.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M16.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3',
+      banknote: 'M3 7h18v10H3zM12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M6 12h.01M18 12h.01',
+      cart: 'M3 4h2l2.5 11h11L21 7H6.5M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2M18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2',
+      trend: 'M3 17l6-6 4 4 8-8M15 7h6v6'
+    };
+    var AMBER = 'var(--warning-main)', TEAL = 'var(--secondary-main)', GREY = 'var(--grey-600)';
+    var tone = {
+      primary: ['var(--soft-primary)', 'var(--primary-text)'],
+      secondary: ['var(--soft-secondary)', 'var(--secondary-text)'],
+      success: ['var(--soft-success)', 'var(--success-text)'],
+      info: ['var(--soft-info)', 'var(--info-text)'],
+      warning: ['var(--soft-warning)', 'var(--warning-text)'],
+      error: ['var(--soft-error)', 'var(--error-text)'],
+      def: ['var(--soft-default)', 'var(--default-text)']
+    };
+    function lastBorder(arr) {
+      return arr.map(function (x, i) { x.border = i === arr.length - 1 ? 'transparent' : 'var(--divider)'; return x; });
+    }
+    var st = this.state || {};
+    var isDark = !!st.dark;
+    var self = this;
+    var alloc = [
+      { label: 'ریال', pct: '۱۲٪', w: 12, chg: '۰٪', chgColor: 'var(--text-secondary)' },
+      { label: 'طلا', pct: '۴۸٪', w: 48, chg: '▲۱٫۲٪', chgColor: 'var(--success-text)' },
+      { label: 'درآمد ثابت', pct: '۳۲٪', w: 32, chg: '▲۰٫۰۸٪', chgColor: 'var(--success-text)' },
+      { label: 'سایر', pct: '۸٪', w: 8, chg: '▼۰٫۲۱٪', chgColor: 'var(--error-text)' }
+    ].map(function (a) { a.w = Math.max(a.w * 2, 14); return a; });
+    var heat = [
+      { name: 'طلا', href: 'app-gold.dc.html', x: 0, y: 0, w: 48.395, h: 100, c: 1.2, share: '۴۸٪', chg: '+۱٫۲۰٪', size: 'xl' },
+      { name: 'درآمد ثابت', href: 'app-fixed.dc.html', x: 48.395, y: 0, w: 31.605, h: 100, c: 0.08, share: '۳۲٪', chg: '+۰٫۰۸٪', size: 'xl' },
+      { name: 'ریال', href: 'app-rial.dc.html', x: 80, y: 0, w: 20, h: 60.247, c: 0, share: '۱۲٪', chg: '۰٪', size: 'md' },
+      { name: 'سهامی', href: 'app-gold.dc.html', x: 80, y: 60.247, w: 10.186, h: 39.753, c: -0.6, share: '۴٪', chg: '−۰٫۶٪', size: 'sm' },
+      { name: 'مختلط', href: 'app-gold.dc.html', x: 90.186, y: 60.247, w: 9.814, h: 29.186, c: 0.3, share: '۳٪', chg: '+۰٫۳٪', size: 'xs' },
+      { name: 'نقره', href: 'app-gold.dc.html', x: 90.186, y: 89.433, w: 9.814, h: 10.567, c: 0.9, share: '۱٪', chg: '+۰٫۹٪', size: 'none' }
+    ].map(function (t) {
+      t.bg = t.c >= 1 ? '#17734B' : t.c >= 0.25 ? '#1F8A5B' : t.c > 0 ? '#2E8B60' : t.c === 0 ? '#636B7F' : t.c <= -0.5 ? '#B83232' : '#C94A4A';
+      t.fs = { xl: 15, md: 13, sm: 10, xs: 9, none: 9 }[t.size];
+      t.fs2 = { xl: 12, md: 11, sm: 9, xs: 9, none: 9 }[t.size];
+      t.showName = t.size !== 'none';
+      t.showChg = t.size === 'xl' || t.size === 'md' || t.size === 'sm';
+      t.aria = t.name + '، ' + t.share + ' از دارایی، تغییر امروز ' + t.chg;
+      return t;
+    });
+    // canonical free / locked ledger (see lock model): free = withdrawable & tradable, locked = owned but not withdrawable
+    var LT = {
+      collateral: { t: 'وثیقه', bg: 'var(--soft-info)', fg: 'var(--info-text)', icon: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2' },
+      vesting: { t: 'قفل زمانی', bg: 'var(--soft-warning)', fg: 'var(--warning-text)', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3 2' },
+      installment: { t: 'اقساطی', bg: 'var(--soft-secondary)', fg: 'var(--secondary-text)', icon: 'M3 9h18M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' },
+      milestone: { t: 'مرحله‌ای', bg: 'var(--soft-primary)', fg: 'var(--primary-text)', icon: 'M5 21V4M5 4h11l-2 4 2 4H5' }
+    };
+    var H = [
+      { k: 'rial', name: 'کیف پول ریالی', href: 'app-rial.dc.html', dot: GREY, total: 24400000, locks: [['collateral', 4000000]], cond: 'آزاد با تسویه اعتبار کارت', spark: '', delta: '' },
+      { k: 'gold', name: 'صندوق طلا', href: 'app-gold.dc.html', dot: AMBER, total: 98000000, locks: [['collateral', 30000000], ['milestone', 12000000]], cond: 'وام · قرارداد پروژه ۲ از ۵ مرحله', delta: '+۱٫۲٪', spark: 'M0 18 L8 16 L16 17 L24 12 L32 13 L40 8 L48 9 L56 4' },
+      { k: 'fixed', name: 'صندوق درآمد ثابت', href: 'app-fixed.dc.html', dot: TEAL, total: 64000000, locks: [['vesting', 20000000]], cond: 'آزاد در ۱۴۰۵/۱۰/۱۵', delta: '+۰٫۰۸٪', spark: '' },
+      { k: 'equity', name: 'صندوق سهامی شاخصی', href: 'app-gold.dc.html', dot: 'var(--primary-light)', total: 8200000, locks: [], cond: '', delta: '−۰٫۶٪', down: true, spark: 'M0 8 L8 10 L16 7 L24 12 L32 11 L40 15 L48 13 L56 16' },
+      { k: 'mixed', name: 'صندوق مختلط', href: 'app-gold.dc.html', dot: 'var(--primary-light)', total: 5800000, locks: [['installment', 3500000]], cond: '۴ قسط مانده', delta: '+۰٫۳٪', spark: 'M0 14 L8 13 L16 14 L24 11 L32 12 L40 10 L48 10 L56 8' },
+      { k: 'silver', name: 'صندوق نقره', href: 'app-gold.dc.html', dot: 'var(--primary-light)', total: 2100000, locks: [['vesting', 2100000]], cond: 'آزاد در ۱۴۰۵/۱۲/۰۱', delta: '+۰٫۹٪', spark: 'M0 16 L8 15 L16 12 L24 13 L32 9 L40 10 L48 7 L56 6' }
+    ].map(function (h) { h.locked = h.locks.reduce(function (a, l) { return a + l[1]; }, 0); h.free = h.total - h.locked; return h; });
+    var tab = st.wtab === 'locked' ? 'locked' : 'free';
+    var freeList = H.filter(function (h) { return h.free > 0; }), lockedList = H.filter(function (h) { return h.locked > 0; });
+    var sumF = freeList.reduce(function (a, h) { return a + h.free; }, 0), sumL = lockedList.reduce(function (a, h) { return a + h.locked; }, 0);
+    var wlist = H.map(function (h) {
+      return {
+        name: h.name, href: h.href, dot: h.dot, value: money(h.total),
+        hasSpark: !!h.spark, hasDelta: !!h.delta, delta: h.delta, spark: h.spark,
+        deltaBg: h.down ? 'var(--soft-error)' : 'var(--soft-success)', deltaFg: h.down ? 'var(--error-text)' : 'var(--success-text)',
+        free: money(h.free), locked: money(h.locked), hasLock: h.locked > 0, noLock: h.locked === 0
+      };
+    });
+    var wtabs = [['free', 'قابل برداشت', freeList.length, 'M12 3v12M7 10l5 5 5-5M5 21h14'], ['locked', 'قفل‌شده', lockedList.length, 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2']].map(function (t) {
+      var on = t[0] === tab;
+      return { label: t[1], count: money(t[2]), icon: t[3], sel: on ? 'true' : 'false', bg: on ? 'var(--seg-active)' : 'transparent', sh: on ? 'var(--shadow-z1)' : 'none', c: on ? '--text-primary' : '--text-secondary', w: on ? 700 : 500, cntBg: on ? 'var(--soft-primary)' : 'rgb(var(--grey-500-rgb) / .16)', pick: function () { self.setState({ wtab: t[0] }); } };
+    });
+    var wsum = tab === 'free'
+      ? { label: 'مجموع قابل برداشت', sub: 'قابل برداشت و فروش به ریال', total: money(sumF), bg: 'rgb(var(--primary-main-rgb) / .08)', iconBg: 'var(--soft-primary)', fg: 'var(--primary-text)', icon: 'M12 3v12M7 10l5 5 5-5M5 21h14' }
+      : { label: 'مجموع قفل‌شده', sub: 'تا آزادسازی قابل برداشت و فروش نیست', total: money(sumL), bg: 'rgb(var(--grey-500-rgb) / .10)', iconBg: 'rgb(var(--grey-500-rgb) / .18)', fg: 'var(--text-primary)', icon: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2' };
+    var activity = lastBorder([
+      { title: 'سود روزانه صندوق درآمد ثابت', when: 'امروز', amount: '+۵۱٬۰۰۰', c: '--success-text', d: I.percent, bg: tone.secondary[0], fg: tone.secondary[1] },
+      { title: 'قفل وثیقه وام روی صندوق طلا', when: '۱ مهر', amount: '۳۰٬۰۰۰٬۰۰۰', c: '--text-primary', d: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2', bg: tone.info[0], fg: tone.info[1] }
+    ]);
+    var faNum = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '٬').replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); };
+    var gain = st.gain || 0, base = 202500000, profit0 = 1240000;
+    var total = base + gain, profit = profit0 + gain, pct = profit / (base - profit0) * 100;
+    var sign = profit >= 0 ? '+' : '−';
+    var live = {
+      totalStr: faNum(total),
+      profitStr: sign + faNum(Math.abs(profit)),
+      pctStr: sign + faNum(Math.abs(pct).toFixed(2)).replace('.', '٫') + '٪',
+      totalColor: st.flash === 'up' ? 'var(--success-text)' : (st.flash === 'down' ? 'var(--error-text)' : 'var(--text-primary)'),
+      badgeBg: st.flash === 'up' ? 'rgb(var(--success-main-rgb) / .32)' : 'var(--soft-success)'
+    };
+    // hero deck: total card + one card per wallet / fund (same format, no charts)
+    var BUY = 'M12 5v14M5 12h14', SELL = 'M5 12h14', DEP = 'M12 4v11M8 11l4 4 4-4M4 15v4h16v-4', WD = 'M12 15V4M8 8l4-4 4 4M4 15v4h16v-4';
+    var HC = [
+      { k: 'total' },
+      { g1: '#434A62', g2: '#6B7390', title: 'کیف پول ریالی', href: 'app-rial.dc.html', accent: 'var(--grey-600)', tintRgb: 'var(--grey-500-rgb)', amount: 24400000, chg: '+۴٬۰۰۰٬۰۰۰', pct: '+۱۹٫۶۱٪', period: 'این ماه', up: 1, a1: 'واریز', a1href: 'app-deposit.dc.html', a1icon: DEP, a2: 'برداشت', a2href: 'app-withdraw.dc.html', a2icon: WD },
+      { g1: '#A9761E', g2: '#D9A84B', title: 'صندوق طلا', href: 'app-gold.dc.html', accent: 'var(--warning-main)', tintRgb: 'var(--warning-main-rgb)', amount: 98000000, chg: '+۱٬۱۶۲٬۰۰۰', pct: '+۱٫۲۰٪', period: 'امروز', up: 1 },
+      { g1: '#2A6684', g2: '#55A0C3', title: 'صندوق درآمد ثابت', href: 'app-fixed.dc.html', accent: 'var(--secondary-main)', tintRgb: 'var(--secondary-main-rgb)', amount: 64000000, chg: '+۵۱٬۰۰۰', pct: '+۰٫۰۸٪', period: 'امروز', up: 1 },
+      { g1: '#2F3AB8', g2: '#5A66E0', title: 'صندوق سهامی شاخصی', href: 'app-gold.dc.html', accent: 'var(--primary-light)', tintRgb: 'var(--primary-main-rgb)', amount: 8200000, chg: '−۴۹٬۵۰۰', pct: '−۰٫۶۰٪', period: 'امروز', up: -1 },
+      { g1: '#277C5A', g2: '#55B08C', title: 'صندوق مختلط', href: 'app-gold.dc.html', accent: 'var(--success-main)', tintRgb: 'var(--success-main-rgb)', amount: 5800000, chg: '+۱۷٬۳۵۰', pct: '+۰٫۳۰٪', period: 'امروز', up: 1 },
+      { g1: '#636C83', g2: '#9AA3B7', title: 'صندوق نقره', href: 'app-gold.dc.html', accent: 'var(--grey-400)', tintRgb: 'var(--grey-500-rgb)', amount: 2100000, chg: '+۱۸٬۷۰۰', pct: '+۰٫۹۰٪', period: 'امروز', up: 1 }
+    ];
+    var NH = HC.length, hci = st.hci || 0, hprev = typeof st.hprev === 'number' ? st.hprev : -1;
+    var hgo = function (to) { var cur = (self.state && self.state.hci) || 0; if (to === cur) return; self.setState({ hprev: cur, hci: to }); };
+    var HPOS = [['none', 1, 10], ['translateY(9px) scale(.955)', 1, 9], ['translateY(18px) scale(.91)', 1, 8]];
+    var hcards = HC.map(function (c, i) {
+      var rel = (i - hci + NH) % NH, p = HPOS[rel] || ['translateY(18px) scale(.91)', 0, 1];
+      var o = { tf: p[0], op: p[1], z: p[2], inner: rel === 0 ? 1 : 0, cls: i === hprev && rel !== 0 ? 'hero-leave' : '', ariaHidden: rel === 0 ? 'false' : 'true', tab: rel === 0 ? '0' : '-1',
+        flip: function () { hgo(rel === 0 ? (i + 1) % NH : i); }, flipAria: rel === 0 ? 'کارت بعدی' : 'نمایش ' + (c.title || 'دارایی کل') };
+      if (c.k === 'total') {
+        o.isTotal = true; o.isAsset = false; o.title = 'دارایی کل'; o.accent = 'var(--primary-main)'; o.tint = 'rgb(var(--primary-main-rgb) / .10)';
+        o.bg = 'var(--bg-paper) linear-gradient(135deg, rgb(var(--primary-main-rgb) / .10), transparent 60%)'; o.fg = 'var(--text-primary)'; o.fg2 = 'var(--text-secondary)'; o.dot = 'var(--primary-main)'; o.circle = 'rgb(var(--primary-main-rgb) / .08)';
+        o.amount = live.totalStr; o.amountColor = live.totalColor; o.chg = live.profitStr; o.pct = live.pctStr; o.period = 'امروز'; o.badgeBg = live.badgeBg; o.badgeFg = 'var(--success-text)';
+        o.hasPending = st.pending !== 0; o.noPending = st.pending === 0;
+      } else {
+        o.isTotal = false; o.isAsset = true; o.title = c.title; o.href = c.href; o.accent = c.accent; o.tint = 'rgb(' + c.tintRgb + ' / .14)';
+        o.amount = money(c.amount); o.amountColor = '#FFFFFF'; o.chg = c.chg; o.pct = c.pct; o.period = c.period;
+        o.bg = 'linear-gradient(135deg, ' + c.g1 + ' 0%, ' + c.g2 + ' 100%)'; o.fg = '#FFFFFF'; o.fg2 = 'rgb(255 255 255 / .82)'; o.dot = '#FFFFFF'; o.circle = 'rgb(255 255 255 / .12)'; o.deep = c.g1;
+        o.badgeBg = 'rgb(255 255 255 / .92)'; o.badgeFg = c.up < 0 ? '#B83232' : '#17734B';
+        o.a1 = c.a1 || 'خرید'; o.a1href = c.a1href || 'app-convert.dc.html'; o.a1icon = c.a1icon || BUY;
+        o.a2 = c.a2 || 'فروش'; o.a2href = c.a2href || 'app-convert.dc.html'; o.a2icon = c.a2icon || SELL;
+        var fidMap = { 'صندوق طلا': 'gold', 'صندوق درآمد ثابت': 'fixed', 'صندوق سهامی شاخصی': 'equity', 'صندوق مختلط': 'mixed', 'صندوق نقره': 'silver' }, fid = fidMap[c.title];
+        var cv = function (v) { return function () { try { if (v) localStorage.setItem('nm-conv', v); } catch (e) {} }; };
+        o.a1go = cv(c.a1href ? '' : 'buy:' + fid); o.a2go = cv(c.a2href ? '' : 'sell:' + fid);
+        o.navAria = 'اکشن‌های ' + c.title;
+      }
+      return o;
+    });
+    var hdots = HC.map(function (c, i) { var on = i === hci; return { w: on ? 18 : 6, bg: on ? 'var(--primary-main)' : 'rgb(var(--grey-500-rgb) / .35)', cur: on ? 'true' : 'false', aria: c.title || 'دارایی کل', pick: function () { hgo(i); } }; });
+    return {
+      hcards: hcards, hdots: hdots,
+      hasPending: st.pending !== 0, noPending: st.pending === 0,
+      totalStr: live.totalStr, profitStr: live.profitStr, pctStr: live.pctStr, totalColor: live.totalColor, badgeBg: live.badgeBg,
+      themeCls: isDark ? 'th-dark' : 'th-light',
+      isDark: isDark,
+      isLight: !isDark,
+      toggleTheme: function () { self.setState({ dark: !(self.state && self.state.dark) }); },
+      alloc: alloc,
+      wlist: wlist, wtabs: wtabs, wsum: wsum, heat: heat,
+      activity: activity
+    };
+  }
+}
+</script>
+</body>
+</html>

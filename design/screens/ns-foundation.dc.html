@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Namadno UI — Foundation</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.ns{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-contrast:#FFFFFF;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-darker:#153F5E;--info-contrast:#FFFFFF;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-darker:#66430A;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-darker:#6E1A1A;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--radius-xs:4px;--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%}
+.th-light{color-scheme:light;--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:var(--grey-200);--bg-canvas:var(--grey-100);--bg-aurora:radial-gradient(900px 520px at 85% -10%,rgb(var(--primary-main-rgb) / .07),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgb(var(--secondary-main-rgb) / .06),transparent 60%);--text-primary:var(--grey-800);--text-secondary:var(--grey-600);--text-disabled:var(--grey-500);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--action-disabled:rgb(var(--grey-500-rgb) / .80);--action-disabled-bg:rgb(var(--grey-500-rgb) / .24);--action-focus:rgb(var(--grey-500-rgb) / .24);--primary-text:var(--primary-main);--success-text:var(--success-dark);--glass-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(var(--grey-500-rgb) / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z4:0 4px 8px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z8:0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z12:0 12px 24px -4px rgb(var(--grey-500-rgb) / .16);--shadow-z16:0 16px 32px -4px rgb(var(--grey-500-rgb) / .16);--shadow-z20:0 20px 40px -4px rgb(var(--grey-500-rgb) / .16);--shadow-z24:0 24px 48px 0 rgb(var(--grey-500-rgb) / .16);--shadow-card:0 0 2px 0 rgb(var(--grey-500-rgb) / .20),0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);--shadow-dropdown:0 0 2px 0 rgb(var(--grey-500-rgb) / .24),-20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);--shadow-dialog:-40px 40px 80px -8px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-success:0 8px 16px 0 rgb(var(--success-main-rgb) / .24);--shadow-error:0 8px 16px 0 rgb(var(--error-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge),0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);--chart-1:var(--primary-main);--chart-2:var(--success-main);--chart-3:var(--secondary-main);--chart-4:var(--grey-400);--chart-5:var(--grey-600);--chart-grid:rgb(var(--grey-500-rgb) / .16)}
+.th-dark{color-scheme:dark;--bg-default:var(--grey-900);--bg-paper:var(--grey-800);--bg-neutral:rgb(var(--grey-500-rgb) / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%,rgb(var(--primary-main-rgb) / .20),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgb(var(--secondary-main-rgb) / .12),transparent 60%);--text-primary:#FFFFFF;--text-secondary:var(--grey-500);--text-disabled:var(--grey-600);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--action-disabled:rgb(var(--grey-500-rgb) / .80);--action-disabled-bg:rgb(var(--grey-500-rgb) / .24);--action-focus:rgb(var(--grey-500-rgb) / .24);--primary-text:var(--primary-light);--success-text:#7CCBA8;--glass-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z4:0 4px 8px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z12:0 12px 24px -4px rgb(0 0 0 / .16);--shadow-z16:0 16px 32px -4px rgb(0 0 0 / .16);--shadow-z20:0 20px 40px -4px rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20),0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24),-20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-dialog:-40px 40px 80px -8px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-success:0 8px 16px 0 rgb(var(--success-main-rgb) / .24);--shadow-error:0 8px 16px 0 rgb(var(--error-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge),0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:var(--primary-light);--chart-2:#7CCBA8;--chart-3:var(--secondary-light);--chart-4:var(--grey-600);--chart-5:var(--grey-400);--chart-grid:rgb(var(--grey-500-rgb) / .16)}
+.card{background:var(--bg-paper);border-radius:var(--radius-lg);box-shadow:var(--shadow-card)}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.cap{font-size:11px;line-height:1.4;color:var(--text-secondary)}
+</style>
+</helmet>
+<div dir="rtl" class="ns" style="width: 1640px; height: 2200px; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: row; font-family: 'IRANSansX', Tahoma, sans-serif; font-size: 14px">
+  <sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+    <section class="{{t.cls}}" style="width: 820px; height: 2200px; box-sizing: border-box; padding: 40px; background-color: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+
+      <!-- Header -->
+      <header style="display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 48px; flex: none">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div style="width: 44px; height: 44px; border-radius: 10px; background: var(--brand-gradient); display: grid; place-items: center; color: #FFFFFF; flex: none">
+            <svg viewBox="0 0 64 40" width="30" height="19" aria-hidden="true" style="flex: none"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <div style="font-family: 'Divan', 'IRANSansX', sans-serif; font-size: 24px; font-weight: 700; line-height: 1.1">نمادنو</div>
+            <div style="font-size: 12px; font-weight: 500; color: var(--text-secondary)" dir="ltr">Namadno UI · Foundation</div>
+          </div>
+        </div>
+        <div class="glass" style="display: flex; align-items: center; gap: 8px; border-radius: var(--radius-pill); padding: 7px 14px; font-size: 13px; font-weight: 700">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-main); display: inline-block"></span>{{t.label}}
+        </div>
+      </header>
+      <p style="margin: 0; font-size: 14px; line-height: 22px; color: var(--text-secondary); flex: none">ساختار Minimals، شیشه ملایم، پالت محدود</p>
+
+      <!-- Palette -->
+      <div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; flex: none">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <div style="font-size: 15px; font-weight: 700">پالت رنگ</div>
+          <div class="cap" dir="ltr">Palette · grey + 6 semantic ramps</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <div style="font-size: 12px; font-weight: 700">Grey — خنثی‌های سرد با ته‌رنگ نیلی</div>
+            <div class="cap" dir="ltr">grey[50..900]</div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px">
+            <sc-for list="{{t.greys}}" as="g" hint-placeholder-count="10">
+              <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                <div style="height: 36px; border-radius: 6px; background: {{g.hex}}; border: 1px solid var(--divider); box-sizing: border-box"></div>
+                <div style="font-size: 11px; font-weight: 600; line-height: 1.2" dir="ltr">{{g.name}}</div>
+                <div class="cap" style="font-size: 10px" dir="ltr">{{g.hex}}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px">
+          <sc-for list="{{t.colors}}" as="c" hint-placeholder-count="6">
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <div style="display: flex; justify-content: space-between; align-items: center">
+                <div style="display: flex; align-items: baseline; gap: 8px">
+                  <div style="font-size: 13px; font-weight: 700" dir="ltr">{{c.name}}</div>
+                  <div class="cap">{{c.fa}}</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px">
+                  <div class="cap" style="font-size: 10px" dir="ltr">contrastText</div>
+                  <div style="width: 26px; height: 26px; border-radius: 6px; background: {{c.main}}; color: {{c.contrast}}; display: grid; place-items: center; font-size: 12px; font-weight: 700; line-height: 1" dir="ltr">Aa</div>
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px">
+                <sc-for list="{{c.steps}}" as="s" hint-placeholder-count="5">
+                  <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                    <div style="height: 34px; border-radius: 6px; background: {{s.hex}}; border: 1px solid var(--divider); box-sizing: border-box"></div>
+                    <div class="cap" style="font-size: 10px; color: var(--text-primary)" dir="ltr">{{s.k}}</div>
+                    <div class="cap" style="font-size: 10px" dir="ltr">{{s.hex}}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- Theme tokens -->
+      <div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; flex: none">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <div style="font-size: 15px; font-weight: 700">توکن‌های تم</div>
+          <div class="cap" dir="ltr">palette.background / text / divider / action — {{t.label}}</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px">
+          <sc-for list="{{t.tokens}}" as="k" hint-placeholder-count="9">
+            <div style="display: flex; align-items: center; gap: 10px; height: 28px; border-bottom: 1px solid var(--divider)">
+              <div style="width: 30px; height: 20px; border-radius: 4px; background: {{k.swatch}}; border: 1px solid var(--divider); box-sizing: border-box; flex: none"></div>
+              <div style="font-size: 12px; font-weight: 600; flex: 1" dir="ltr">{{k.name}}</div>
+              <div class="cap" dir="ltr">{{k.value}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- Typography -->
+      <div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; flex: none">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <div style="font-size: 15px; font-weight: 700">مقیاس تایپوگرافی</div>
+          <div class="cap" dir="ltr">IRANSansX everywhere · Divan only for the wordmark / display h1 · numerals 300 tabular</div>
+        </div>
+        <div style="display: flex; flex-direction: column">
+          <sc-for list="{{t.type}}" as="ty" hint-placeholder-count="15">
+            <div style="display: grid; grid-template-columns: 1fr 210px; gap: 16px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--divider)">
+              <div style="font-family: {{ty.family}}; font-size: {{ty.size}}px; font-weight: {{ty.weight}}; line-height: {{ty.lh}}; letter-spacing: {{ty.ls}}; color: var({{ty.colorVar}}); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0">{{ty.sample}}</div>
+              <div style="display: flex; flex-direction: column; gap: 1px" dir="ltr">
+                <div style="font-size: 12px; font-weight: 700; line-height: 1.3">{{ty.name}}</div>
+                <div class="cap" style="font-size: 10.5px">{{ty.spec}}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- Shadows -->
+      <div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; flex: none">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <div style="font-size: 15px; font-weight: 700">سایه‌ها</div>
+          <div class="cap" dir="ltr">customShadows · grey-500 @16% in Light, black in Dark · primary = colored hover</div>
+        </div>
+        <div style="background: var(--bg-canvas); border-radius: var(--radius-md); padding: 26px 24px 40px; display: grid; grid-template-columns: repeat(8, 1fr); gap: 16px">
+          <sc-for list="{{t.shadows}}" as="s" hint-placeholder-count="8">
+            <div style="display: flex; flex-direction: column; gap: 10px; align-items: stretch; min-width: 0">
+              <div style="height: 56px; border-radius: var(--radius-md); background: var(--bg-paper); box-shadow: var({{s.v}})"></div>
+              <div style="font-size: 11px; font-weight: 700; text-align: center; line-height: 1.2" dir="ltr">{{s.name}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- Radius / Spacing + Glass / Aurora -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex: none">
+        <div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <div style="font-size: 15px; font-weight: 700">شعاع و فاصله</div>
+            <div class="cap" dir="ltr">radius · spacing (unit 8)</div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px">
+            <sc-for list="{{t.radii}}" as="r" hint-placeholder-count="6">
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: center">
+                <div style="width: 44px; height: 44px; border-radius: {{r.px}}px; background: var(--bg-neutral); border: 1px solid var(--divider); box-sizing: border-box"></div>
+                <div class="cap" style="font-size: 10px; text-align: center" dir="ltr">{{r.name}}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; align-items: end; padding-top: 4px; border-top: 1px solid var(--divider)">
+            <sc-for list="{{t.spacing}}" as="sp" hint-placeholder-count="10">
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: flex-end; height: 86px">
+                <div style="width: 18px; height: {{sp.px}}px; border-radius: 2px; background: var(--primary-main)"></div>
+                <div class="cap" style="font-size: 10px" dir="ltr">{{sp.px}}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <div style="font-size: 15px; font-weight: 700">شیشه و Aurora</div>
+            <div class="cap" dir="ltr">glass recipe · aurora background</div>
+          </div>
+          <div style="position: relative; height: 136px; border-radius: var(--radius-md); background-color: var(--bg-canvas); background-image: var(--bg-aurora); overflow: hidden">
+            <div style="position: absolute; width: 150px; height: 150px; border-radius: 50%; background: var(--brand-gradient); filter: blur(22px); opacity: .85; left: 36px; top: -40px"></div>
+            <div style="position: absolute; width: 90px; height: 90px; border-radius: 50%; background: var(--success-main); filter: blur(22px); opacity: .55; right: 44px; bottom: -34px"></div>
+            <div class="glass" style="position: absolute; left: 50%; top: 50%; width: 220px; height: 100px; margin: -50px 0 0 -110px; border-radius: var(--radius-md); box-sizing: border-box; padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between">
+              <div style="display: flex; align-items: center; justify-content: space-between">
+                <div style="font-size: 13px; font-weight: 700">سطح شیشه‌ای</div>
+                <div class="cap" style="font-size: 10px" dir="ltr">.nm-glass</div>
+              </div>
+              <div class="cap" style="font-size: 11px; color: var(--text-primary)">AppBar · Nav drawer · Bottom nav · Popover</div>
+              <div style="display: flex; gap: 6px">
+                <span style="width: 44px; height: 6px; border-radius: 3px; background: var(--primary-main); opacity: .9"></span>
+                <span style="width: 28px; height: 6px; border-radius: 3px; background: var(--divider)"></span>
+                <span style="width: 20px; height: 6px; border-radius: 3px; background: var(--divider)"></span>
+              </div>
+            </div>
+          </div>
+          <div class="cap" style="font-size: 10.5px; line-height: 1.5" dir="ltr">glass-bg + backdrop blur(20px) saturate(140%) + 1px glass-border + shadow-glass + glass-highlight · cards stay solid</div>
+          <div class="cap" style="font-size: 11.5px; line-height: 1.6; color: var(--text-primary)">{{t.auroraNote}}</div>
+        </div>
+      </div>
+
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var greys = [['50','#FCFCFE'],['100','#F8F9FC'],['200','#F1F3F8'],['300','#DEE2EB'],['400','#C3C9D6'],['500','#8F97AA'],['600','#636B7F'],['700','#454C5E'],['800','#1F2433'],['900','#141826']]
+      .map(function (g) { return { name: g[0], hex: g[1] }; });
+
+    var steps = ['lighter', 'light', 'main', 'dark', 'darker'];
+    function ramp(name, fa, hexes, contrast) {
+      return {
+        name: name, fa: fa, main: hexes[2], contrast: contrast,
+        steps: hexes.map(function (h, i) { return { k: steps[i], hex: h }; })
+      };
+    }
+    var colors = [
+      ramp('primary',   'نیلی برند',   ['#DDE0FB','#8E97F0','#3A47CD','#2A34A0','#1A2070'], '#FFFFFF'),
+      ramp('secondary', 'فیروزه‌ای',   ['#D4EAF3','#8FC1D6','#4686A6','#2F6480','#1C4257'], '#FFFFFF'),
+      ramp('info',      'آبی آسمانی',  ['#D3EBF8','#7FC0E6','#3B8EC7','#25628F','#153F5E'], '#FFFFFF'),
+      ramp('success',   'سبز برند',    ['#DAF3E7','#9BD9BF','#55B08C','#2F7D5C','#1B5540'], '#0B2A1C'),
+      ramp('warning',   'کهربایی',     ['#FBEFD3','#F0CB7C','#D99A2B','#9E6A14','#66430A'], '#1F2433'),
+      ramp('error',     'قرمز',        ['#FBDCDC','#F09A9A','#D94A4A','#A32C2C','#6E1A1A'], '#FFFFFF')
+    ];
+
+    var IR = 'IRANSansX, Tahoma, sans-serif';
+    var DV = 'Divan, IRANSansX, Tahoma, sans-serif';
+    function ty(name, sample, size, weight, lh, opts) {
+      opts = opts || {};
+      return {
+        name: name, sample: sample, size: size, weight: weight, lh: lh,
+        family: opts.family || IR, ls: opts.ls || '0', colorVar: opts.colorVar || '--text-primary',
+        spec: size + 'px · ' + weight + ' · lh ' + lh + (opts.ls ? ' · ls ' + opts.ls : '') + ' · ' + (opts.family ? 'Divan' : 'IRANSansX')
+      };
+    }
+    var type = [
+      ty('h1', 'مدیریت ثروت، ساده و شفاف', 40, 700, 1.25),
+      ty('h1 · display', 'آینده‌ی مالی شما', 40, 700, 1.25, { family: DV }),
+      ty('h2', 'داشبورد سازمان', 32, 700, 1.3),
+      ty('h3', 'پرداخت حقوق مهر ۱۴۰۵', 24, 700, 1.4),
+      ty('h4', 'تراکنش‌های اخیر', 20, 700, 1.5),
+      ty('h5', 'اعتبار در دسترس', 18, 700, 1.5),
+      ty('h6', 'حساب جاری', 17, 700, 1.55),
+      ty('subtitle1', 'واریز حقوق — هلدینگ آرمان', 16, 600, 1.5),
+      ty('subtitle2', 'سقف خرید روزانه', 14, 600, 1.57),
+      ty('body1', 'برای ادامه، کد تأیید ارسال‌شده به شماره همراه خود را وارد کنید.', 16, 400, 1.5),
+      ty('body2', 'آخرین به‌روزرسانی: ۱۴ مهر ۱۴۰۵ — ساعت ۰۹:۱۲', 14, 400, 1.57),
+      ty('caption', 'کارمزد انتقال: ۵٬۰۰۰ تومان', 12, 400, 1.5, { colorVar: '--text-secondary' }),
+      ty('overline', 'حساب‌ها و کارت‌ها', 12, 700, 1.5, { ls: '.08em', colorVar: '--text-secondary' }),
+      ty('button', 'تأیید و ارسال', 14, 700, 1.71, { colorVar: '--primary-text' }),
+      ty('numeral', '۲۴۸٬۶۵۰٬۰۰۰ تومان', 28, 300, 1.2)
+    ];
+
+    var shadows = [
+      { name: 'z1', v: '--shadow-z1' }, { name: 'z8', v: '--shadow-z8' }, { name: 'z16', v: '--shadow-z16' }, { name: 'z24', v: '--shadow-z24' },
+      { name: 'card', v: '--shadow-card' }, { name: 'dropdown', v: '--shadow-dropdown' }, { name: 'dialog', v: '--shadow-dialog' }, { name: 'primary', v: '--shadow-primary' }
+    ];
+    var radii = [
+      { name: 'xs · 4', px: 4 }, { name: 'sm · 8', px: 8 }, { name: 'md · 12', px: 12 },
+      { name: 'lg · 16', px: 16 }, { name: 'xl · 24', px: 24 }, { name: 'pill', px: 999 }
+    ];
+    var spacing = [4, 8, 12, 16, 20, 24, 32, 40, 48, 64].map(function (px) { return { px: px }; });
+
+    function theme(cls, label, tokens, auroraNote) {
+      return { cls: cls, label: label, greys: greys, colors: colors, type: type, shadows: shadows, radii: radii, spacing: spacing, tokens: tokens, auroraNote: auroraNote };
+    }
+    return {
+      themes: [
+        theme('th-light', 'Light', [
+          { name: 'background.default', value: '#FFFFFF', swatch: '#FFFFFF' },
+          { name: 'background.paper', value: '#FFFFFF', swatch: '#FFFFFF' },
+          { name: 'background.neutral', value: 'grey-200 · #F1F3F8', swatch: '#F1F3F8' },
+          { name: 'text.primary', value: 'grey-800 · #1F2433', swatch: '#1F2433' },
+          { name: 'text.secondary', value: 'grey-600 · #636B7F', swatch: '#636B7F' },
+          { name: 'text.disabled', value: 'grey-500 · #8F97AA', swatch: '#8F97AA' },
+          { name: 'divider', value: 'rgb(143 151 170 / .20)', swatch: 'rgb(143 151 170 / .20)' },
+          { name: 'action.hover', value: 'rgb(143 151 170 / .08)', swatch: 'rgb(143 151 170 / .08)' },
+          { name: 'action.selected', value: 'rgb(143 151 170 / .16)', swatch: 'rgb(143 151 170 / .16)' }
+        ], 'Aurora: دو radial-gradient بسیار کم‌رنگ روی پس‌زمینه صفحه — نیلی ۷٪ در بالا-راست و فیروزه‌ای ۶٪ در پایین-چپ. فقط پس‌زمینه می‌درخشد؛ کارت‌ها solid می‌مانند و در High contrast خاموش می‌شود.'),
+        theme('th-dark', 'Dark', [
+          { name: 'background.default', value: 'grey-900 · #141826', swatch: '#141826' },
+          { name: 'background.paper', value: 'grey-800 · #1F2433', swatch: '#1F2433' },
+          { name: 'background.neutral', value: 'rgb(143 151 170 / .12)', swatch: 'rgb(143 151 170 / .12)' },
+          { name: 'text.primary', value: '#FFFFFF', swatch: '#FFFFFF' },
+          { name: 'text.secondary', value: 'grey-500 · #8F97AA', swatch: '#8F97AA' },
+          { name: 'text.disabled', value: 'grey-600 · #636B7F', swatch: '#636B7F' },
+          { name: 'divider', value: 'rgb(143 151 170 / .20)', swatch: 'rgb(143 151 170 / .20)' },
+          { name: 'action.hover', value: 'rgb(143 151 170 / .08)', swatch: 'rgb(143 151 170 / .08)' },
+          { name: 'action.selected', value: 'rgb(143 151 170 / .16)', swatch: 'rgb(143 151 170 / .16)' }
+        ], 'Aurora: در Dark کمی پررنگ‌تر — نیلی ۲۰٪ در بالا-راست و فیروزه‌ای ۱۲٪ در پایین-چپ روی grey-900. متن و آیکن نیلی به primary.light می‌رود؛ در High contrast خاموش می‌شود.')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

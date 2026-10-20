@@ -1,0 +1,6 @@
+/* Requests — scoped under .pg-oreq */
+.pg-oreq .rq-row:hover{background:var(--action-hover)}
+.pg-oreq .rq-row[aria-selected="true"]:hover{background:var(--nav-active)}
+.pg-oreq .rq-row:focus-visible{outline:2px solid var(--primary-main);outline-offset:-2px}
+.pg-oreq .ibtn:disabled,.pg-oreq .btn:disabled{opacity:.5;cursor:default}
+.pg-oreq textarea{width:100%}

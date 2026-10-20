@@ -1,0 +1,16 @@
+/* app-money screens (funds, assets, convert, deposit, withdraw, receipt, history). Root: .pg-money */
+.pg-money{display:contents}
+/* asset band colors (design: .th-light/.th-dark{--band;--band-line}) */
+.th-light .pg-money[data-band="gold"],.pg-money[data-band="gold"]{--band:#C9962E;--band-line:#C9962E}
+.th-dark .pg-money[data-band="gold"]{--band:#8F6A1F;--band-line:#E6B65A}
+.th-light .pg-money[data-band="fixed"],.pg-money[data-band="fixed"]{--band:#3F7E9E;--band-line:#3F7E9E}
+.th-dark .pg-money[data-band="fixed"]{--band:#2B5A72;--band-line:#7DB5D1}
+.th-light .pg-money[data-band="rial"],.pg-money[data-band="rial"]{--band:#4F5770;--band-line:#4F5770}
+.th-dark .pg-money[data-band="rial"]{--band:#353B4E;--band-line:#9AA3B8}
+.pg-money .mn-noscroll{scrollbar-width:none}
+.pg-money .mn-noscroll::-webkit-scrollbar{display:none}
+.pg-money .mn-search::-webkit-search-cancel-button{-webkit-appearance:none}
+.pg-money .mn-pop{animation:pgMoneyPop .3s ease-out}
+.pg-money button:disabled{cursor:not-allowed}
+.pg-money .mn-cta:disabled{opacity:.5;box-shadow:none}
+@keyframes pgMoneyPop{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}

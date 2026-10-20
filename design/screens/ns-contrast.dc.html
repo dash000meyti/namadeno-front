@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Namadno UI — Contrast</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'IRANSansX';src:url(/_blob/285d46b33440425297dda32de548fd56) format('woff2');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/d78410e6147e8930a4a577e606fc9d7f) format('woff2');font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9f9fc1a84eaf8505f6f1399a440b9714) format('woff2');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/ff6dfc77c2c9d3fa02b30f6edfde4768) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/caad8ef11b31a48ebd9091823a388b8d) format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/9de30fc043f271421cf2b1d946242299) format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/6a4b2d98688ea3ae50ea1b2c67745b32) format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/c8539d6a97f140da4528d5c82f66f0a2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IRANSansX';src:url(/_blob/57f2cc4010221868354e67944af46756) format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Divan';src:url(/_blob/875e3b50ec1d4de13cbc6fb2c3c29302) format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}
+body{margin:0}
+a{color:var(--primary-text);text-decoration:none}a:hover{color:var(--primary-dark)}
+.ns{--grey-50:#FCFCFE;--grey-100:#F8F9FC;--grey-200:#F1F3F8;--grey-300:#DEE2EB;--grey-400:#C3C9D6;--grey-500:#8F97AA;--grey-600:#636B7F;--grey-700:#454C5E;--grey-800:#1F2433;--grey-900:#141826;--grey-500-rgb:143 151 170;--primary-lighter:#DDE0FB;--primary-light:#8E97F0;--primary-main:#3A47CD;--primary-dark:#2A34A0;--primary-darker:#1A2070;--primary-contrast:#FFFFFF;--primary-main-rgb:58 71 205;--secondary-lighter:#D4EAF3;--secondary-light:#8FC1D6;--secondary-main:#4686A6;--secondary-dark:#2F6480;--secondary-darker:#1C4257;--secondary-contrast:#FFFFFF;--secondary-main-rgb:70 134 166;--info-lighter:#D3EBF8;--info-light:#7FC0E6;--info-main:#3B8EC7;--info-dark:#25628F;--info-darker:#153F5E;--info-contrast:#FFFFFF;--info-main-rgb:59 142 199;--success-lighter:#DAF3E7;--success-light:#9BD9BF;--success-main:#55B08C;--success-dark:#2F7D5C;--success-darker:#1B5540;--success-contrast:#0B2A1C;--success-main-rgb:85 176 140;--warning-lighter:#FBEFD3;--warning-light:#F0CB7C;--warning-main:#D99A2B;--warning-dark:#9E6A14;--warning-darker:#66430A;--warning-contrast:#1F2433;--warning-main-rgb:217 154 43;--error-lighter:#FBDCDC;--error-light:#F09A9A;--error-main:#D94A4A;--error-dark:#A32C2C;--error-darker:#6E1A1A;--error-contrast:#FFFFFF;--error-main-rgb:217 74 74;--brand-gradient:linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);--radius-xs:4px;--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-pill:999px;--glass-blur:20px;--glass-saturate:140%;--header-h:72px}
+.th-light,.th-light-hc{color-scheme:light;--bg-default:#FFFFFF;--bg-paper:#FFFFFF;--bg-neutral:var(--grey-200);--bg-canvas:var(--grey-100);--bg-aurora:radial-gradient(900px 520px at 85% -10%,rgb(var(--primary-main-rgb) / .16),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgb(var(--secondary-main-rgb) / .12),transparent 60%),radial-gradient(400px 400px at 60% 104%,rgb(var(--success-main-rgb) / .10),transparent 70%);--text-primary:var(--grey-800);--text-secondary:var(--grey-600);--text-disabled:var(--grey-500);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--action-disabled:rgb(var(--grey-500-rgb) / .80);--action-disabled-bg:rgb(var(--grey-500-rgb) / .24);--action-focus:rgb(var(--grey-500-rgb) / .24);--primary-text:var(--primary-main);--secondary-text:var(--secondary-dark);--info-text:var(--info-dark);--success-text:var(--success-dark);--warning-text:var(--warning-dark);--error-text:var(--error-dark);--glass-bg:rgb(255 255 255 / .78);--card-bg:rgb(255 255 255 / .72);--glass-border:rgb(255 255 255 / .60);--glass-edge:rgb(var(--grey-500-rgb) / .12);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .80);--shadow-z1:0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z4:0 4px 8px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z8:0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);--shadow-z12:0 12px 24px -4px rgb(var(--grey-500-rgb) / .16);--shadow-z16:0 16px 32px -4px rgb(var(--grey-500-rgb) / .16);--shadow-z20:0 20px 40px -4px rgb(var(--grey-500-rgb) / .16);--shadow-z24:0 24px 48px 0 rgb(var(--grey-500-rgb) / .16);--shadow-card:0 0 2px 0 rgb(var(--grey-500-rgb) / .20),0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);--shadow-dropdown:0 0 2px 0 rgb(var(--grey-500-rgb) / .24),-20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);--shadow-dialog:-40px 40px 80px -8px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-success:0 8px 16px 0 rgb(var(--success-main-rgb) / .24);--shadow-error:0 8px 16px 0 rgb(var(--error-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge),0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);--chart-1:var(--primary-main);--chart-2:var(--success-main);--chart-3:var(--secondary-main);--chart-4:var(--grey-400);--chart-5:var(--grey-600);--chart-grid:rgb(var(--grey-500-rgb) / .16)}
+.th-light-hc{--bg-default:var(--grey-200);--bg-canvas:var(--grey-200);--text-secondary:var(--grey-700);--divider:rgb(var(--grey-500-rgb) / .32);--shadow-card:var(--shadow-z1),0 0 0 1px rgb(var(--grey-500-rgb) / .24);--card-bg:var(--bg-paper);--card-border:rgb(var(--grey-500-rgb) / .24);--glass-bg:rgb(255 255 255 / .88);--bg-aurora:none}
+.th-dark,.th-dark-hc{color-scheme:dark;--bg-default:var(--grey-900);--bg-paper:var(--grey-800);--bg-neutral:rgb(var(--grey-500-rgb) / .12);--bg-canvas:#10131F;--bg-aurora:radial-gradient(900px 520px at 85% -10%,rgb(var(--primary-main-rgb) / .32),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgb(var(--secondary-main-rgb) / .20),transparent 60%),radial-gradient(400px 400px at 60% 104%,rgb(var(--success-main-rgb) / .16),transparent 70%);--text-primary:#FFFFFF;--text-secondary:var(--grey-500);--text-disabled:var(--grey-600);--divider:rgb(var(--grey-500-rgb) / .20);--action-hover:rgb(var(--grey-500-rgb) / .08);--action-selected:rgb(var(--grey-500-rgb) / .16);--action-disabled:rgb(var(--grey-500-rgb) / .80);--action-disabled-bg:rgb(var(--grey-500-rgb) / .24);--action-focus:rgb(var(--grey-500-rgb) / .24);--primary-text:var(--primary-light);--secondary-text:var(--secondary-light);--info-text:var(--info-light);--success-text:#7CCBA8;--warning-text:var(--warning-light);--error-text:var(--error-light);--glass-bg:rgb(31 36 51 / .72);--card-bg:rgb(31 36 51 / .66);--glass-border:rgb(255 255 255 / .08);--glass-edge:rgb(255 255 255 / .06);--glass-highlight:inset 0 1px 0 rgb(255 255 255 / .06);--shadow-z1:0 1px 2px 0 rgb(0 0 0 / .16);--shadow-z4:0 4px 8px 0 rgb(0 0 0 / .16);--shadow-z8:0 8px 16px 0 rgb(0 0 0 / .16);--shadow-z12:0 12px 24px -4px rgb(0 0 0 / .16);--shadow-z16:0 16px 32px -4px rgb(0 0 0 / .16);--shadow-z20:0 20px 40px -4px rgb(0 0 0 / .16);--shadow-z24:0 24px 48px 0 rgb(0 0 0 / .16);--shadow-card:0 0 2px 0 rgb(0 0 0 / .20),0 12px 24px -4px rgb(0 0 0 / .12);--shadow-dropdown:0 0 2px 0 rgb(0 0 0 / .24),-20px 20px 40px -4px rgb(0 0 0 / .24);--shadow-dialog:-40px 40px 80px -8px rgb(0 0 0 / .24);--shadow-primary:0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);--shadow-success:0 8px 16px 0 rgb(var(--success-main-rgb) / .24);--shadow-error:0 8px 16px 0 rgb(var(--error-main-rgb) / .24);--shadow-glass:0 0 0 1px var(--glass-edge),0 16px 40px -8px rgb(0 0 0 / .45);--chart-1:var(--primary-light);--chart-2:#7CCBA8;--chart-3:var(--secondary-light);--chart-4:var(--grey-600);--chart-5:var(--grey-400);--chart-grid:rgb(var(--grey-500-rgb) / .16)}
+.th-dark-hc{--bg-default:#0B0E18;--bg-canvas:#0B0E18;--bg-paper:#232A3B;--text-secondary:var(--grey-400);--divider:rgb(var(--grey-500-rgb) / .32);--shadow-card:var(--shadow-z1),0 0 0 1px rgb(255 255 255 / .12);--card-bg:var(--bg-paper);--card-border:rgb(255 255 255 / .12);--glass-bg:rgb(35 42 59 / .92);--bg-aurora:none}
+.card{background:var(--card-bg);border-radius:var(--radius-lg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+.th-light-hc .card,.th-dark-hc .card{background:var(--bg-paper);border:1px solid var(--card-border);box-shadow:var(--shadow-z1);backdrop-filter:none;-webkit-backdrop-filter:none}
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+.ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-weight:300;font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;line-height:1;white-space:nowrap}
+.seg{height:28px;border:0;border-radius:6px;background:transparent;color:var(--text-secondary);font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:0 6px}
+.seg[aria-pressed="true"]{background:var(--bg-paper);color:var(--text-primary);box-shadow:var(--shadow-z1)}
+</style>
+</helmet>
+<div dir="rtl" class="ns" style="width: 1640px; height: 1300px; box-sizing: border-box; overflow: hidden; padding: 32px; background: #C3C9D6; display: grid; grid-template-columns: 780px 780px; grid-template-rows: 610px 610px; gap: 16px; font-family: 'IRANSansX', Tahoma, sans-serif; font-size: 14px">
+  <sc-for list="{{themes}}" as="t" hint-placeholder-count="4">
+    <section class="{{t.cls}}" style="position: relative; width: 780px; height: 610px; box-sizing: border-box; border-radius: var(--radius-lg); overflow: hidden; background-color: var(--bg-default); background-image: var(--bg-aurora); color: var(--text-primary); display: flex; flex-direction: column">
+
+      <!-- Glass header -->
+      <header class="glass" style="height: 64px; flex: none; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; gap: 14px; border-radius: 0; border-left: 0; border-right: 0; border-top: 0">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--brand-gradient); display: grid; place-items: center; color: #FFFFFF; flex: none">
+            <svg viewBox="0 0 64 40" width="22" height="14" aria-hidden="true" style="flex: none"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></path></svg>
+          </div>
+          <div style="font-family: 'Divan', 'IRANSansX', sans-serif; font-size: 19px; font-weight: 700; line-height: 1">نمادنو</div>
+        </div>
+        <div style="position: relative; width: 240px; margin-right: 10px">
+          <label for="q-{{t.cls}}" class="sr">جستجو</label>
+          <input id="q-{{t.cls}}" type="search" placeholder="جستجو…" style="width: 100%; height: 36px; box-sizing: border-box; padding: 0 36px 0 12px; border: 1px solid var(--divider); border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); font: inherit; font-size: 13px; outline: none">
+          <svg class="ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="position: absolute; right: 11px; top: 9px; color: var(--text-secondary)"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.2-4.2"></path></svg>
+        </div>
+        <div style="flex: 1"></div>
+        <button type="button" aria-label="اعلان‌ها" style="position: relative; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--text-primary); display: grid; place-items: center; cursor: pointer">
+          <svg class="ico" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"></path><path d="M10 21a2 2 0 0 0 4 0"></path></svg>
+          <span style="position: absolute; top: 4px; left: 4px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--error-main); color: #FFFFFF; font-size: 10px; font-weight: 700; line-height: 18px; text-align: center">۳</span>
+        </button>
+        <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary-lighter); color: var(--primary-darker); display: grid; place-items: center; font-size: 14px; font-weight: 700; flex: none">س</div>
+      </header>
+
+      <!-- Content -->
+      <div style="flex: 1; min-height: 0; box-sizing: border-box; padding: 16px 20px 16px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: center; justify-content: space-between; height: 20px">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-main); display: inline-block"></span>
+            <span dir="ltr">{{t.label}}</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary)" dir="ltr">{{t.attrs}}</div>
+        </div>
+
+        <!-- KPI cards -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px">
+          <sc-for list="{{t.kpis}}" as="k" hint-placeholder-count="3">
+            <div class="card" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0">
+              <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4">{{k.title}}</div>
+              <div style="display: flex; align-items: baseline; gap: 6px">
+                <span class="num" style="font-size: 22px; line-height: 1.2">{{k.value}}</span>
+                <span style="font-size: 11px; color: var(--text-secondary)">{{k.unit}}</span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <div style="display: flex; align-items: center; gap: 6px">
+                  <span class="lbl" style="background: rgb(var(--success-main-rgb) / .16); color: var(--success-text)" dir="ltr">{{k.delta}}</span>
+                  <span style="font-size: 11px; color: var(--text-secondary)">این ماه</span>
+                </div>
+                <div dir="ltr" style="flex: none; display: flex">
+                  <svg viewBox="0 0 72 28" width="72" height="28" aria-hidden="true" style="display: block; overflow: visible">
+                    <polygon points="{{k.area}}" style="fill: var(--chart-1); opacity: .12"></polygon>
+                    <polyline points="{{k.line}}" style="fill: none; stroke: var(--chart-1); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"></polyline>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- Table + buttons -->
+        <div style="display: grid; grid-template-columns: 1fr 296px; gap: 12px; align-items: stretch">
+          <div class="card" style="overflow: hidden; display: flex; flex-direction: column">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 10px">
+              <div style="display: flex; flex-direction: column; gap: 2px">
+                <div style="font-size: 14px; font-weight: 700; line-height: 1.4">آخرین تراکنش‌ها</div>
+                <div style="font-size: 11px; color: var(--text-secondary)">۳ مورد از ۱۲۸</div>
+              </div>
+              <button type="button" aria-label="گزینه‌های بیشتر" style="width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--text-secondary); display: grid; place-items: center; cursor: pointer">
+                <svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="5.5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="18.5" r="1"></circle></svg>
+              </button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr; align-items: center; height: 40px; padding: 0 16px; background: rgb(var(--grey-500-rgb) / .12); font-size: 13px; font-weight: 700; color: var(--text-secondary)">
+              <div>نام</div>
+              <div>وضعیت</div>
+              <div style="text-align: left">مبلغ (تومان)</div>
+            </div>
+            <sc-for list="{{t.rows}}" as="r" hint-placeholder-count="3">
+              <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr; align-items: center; height: 50px; padding: 0 16px; border-bottom: 1px solid var(--divider); font-size: 13px">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+                  <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-neutral); color: var(--text-secondary); display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none">{{r.initial}}</div>
+                  <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+                    <div style="font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.3">{{r.sub}}</div>
+                  </div>
+                </div>
+                <div><span class="lbl" style="background: rgb(var({{r.rgb}}) / .16); color: var({{r.txt}})">{{r.status}}</span></div>
+                <div class="num" style="text-align: left; font-size: 14px; font-weight: 400" dir="ltr">{{r.amount}}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div class="card" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box">
+            <div style="font-size: 14px; font-weight: 700; line-height: 1.4">دکمه‌ها و سوئیچ</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <button type="button" style="height: 36px; padding: 0 14px; border: 0; border-radius: var(--radius-sm); background: var(--primary-main); color: var(--primary-contrast); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">ثبت</button>
+              <button type="button" style="height: 36px; padding: 0 14px; border: 0; border-radius: var(--radius-sm); background: rgb(var(--primary-main-rgb) / .16); color: var(--primary-text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">پیش‌نویس</button>
+              <button type="button" style="height: 36px; padding: 0 14px; border: 1px solid rgb(var(--primary-main-rgb) / .48); border-radius: var(--radius-sm); background: transparent; color: var(--primary-text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">انصراف</button>
+            </div>
+            <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5" dir="ltr">contained · soft · outlined — radius 8, no shadow at rest</div>
+            <div style="height: 1px; background: var(--divider)"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <div style="font-size: 13px">اعلان لحظه‌ای</div>
+              <button type="button" aria-pressed="true" aria-label="اعلان لحظه‌ای" style="position: relative; width: 33px; height: 20px; border: 0; border-radius: 10px; background: var(--primary-main); cursor: pointer; padding: 0">
+                <span style="position: absolute; top: 3px; left: 16px; width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF; box-shadow: var(--shadow-z1)"></span>
+              </button>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <div style="font-size: 13px">تأیید دومرحله‌ای</div>
+              <button type="button" aria-pressed="false" aria-label="تأیید دومرحله‌ای" style="position: relative; width: 33px; height: 20px; border: 0; border-radius: 10px; background: rgb(var(--grey-500-rgb) / .48); cursor: pointer; padding: 0">
+                <span style="position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF; box-shadow: var(--shadow-z1)"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: auto; display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.5">
+          <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8v.5"></path></svg>
+          <span>{{t.caption}}</span>
+        </div>
+      </div>
+
+      <!-- Settings drawer (Light · Default only) -->
+      <sc-if value="{{t.showSettings}}" hint-placeholder-val="{{ true }}">
+        <aside class="glass" style="position: absolute; left: 16px; top: 25px; width: 300px; height: 560px; box-sizing: border-box; border-radius: var(--radius-lg); padding: 16px 20px; display: flex; flex-direction: column; gap: 11px; z-index: 5">
+          <div style="display: flex; align-items: center; justify-content: space-between; height: 28px">
+            <div style="font-size: 15px; font-weight: 700">تنظیمات</div>
+            <button type="button" aria-label="بستن" style="width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--text-secondary); display: grid; place-items: center; cursor: pointer">
+              <svg class="ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            </button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 5px">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: .06em" dir="ltr">Mode</div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; border-radius: var(--radius-sm); background: var(--bg-neutral)">
+              <button type="button" class="seg" aria-pressed="true">Light</button>
+              <button type="button" class="seg" aria-pressed="false">Dark</button>
+              <button type="button" class="seg" aria-pressed="false">System</button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 5px">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: .06em" dir="ltr">Contrast</div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 3px; border-radius: var(--radius-sm); background: var(--bg-neutral)">
+              <button type="button" class="seg" aria-pressed="true">Default</button>
+              <button type="button" class="seg" aria-pressed="false">High</button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 5px">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: .06em" dir="ltr">Direction</div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 3px; border-radius: var(--radius-sm); background: var(--bg-neutral)">
+              <button type="button" class="seg" aria-pressed="true">RTL</button>
+              <button type="button" class="seg" aria-pressed="false">LTR</button>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; height: 24px">
+            <div style="font-size: 12px; font-weight: 600">Compact <span style="font-weight: 400; color: var(--text-secondary)">· فشرده</span></div>
+            <button type="button" aria-pressed="false" aria-label="Compact" style="position: relative; width: 33px; height: 20px; border: 0; border-radius: 10px; background: rgb(var(--grey-500-rgb) / .48); cursor: pointer; padding: 0">
+              <span style="position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF; box-shadow: var(--shadow-z1)"></span>
+            </button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: .06em" dir="ltr">Presets</div>
+            <div style="display: flex; gap: 14px; align-items: center">
+              <button type="button" aria-pressed="true" aria-label="Indigo" style="width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--primary-main); box-shadow: 0 0 0 2px var(--bg-paper), 0 0 0 4px var(--primary-main); cursor: pointer; padding: 0"></button>
+              <button type="button" aria-pressed="false" aria-label="Teal" style="width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--secondary-main); cursor: pointer; padding: 0"></button>
+              <button type="button" aria-pressed="false" aria-label="Green" style="width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--success-main); cursor: pointer; padding: 0"></button>
+              <div style="font-size: 11px; color: var(--text-secondary)">Indigo پیش‌فرض</div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: .06em" dir="ltr">Nav layout</div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px">
+              <button type="button" aria-pressed="true" aria-label="Vertical" style="height: 46px; box-sizing: border-box; border: 1.5px solid var(--primary-main); border-radius: var(--radius-sm); background: var(--bg-paper); padding: 5px; display: flex; gap: 4px; cursor: pointer">
+                <span style="width: 16px; border-radius: 3px; background: rgb(var(--primary-main-rgb) / .32)"></span>
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="height: 5px; border-radius: 2px; background: var(--divider)"></span><span style="flex: 1; border-radius: 3px; background: var(--bg-neutral)"></span></span>
+              </button>
+              <button type="button" aria-pressed="false" aria-label="Mini" style="height: 46px; box-sizing: border-box; border: 1px solid var(--divider); border-radius: var(--radius-sm); background: var(--bg-paper); padding: 5px; display: flex; gap: 4px; cursor: pointer">
+                <span style="width: 7px; border-radius: 3px; background: var(--grey-400)"></span>
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="height: 5px; border-radius: 2px; background: var(--divider)"></span><span style="flex: 1; border-radius: 3px; background: var(--bg-neutral)"></span></span>
+              </button>
+              <button type="button" aria-pressed="false" aria-label="Horizontal" style="height: 46px; box-sizing: border-box; border: 1px solid var(--divider); border-radius: var(--radius-sm); background: var(--bg-paper); padding: 5px; display: flex; flex-direction: column; gap: 3px; cursor: pointer">
+                <span style="height: 7px; border-radius: 2px; background: var(--grey-400)"></span>
+                <span style="flex: 1; border-radius: 3px; background: var(--bg-neutral)"></span>
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: .06em" dir="ltr">Nav color</div>
+            <div style="display: flex; gap: 8px">
+              <button type="button" aria-pressed="true" style="height: 28px; padding: 0 12px; border: 0; border-radius: var(--radius-sm); background: rgb(var(--primary-main-rgb) / .16); color: var(--primary-text); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer">Integrate</button>
+              <button type="button" aria-pressed="false" style="height: 28px; padding: 0 12px; border: 1px solid var(--divider); border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer">Apparent</button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: .06em" dir="ltr">Font</div>
+            <div style="display: flex; gap: 8px">
+              <button type="button" aria-pressed="true" style="height: 28px; padding: 0 12px; border: 0; border-radius: var(--radius-sm); background: rgb(var(--primary-main-rgb) / .16); color: var(--primary-text); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer">IRANSansX</button>
+              <button type="button" aria-pressed="false" style="height: 28px; padding: 0 12px; border: 1px solid var(--divider); border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); font-family: 'Divan', 'IRANSansX', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer">Divan</button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: .06em" dir="ltr">Font size</div>
+              <div class="num" style="font-size: 12px; font-weight: 500">۱۴px</div>
+            </div>
+            <div style="position: relative; height: 20px" dir="ltr">
+              <div style="position: absolute; left: 0; right: 0; top: 8px; height: 4px; border-radius: 2px; background: rgb(var(--grey-500-rgb) / .32)"></div>
+              <div style="position: absolute; left: 0; width: 42%; top: 8px; height: 4px; border-radius: 2px; background: var(--primary-main)"></div>
+              <div style="position: absolute; left: 42%; top: 3px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--primary-main); box-shadow: 0 0 0 2px var(--bg-paper), var(--shadow-z1)"></div>
+            </div>
+          </div>
+        </aside>
+      </sc-if>
+
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    function spark(points) {
+      return { line: points, area: points + ' 72,28 0,28' };
+    }
+    var s1 = spark('0,20 10,17 20,18 30,12 40,14 50,9 60,10 72,5');
+    var s2 = spark('0,18 10,20 20,14 30,16 40,10 50,12 60,7 72,8');
+    var s3 = spark('0,22 10,19 20,20 30,15 40,16 50,12 60,13 72,9');
+    var kpis = [
+      { title: 'دارایی کل', value: '۲۴۸٬۶۵۰٬۰۰۰', unit: 'تومان', delta: '+۲٫۴٪', line: s1.line, area: s1.area },
+      { title: 'تراکنش امروز', value: '۱٬۲۸۴', unit: 'تراکنش', delta: '+۸٫۱٪', line: s2.line, area: s2.area },
+      { title: 'کاربران فعال', value: '۳۸۴', unit: 'نفر', delta: '+۳٫۲٪', line: s3.line, area: s3.area }
+    ];
+    var rows = [
+      { name: 'علی کریمی', initial: 'ع', sub: 'واریز حقوق', status: 'موفق', rgb: '--success-main-rgb', txt: '--success-text', amount: '+۴۸٬۰۰۰٬۰۰۰' },
+      { name: 'مریم احمدی', initial: 'م', sub: 'انتقال وجه', status: 'در انتظار', rgb: '--warning-main-rgb', txt: '--warning-text', amount: '−۲٬۳۴۰٬۰۰۰' },
+      { name: 'رضا حسینی', initial: 'ر', sub: 'قبض برق', status: 'ناموفق', rgb: '--error-main-rgb', txt: '--error-text', amount: '−۴۲۰٬۰۰۰' }
+    ];
+    function theme(cls, label, attrs, showSettings, caption) {
+      return { cls: cls, label: label, attrs: attrs, showSettings: showSettings, caption: caption, kpis: kpis, rows: rows };
+    }
+    return {
+      themes: [
+        theme('th-light', 'Light · Default', 'data-mode="light" data-contrast="default"', true,
+          'پس‌زمینه سفید با Aurora ۱۶٪، کارت‌های شیشه‌ای (glass-bg ۷۲٪ + blur ۲۰)، AppBar شیشه‌ای ۷۸٪، متن ثانویه grey-600 · سطح‌های شیشه‌ای'),
+        theme('th-light-hc', 'Light · High contrast', 'data-mode="light" data-contrast="high"', false,
+          'پس‌زمینه grey-200، کارت‌ها جامد، بدون شیشه (سفید با بوردر ۲۴٪ و سایه z1)، متن ثانویه پررنگ‌تر (grey-700)، divider ۳۲٪، Aurora خاموش، AppBar ۸۸٪'),
+        theme('th-dark', 'Dark · Default', 'data-mode="dark" data-contrast="default"', false,
+          'پس‌زمینه grey-900 با Aurora نیلی ۳۲٪، کارت‌های شیشه‌ای (glass-bg ۶۶٪ + blur ۲۰)، AppBar شیشه‌ای ۷۲٪، متن ثانویه grey-500، نیلی روشن‌تر (primary.light) برای متن و آیکن · سطح‌های شیشه‌ای'),
+        theme('th-dark-hc', 'Dark · High contrast', 'data-mode="dark" data-contrast="high"', false,
+          'پس‌زمینه تیره‌تر #0B0E18، کارت‌ها جامد، بدون شیشه (paper #232A3B با بوردر ۱۲٪ سفید)، متن ثانویه grey-400، divider ۳۲٪، Aurora خاموش، AppBar ۹۲٪')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
