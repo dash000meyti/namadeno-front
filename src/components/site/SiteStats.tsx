@@ -11,7 +11,7 @@ export function SiteStats() {
   const tiles = [
     { k: 'سازمان همراه', v: s ? faDigits(s.organizations) : null },
     { k: 'عضو فعال', v: s ? money(s.employees) : null },
-    { k: 'صندوق فعال', v: s ? faDigits(s.funds) : null },
+    { k: 'نوع دارایی', v: s ? faDigits(s.funds) : null },
     { k: 'دارایی امانت‌شده (تومان)', v: s ? compactMoney(s.aum) : null },
   ];
   return (

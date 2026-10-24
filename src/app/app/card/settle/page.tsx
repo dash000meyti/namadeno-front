@@ -8,6 +8,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { useBankAccounts, useCard, useFunds, usePortfolio } from '@/api/app';
 import { useCreditExtra, useSettleCardX, type PaySource } from '@/api/app-credit-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDayMonth, money } from '@/lib/format';
 import { CI } from '@/components/app/credit/icons';
@@ -42,8 +43,8 @@ export default function CardSettlePage() {
   const released = lockedNow - lockedAfter;
   const lockHolding = c && pf.data ? pf.data.holdings.filter((h) => h.locks.some((l) => l.sourceId === c.id)).map((h) => h.name).join('، ') : '';
   const rel = released > 0
-    ? { title: `آزادسازی: ${money(released)} از وثیقه آزاد شد`, sub: lockedAfter > 0 ? `پس از تسویه · قفل باقی‌مانده کارت ${money(lockedAfter)} تومان` : `پس از تسویه · رزرو تسویه اعتبار کارت از ${lockHolding || 'کیف پول ریالی'} برداشته می‌شود`, ok: true }
-    : { title: lockedNow > 0 ? `وثیقه ${money(lockedNow)} ${lockHolding} قفل می‌ماند` : 'وثیقه‌ای برای کارت قفل نیست', sub: `آزاد با تسویه کامل صورت‌حساب · مانده بدهی ${money(after)} تومان`, ok: false };
+    ? { title: `${money(released)} تومان از پشتوانه آزاد می‌شود`, sub: lockedAfter > 0 ? `پس از تسویه · رزرو باقی‌مانده‌ی کارت ${money(lockedAfter)} تومان` : `پس از تسویه · کل پشتوانه‌ی کارت در ${lockHolding || 'کیف پول ریالی'} آزاد می‌شود`, ok: true }
+    : { title: lockedNow > 0 ? `${money(lockedNow)} تومان پشتوانه در ${lockHolding} رزرو می‌ماند` : 'پشتوانه‌ای برای کارت رزرو نشده است', sub: `آزاد با تسویه کامل صورت‌حساب · مانده بدهی ${money(after)} تومان`, ok: false };
 
   const partInvalid = !isFull && (amt < MIN_PART && amt < debt);
   const insufficient = amt > sourceFree(src, pf.data);
@@ -53,7 +54,7 @@ export default function CardSettlePage() {
     if (disabled) return;
     settle.mutate({ amount: amt, source: src }, {
       onSuccess: (r) => {
-        toast(r.released > 0 ? `${money(amt)} تومان تسویه شد و ${money(r.released)} تومان وثیقه آزاد شد` : `${money(amt)} تومان از بدهی کارت تسویه شد`);
+        toast(r.released > 0 ? `${money(amt)} تومان تسویه شد و ${money(r.released)} تومان از پشتوانه آزاد شد` : `${money(amt)} تومان از بدهی کارت تسویه شد`);
         router.push(routes.app.receipt(r.transaction.id));
       },
     });
@@ -116,7 +117,7 @@ export default function CardSettlePage() {
                 {/* collateral release */}
                 <div className="card" style={{ boxSizing: 'border-box', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 4, flex: 'none', background: rel.ok ? 'rgb(var(--success-main-rgb) / .08)' : 'var(--card-bg)' }}>
                   <div className="row" style={{ minHeight: 22, gap: 8 }}>
-                    <span className="lktype" style={{ background: 'var(--soft-info)', color: 'var(--info-text)' }}><Icon d={CI.lock} size={12} />وثیقه</span>
+                    <span className="lktype" style={{ background: LOCK_META.collateral.bg, color: LOCK_META.collateral.fg }}><Icon d={LOCK_META.collateral.d} size={12} />{LOCK_META.collateral.short}</span>
                     <span className="num" style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: rel.ok ? 'var(--success-text)' : 'var(--text-primary)', lineHeight: 1.4 }}>{rel.title}</span>
                   </div>
                   <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{rel.sub}</span>

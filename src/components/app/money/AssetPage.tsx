@@ -15,7 +15,7 @@ import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
 import { Icon, ICONS } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
-import { LOCK_META } from '@/lib/locks';
+import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { faDigits, jDate, jMonthYear, money, pct, percent, relTime, signedMoney, units as fmtUnits } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import { now } from '@/lib/clock';
@@ -153,7 +153,7 @@ export function AssetPage({ kind }: { kind: AssetKind }) {
   const monthTx = (rialTxs.data ?? []).filter((t) => !t.lockEvent && jMonthYear(t.at) === monthKey);
   const inflow = monthTx.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
   const outflow = monthTx.filter((t) => t.amount < 0 && t.category === 'rial').reduce((s, t) => s - t.amount, 0);
-  const lockedLabel = isRial && holding.locks.length === 1 && (holding.locks[0].sourceId ?? '').startsWith('card') ? 'قفل‌شده (وثیقه کارت)' : 'قفل‌شده';
+  const lockedLabel = isRial && holding.locks.length === 1 && (holding.locks[0].sourceId ?? '').startsWith('card') ? 'رزروشده (پشتوانه‌ی کارت)' : 'رزروشده';
   const pnlFact = { k: 'سود / زیان', v: st ? signedMoney(st.pnl) : dash, c: st && st.pnl < 0 ? 'var(--error-text)' : 'var(--success-text)' };
   const avgFact = { k: 'میانگین خرید', v: st ? money(st.avgCost) : dash, c: 'var(--text-primary)' };
   const unitsFact = { k: 'واحدها', v: fmtUnits(holding.units ?? 0, 1), c: 'var(--text-primary)' };
@@ -177,7 +177,7 @@ export function AssetPage({ kind }: { kind: AssetKind }) {
       : [
           unitsFact, navFact, avgFact, pnlFact,
           { k: 'قابل فروش (آزاد)', v: money(free), c: 'var(--primary-text)' },
-          { k: 'قفل‌شده', v: money(locked), c: 'var(--text-primary)' },
+          { k: 'رزروشده', v: money(locked), c: 'var(--text-primary)' },
         ];
 
   const vesting = holding.locks.find((l) => l.type === 'vesting');
@@ -234,11 +234,11 @@ export function AssetPage({ kind }: { kind: AssetKind }) {
               <span style={{ fontSize: 13, fontWeight: 700 }}>ترکیب موجودی</span>
               {lockCount > 0 && (
                 <span className="num" style={{ marginRight: 'auto', height: 20, padding: '0 7px', borderRadius: 6, background: 'rgb(255 255 255 / .2)', color: '#FFFFFF', fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
-                  {faDigits(lockCount)} قفل فعال
+                  {faDigits(lockCount)} رزرو فعال
                 </span>
               )}
             </div>
-            <div role="img" aria-label={`آزاد ${money(free)} · قفل ${money(locked)}`} style={{ height: 8, borderRadius: 6, display: 'flex', overflow: 'hidden', gap: 2, background: 'rgb(255 255 255 / .16)' }}>
+            <div role="img" aria-label={`آزاد ${money(free)} · رزرو ${money(locked)}`} style={{ height: 8, borderRadius: 6, display: 'flex', overflow: 'hidden', gap: 2, background: 'rgb(255 255 255 / .16)' }}>
               {free > 0 && <span style={{ width: locked > 0 ? `${freePct}%` : '100%', borderRadius: 6, background: '#FFFFFF' }} />}
               {locked > 0 && <span style={{ flex: 1, borderRadius: 6, background: 'repeating-linear-gradient(135deg, rgb(255 255 255 / .75) 0 3px, rgb(255 255 255 / .22) 3px 6px)' }} />}
             </div>
@@ -248,7 +248,7 @@ export function AssetPage({ kind }: { kind: AssetKind }) {
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FFFFFF' }} />آزاد <b className="num" style={{ fontWeight: 600, color: '#FFFFFF' }}>{money(free)}</b>
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <Icon name="lock" size={12} />قفل <b className="num" style={{ fontWeight: 600, color: '#FFFFFF' }}>{money(locked)}</b>
+                  <Icon d={HOURGLASS} size={12} />رزرو <b className="num" style={{ fontWeight: 600, color: '#FFFFFF' }}>{money(locked)}</b>
                 </span>
               </div>
             ) : (
@@ -301,7 +301,7 @@ export function AssetPage({ kind }: { kind: AssetKind }) {
           <div style={{ boxSizing: 'border-box', padding: '12px 12px 8px', borderRadius: 12, background: 'var(--soft-info)', display: 'flex', alignItems: 'flex-start', gap: 10, flex: 'none' }}>
             <Icon name="info" size={20} style={{ color: 'var(--info-text)', marginTop: 2 }} />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 13, lineHeight: 1.8, fontWeight: 500, color: 'var(--text-primary)' }}>پول ریالی ارزش خود را در برابر تورم حفظ نمی‌کند؛ بخشی را به صندوق تبدیل کنید.</span>
+              <span style={{ fontSize: 13, lineHeight: 1.8, fontWeight: 500, color: 'var(--text-primary)' }}>برای حفظ ارزش دارایی در برابر تورم، بخشی از موجودی ریالی را به صندوق تبدیل کنید.</span>
               <Link href={routes.app.convert('buy', 'gold')} style={{ alignSelf: 'flex-start', height: 32, display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, fontWeight: 700, color: 'var(--info-text)', textDecoration: 'none' }}>
                 تبدیل به صندوق<Icon name="forward" size={16} />
               </Link>
@@ -323,13 +323,13 @@ export function AssetPage({ kind }: { kind: AssetKind }) {
         {lockCount > 0 && !archiveLocks && (
           <div className="card" style={{ boxSizing: 'border-box', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none' }}>
             <div style={{ minHeight: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>قفل‌های فعال</span>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>رزروهای فعال</span>
               {vesting ? (
                 <button onClick={() => setVestOpen(true)} aria-haspopup="dialog" style={{ marginRight: 'auto', height: 32, border: 0, background: 'transparent', padding: '0 4px', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: 'var(--primary-text)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <Icon name="info" size={16} />درباره قفل زمانی
+                  <Icon name="info" size={16} />درباره {LOCK_META.vesting.label}
                 </button>
               ) : (
-                <span className="chip" style={{ marginRight: 'auto' }}>{faDigits(lockCount)} قفل فعال</span>
+                <span className="chip" style={{ marginRight: 'auto' }}>{faDigits(lockCount)} رزرو فعال</span>
               )}
             </div>
             {holding.locks.map((l) => (
@@ -341,8 +341,8 @@ export function AssetPage({ kind }: { kind: AssetKind }) {
 
         {!isRial && (
           <div style={{ minHeight: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', flex: 'none' }}>
-            <Icon name="lock" size={12} style={{ color: 'var(--text-secondary)' }} />
-            <span>فروش به ریال فقط از بخش آزاد · تا <b className="num" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{money(free)}</b> تومان</span>
+            <Icon d={LOCK_META.none.d} size={12} style={{ color: 'var(--text-secondary)' }} />
+            <span>قابل فروش به ریال تا <b className="num" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{money(free)}</b> تومان · از بخش آزاد</span>
           </div>
         )}
 
@@ -423,21 +423,21 @@ export function AssetPage({ kind }: { kind: AssetKind }) {
         </div>
       </Sheet>
 
-      {/* vesting lock info */}
+      {/* vesting (organizational savings) info */}
       {vesting && (
-        <Sheet open={vestOpen} onClose={() => setVestOpen(false)} hideHeader padding="0 16px 28px" label="قفل زمانی سازمان">
+        <Sheet open={vestOpen} onClose={() => setVestOpen(false)} hideHeader padding="0 16px 28px" label={LOCK_META.vesting.label}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
-            <span style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--soft-warning)', color: 'var(--warning-text)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d="M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3" size={20} /></span>
-            <span style={{ fontSize: 16, fontWeight: 700 }}>قفل زمانی سازمان</span>
+            <span style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--soft-warning)', color: 'var(--warning-text)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={LOCK_META.vesting.d} size={20} /></span>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>{LOCK_META.vesting.label}</span>
             <button className="ibtn" aria-label="بستن" onClick={() => setVestOpen(false)} style={{ marginRight: 'auto', marginLeft: -10, color: 'var(--text-secondary)' }}><Icon name="close" size={20} /></button>
           </div>
           <span style={{ fontSize: 13, lineHeight: 1.9, color: 'var(--text-primary)' }}>
-            {orgName} هنگام ارسال بسته «{vesting.title}» این بخش را تا تاریخ مشخصی قفل کرده است. این واحدها تا آن روز قابل فروش یا برداشت نیستند، اما {isFixedIncome ? 'سود روزانه' : 'سود'} همچنان به آن‌ها تعلق می‌گیرد و در تاریخ آزادسازی خودکار آزاد می‌شوند.
+            {orgName} هنگام ارسال بسته «{vesting.title}» این بخش را تا تاریخ مشخصی برای شما پس‌انداز کرده است. این واحدها مال شما هستند و {isFixedIncome ? 'سود روزانه' : 'سود'} همچنان به آن‌ها تعلق می‌گیرد. در تاریخ آزادسازی خودکار آزاد می‌شوند و از همان روز قابل فروش و برداشت‌اند.
           </span>
           <KeyValueCard
             rows={[
-              { k: 'نوع قفل', v: LOCK_META.vesting.label },
-              { k: 'مبلغ قفل‌شده', v: money(vesting.amount) + ' تومان' },
+              { k: 'نوع رزرو', v: LOCK_META.vesting.label },
+              { k: 'مبلغ رزروشده', v: money(vesting.amount) + ' تومان' },
               { k: 'منبع', v: 'بسته «' + vesting.title + '»' },
               { k: 'آزاد در', v: vesting.releaseAt ? jDate(vesting.releaseAt) : '—' },
             ]}
@@ -548,13 +548,13 @@ function MilestoneNote({ orgName }: { orgName: string }) {
     <div style={{ boxSizing: 'border-box', padding: '8px 10px', borderRadius: 10, background: 'var(--soft-primary)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
       <Icon name="info" size={16} style={{ color: 'var(--primary-text)', marginTop: 3 }} />
       <span style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.8, color: 'var(--text-primary)' }}>
-        آزادسازی هر مرحله را {orgName} پس از تحویل تأیید می‌کند؛ نیازی به اقدامی از طرف شما نیست. واحدهای قفل‌شده همچنان سود می‌گیرند.
+        آزادسازی هر مرحله را {orgName} پس از تحویل تأیید می‌کند؛ نیازی به اقدامی از طرف شما نیست. واحدهای رزروشده همچنان سود می‌گیرند.
       </span>
     </div>
   );
 }
 
-/** Gold-style lock card (same structure as the inbox archive). Milestone cards expand to show steps. */
+/** Gold-style reserve card (same structure as the inbox archive). Milestone cards expand to show steps. */
 function ArchiveLock({ lock, open, onToggle, orgName }: { lock: Lock; open: boolean; onToggle: () => void; orgName: string }) {
   const m = LOCK_META[lock.type];
   const isMs = lock.type === 'milestone';
@@ -583,7 +583,7 @@ function ArchiveLock({ lock, open, onToggle, orgName }: { lock: Lock; open: bool
       ) : (
         <span className="col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10, flex: 'none' }}>
           <span className="num" style={{ fontSize: 15, fontWeight: 400, whiteSpace: 'nowrap' }}>{money(lock.amount)}</span>
-          <span className="lktype" style={{ height: 20, padding: '0 6px', background: m.bg, color: m.fg }}><Icon name="lock" size={12} />{m.short}</span>
+          <span className="lktype" style={{ height: 20, padding: '0 6px', background: m.bg, color: m.fg }} title={m.label}><Icon d={m.d} size={12} />{m.short}</span>
         </span>
       )}
     </>
@@ -607,7 +607,7 @@ function ArchiveLock({ lock, open, onToggle, orgName }: { lock: Lock; open: bool
   );
 }
 
-/** Row inside the «قفل‌های فعال» card (fixed / rial / other funds). */
+/** Row inside the «رزروهای فعال» card (fixed / rial / other funds). */
 function CardLock({ lock, orgName, accrues }: { lock: Lock; orgName: string; accrues: boolean }) {
   const m = LOCK_META[lock.type];
   const link = lockLink(lock);

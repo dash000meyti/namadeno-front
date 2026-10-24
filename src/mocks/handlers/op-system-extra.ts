@@ -14,6 +14,7 @@
  *   PATCH /api/v1/op/products/:id              body Partial<CreditProduct> & { meta?: Partial<ProductMeta> } → OpProduct (422 on invalid rates/percent/months)
  *   PATCH /api/v1/op/rules/:id                 body Partial<PlatformRule> → PlatformRule (also logs the change in the rules history, bumps version)
  *   POST  /api/v1/op/requests/:id/decision     body { approve, note? } → ApprovalRequest (decidedBy = calling operator; notifies the employee in-app)
+ *         409 org_decides for milestone_release (the organization approves or reclaims contract steps)
  *
  * New endpoints
  *   POST  /api/v1/op/funds/nav-refresh         body { fundId? } → { lastNavAt, funds: OpFund[] }
@@ -64,7 +65,7 @@ function sectionOf(id: string) {
   if (id.startsWith('r-limit-withdraw') || id.startsWith('r-withdraw')) return 'برداشت';
   if (id.startsWith('r-credit')) return 'تسهیلات';
   if (id.startsWith('r-kyc')) return 'KYC';
-  if (id.startsWith('r-lock')) return 'قفل دارایی';
+  if (id.startsWith('r-lock')) return 'رزرو دارایی';
   if (id.startsWith('r-risk')) return 'ریسک';
   return 'محدودیت‌ها';
 }
@@ -174,7 +175,7 @@ export const opSystemHandlers: HttpHandler[] = [
     if (!f) return fail(404, 'not_found', 'صندوق پیدا نشد.');
     const b = await body<Partial<Fund> & { meta?: Partial<FundMeta> }>(request);
     if (b.name !== undefined && !String(b.name).trim()) return fail(422, 'missing_name', 'نام صندوق الزامی است.');
-    if (b.symbol !== undefined && !String(b.symbol).trim()) return fail(422, 'missing_symbol', 'نماد بورسی الزامی است.');
+    if (b.symbol !== undefined && !String(b.symbol).trim()) return fail(422, 'missing_symbol', 'نماد الزامی است.');
     if (b.feePct !== undefined && (!(b.feePct >= 0) || b.feePct > 5)) return fail(422, 'bad_fee', 'کارمزد باید بین ۰ تا ۵ درصد باشد.');
     if (b.settlement !== undefined && !['T+0', 'T+1', 'T+2'].includes(b.settlement)) return fail(422, 'bad_settlement', 'نوع تسویه معتبر نیست.');
     if (b.status !== undefined && !['active', 'paused', 'coming_soon'].includes(b.status)) return fail(422, 'bad_status', 'وضعیت صندوق معتبر نیست.');
@@ -182,7 +183,7 @@ export const opSystemHandlers: HttpHandler[] = [
     const m = b.meta;
     if (m) {
       if (m.sellFeePct !== undefined && (!(m.sellFeePct >= 0) || m.sellFeePct > 5)) return fail(422, 'bad_fee', 'کارمزد فروش باید بین ۰ تا ۵ درصد باشد.');
-      if (m.maxLtvPct !== undefined && (!(m.maxLtvPct >= 0) || m.maxLtvPct > 100)) return fail(422, 'bad_ltv', 'حداکثر نسبت وثیقه باید بین ۰ تا ۱۰۰ درصد باشد.');
+      if (m.maxLtvPct !== undefined && (!(m.maxLtvPct >= 0) || m.maxLtvPct > 100)) return fail(422, 'bad_ltv', 'حداکثر نسبت پشتوانه باید بین ۰ تا ۱۰۰ درصد باشد.');
       if (m.minBuy !== undefined && !(m.minBuy >= 0)) return fail(422, 'bad_min_buy', 'حداقل خرید معتبر نیست.');
     }
     const { meta, id, ...rest } = b;
@@ -205,7 +206,7 @@ export const opSystemHandlers: HttpHandler[] = [
     if (b.monthsOptions !== undefined && !b.monthsOptions.length) return fail(422, 'no_months', 'دست‌کم یک گزینهٔ مدت را انتخاب کنید.');
     const m = b.meta;
     if (m?.minScore !== undefined && (m.minScore < 300 || m.minScore > 900)) return fail(422, 'bad_score', 'حداقل امتیاز اعتباری باید بین ۳۰۰ تا ۹۰۰ باشد.');
-    if (m?.lockRatioPct !== undefined && (!(m.lockRatioPct > 0) || m.lockRatioPct > 100)) return fail(422, 'bad_pct', 'نسبت قفل باید بین ۱ تا ۱۰۰ درصد باشد.');
+    if (m?.lockRatioPct !== undefined && (!(m.lockRatioPct > 0) || m.lockRatioPct > 100)) return fail(422, 'bad_pct', 'نسبت رزرو باید بین ۱ تا ۱۰۰ درصد باشد.');
     const { meta, id, ...rest } = b;
     void id;
     Object.assign(x, rest);
@@ -252,6 +253,7 @@ export const opSystemHandlers: HttpHandler[] = [
     await latency();
     const r = db().requests.find((x) => x.id === params.id);
     if (!r) return fail(404, 'not_found', 'درخواست پیدا نشد.');
+    if (r.kind === 'milestone_release') return fail(409, 'org_decides', 'تأیید یا بازپس‌گیری مراحل قرارداد با سازمان است.');
     if (r.status !== 'pending') return fail(409, 'already_decided', 'برای این درخواست قبلاً تصمیم گرفته شده است.');
     const b = await body<{ approve: boolean; note?: string }>(request);
     r.status = b.approve ? 'approved' : 'rejected';
@@ -270,6 +272,7 @@ export const opSystemHandlers: HttpHandler[] = [
     await latency();
     const r = db().requests.find((x) => x.id === params.id);
     if (!r) return fail(404, 'not_found', 'درخواست پیدا نشد.');
+    if (r.kind === 'milestone_release') return fail(409, 'org_decides', 'تأیید یا بازپس‌گیری مراحل قرارداد با سازمان است.');
     if (r.status === 'pending') return fail(409, 'already_pending', 'این درخواست هنوز در انتظار بررسی است.');
     r.status = 'pending';
     delete r.decidedAt;

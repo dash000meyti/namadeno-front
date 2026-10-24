@@ -16,15 +16,15 @@ import {
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { LockTag, StepMark, WizardHeader, type StepState } from '@/components/org/packages/Stepper';
-import { I, allocationText, reasonMeta, splitCompact } from '@/components/org/packages/meta';
+import { I, allocationText, perPersonText, splitCompact } from '@/components/org/packages/meta';
 import { errMsg } from '@/components/org/packages/ui';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
-import { faDigits, jDate, money, relTime } from '@/lib/format';
+import { faDigits, jDate, jDayMonth, money, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
 import type { OrgPackage } from '@/types/domain';
 
 const SHOW = 6;
-const LOCK_D = 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2';
 type Recipient = OrgPackage['recipients'][number];
 
 function ReviewStep() {
@@ -66,11 +66,11 @@ function ReviewStep() {
   const remainAfter = splitCompact(Math.max(0, remaining - pkg.total));
   const remainNow = splitCompact(remaining);
   const lp = pkg.lockPolicy;
-  const missing = !pkg.amountPerPerson ? 'مبلغ هر نفر تعیین نشده است.' : !n ? 'هیچ گیرنده‌ای انتخاب نشده است.' : '';
+  const per = perPersonText(pkg, money);
+  const missing = !pkg.total ? 'مبلغ هر نفر تعیین نشده است.' : !n ? 'هیچ گیرنده‌ای انتخاب نشده است.' : '';
   const canSend = ack && !over && !missing && !send.isPending;
   const empOf = (id: string) => emps?.find((e) => e.id === id);
   const units = new Set(pkg.recipients.map((r) => empOf(r.employeeId)?.department).filter(Boolean)).size;
-  const rm = reasonMeta(pkg.reason);
   const adminName = me?.admin.name ?? 'نیما رضایی';
 
   const chain: { label: string; sub: string; state: StepState; s: string; tone: Tone }[] = [
@@ -80,13 +80,11 @@ function ReviewStep() {
   ];
 
   const defs: [string, ReactNode][] = [
-    ['نوع بسته', rm.label],
     ['عنوان', pkg.title],
-    ['مبلغ هر نفر', <span key="a" className="num" style={pkg.amountPerPerson ? undefined : { color: 'var(--error-text)' }}>{pkg.amountPerPerson ? `${money(pkg.amountPerPerson)} تومان` : '—'}</span>],
-    ['نحوه مبلغ', 'یکسان برای همه'],
-    ['برداشت نقدی', pkg.cashAllowed ? 'مجاز' : 'غیرمجاز'],
+    ['مبلغ هر نفر', <span key="a" className="num" style={per ? undefined : { color: 'var(--error-text)' }}>{per ? `${per} تومان` : '—'}</span>],
+    ['نحوه مبلغ', pkg.amountSource === 'file' ? 'از فایل اکسل (برای هر نفر جدا)' : 'یکسان برای همه'],
     ['تخصیص دارایی', allocationText(pkg)],
-    ['سیاست قفل', <span key="l" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LockTag type={lp.type} /><span className="num">{lp.type === 'vesting' ? 'آزاد در ' + jDate(lp.releaseAt) : lp.type === 'milestone' ? `${faDigits(lp.steps.length)} مرحله` : 'همه آزاد'}</span></span>],
+    ['شیوه‌ی دریافت', <span key="l" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LockTag type={lp.type} /><span className="num">{lp.type === 'vesting' ? 'آزاد در ' + jDate(lp.releaseAt) : lp.type === 'milestone' ? `${faDigits(lp.steps.length)} مرحله` : 'پس از پذیرش'}</span></span>],
     ['مهلت تأیید', <span key="e" className="num">{pkg.expiresAt ? jDate(pkg.expiresAt) : 'بدون مهلت'}</span>],
   ];
 
@@ -104,12 +102,14 @@ function ReviewStep() {
   };
 
   const list = showAll ? pkg.recipients : pkg.recipients.slice(0, SHOW);
+  /** Milestone steps released automatically at their due date («نیاز به تأیید» off). */
+  const msAuto = lp.type === 'milestone' ? lp.steps.filter((s) => s.requiresApproval === false).length : 0;
   const lockText = lp.type === 'vesting'
-    ? <>پس از تأیید هر کارمند، بخش صندوقی بسته‌اش (طلا و درآمد ثابت) در دارایی او با نوع <b>«قفل زمانی سازمان»</b> تا <span className="num">{jDate(lp.releaseAt)}</span> قفل می‌شود و سپس خودکار آزاد می‌شود. بخش ریالی از ابتدا آزاد است.</>
+    ? <>پس از تأیید هر کارمند، بخش صندوقی بسته‌اش (طلا و درآمد ثابت) به‌عنوان <b>«{LOCK_META.vesting.label}»</b> تا <span className="num">{jDate(lp.releaseAt)}</span> در دارایی او رزرو می‌شود، بازده می‌گیرد و سپس خودکار آزاد می‌شود. بخش ریالی از ابتدا آزاد است.</>
     : lp.type === 'milestone'
-      ? <>پس از تأیید کارمند، کل مبلغ در صندوق طلای او با نوع <b>«آزادسازی مرحله‌ای»</b> قفل می‌شود و طی {faDigits(lp.steps.length)} مرحله ({lp.steps.map((s) => faDigits(s.sharePct) + '٪').join('، ')}) با تأیید سازمان آزاد می‌شود.</>
-      : <>بسته پس از تأیید کارمند بلافاصله <b>آزاد</b> است و می‌تواند فروخته{pkg.cashAllowed ? ' یا برداشت' : ''} شود.</>;
-  const lockTone = lp.type === 'vesting' ? 'warn' : lp.type === 'milestone' ? 'info' : 'ok';
+      ? <>پس از تأیید کارمند، کل مبلغ به‌عنوان <b>«{LOCK_META.milestone.label}»</b> در صندوق طلای او رزرو می‌شود و طی {faDigits(lp.steps.length)} مرحله ({lp.steps.map((s) => `${faDigits(s.sharePct)}٪${s.dueDate ? ' تا ' + jDayMonth(s.dueDate) : ''}`).join('، ')})، در سررسید هر مرحله آزاد می‌شود{msAuto ? `؛ ${msAuto === lp.steps.length ? 'همه‌ی مراحل' : faDigits(msAuto) + ' مرحله'} خودکار و بقیه با تأیید شما` : ' با تأیید شما'}.</>
+      : <>بسته پس از تأیید کارمند بلافاصله <b>آزاد</b> است و کارمند می‌تواند آن را بفروشد{pkg.cashAllowed ? ' یا برداشت کند' : ''}.</>;
+  const lockTone = lp.type === 'none' ? 'ok' : 'info';
 
   const columns: Column<Recipient>[] = [
     {
@@ -128,10 +128,10 @@ function ReviewStep() {
 
       <div className="nm-grid side">
         <div className="nm-stack">
-          <Card title="تنظیمات بسته" actions={<Pill>{rm.label}</Pill>} more={{ label: 'ویرایش', href: routes.org.newSettings(pkg.id) }}>
+          <Card title="تنظیمات بسته" more={{ label: 'ویرایش', href: routes.org.newSettings(pkg.id) }}>
             <KV rows={defs} />
             {pkg.message && <span className="mute" style={{ fontSize: 12.5, lineHeight: 1.7 }}>پیام به کارکنان: <span style={{ color: 'var(--text-primary)' }}>«{pkg.message}»</span></span>}
-            <Note tone={lockTone} icon={lp.type === 'milestone' ? I.flag : LOCK_D}>{lockText}</Note>
+            <Note tone={lockTone} icon={LOCK_META[lp.type].d}>{lockText}</Note>
           </Card>
 
           <Card flush title="گیرندگان" count={n} sub={units ? `${faDigits(units)} واحد` : undefined} more={{ label: 'ویرایش', href: routes.org.newRecipients(pkg.id) }}>

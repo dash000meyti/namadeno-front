@@ -11,10 +11,11 @@ import type { LockType, Organization } from '@/types/domain';
 import { useCreateOrganization, useOpFunds, useOpProducts } from '@/api/op';
 import type { OrgCreate } from '@/api/op-core-extra';
 import {
-  ActionBar, Ava, Card, Chips, Dialog, Empty, Field, KV, List, ListRow, Note, NumInput, NumberInput, PageHeading, Pill, Select,
+  ActionBar, Ava, Card, Chips, Dialog, Empty, Field, KV, List, ListRow, Note, NumberInput, PageHeading, Pill, Select,
   SettingRow, SettingsGroup, Switch, Who,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
+import { DateInput } from '@/components/ui/DateInput';
 import { LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
 import { contractFunds, fundMeta } from '@/components/op/core/ContractEditor';
@@ -202,22 +203,25 @@ export default function OpOrgNewPage() {
 
   const funds = contractFunds(fundsQ.data);
   const hasApprover = f.users.some((u) => u.role === 1);
-  const polRows: { k: keyof Form['pol'] | 'legal'; t: LockType; sub: string; max?: { value: number; set: (n: number) => void; suffix: string } }[] = [
-    { k: 'vesting', t: 'vesting', sub: 'قفل تا تاریخ روی بسته‌های سازمانی', max: { value: f.lock, set: (n) => set({ lock: whole(n, 1, 24) }), suffix: 'ماه' } },
-    { k: 'milestone', t: 'milestone', sub: 'آزادسازی بخش‌به‌بخش با تأیید هر مرحله', max: { value: f.msMax, set: (n) => set({ msMax: whole(n, 2, 10) }), suffix: 'مرحله' } },
-    { k: 'collateral', t: 'collateral', sub: 'قفل وثیقه روی بخش آزاد · طبق سقف وام و کارت' },
+  // Receive policies («شیوه‌ی دریافت»: free / vesting / milestone) vs. reserves managed by Namadno (collateral / installment / legal).
+  const polRows: { k: keyof Form['pol'] | 'legal' | 'none'; t: LockType | 'none'; receive?: boolean; sub: string; max?: { value: number; set: (n: number) => void; suffix: string } }[] = [
+    { k: 'none', t: 'none', receive: true, sub: 'همیشه مجاز · کل مبلغ بلافاصله آزاد' },
+    { k: 'vesting', t: 'vesting', receive: true, sub: 'آزاد در تاریخ مشخص روی بسته‌های سازمانی', max: { value: f.lock, set: (n) => set({ lock: whole(n, 1, 24) }), suffix: 'ماه' } },
+    { k: 'milestone', t: 'milestone', receive: true, sub: 'دریافت بخش‌به‌بخش با تأیید هر مرحله', max: { value: f.msMax, set: (n) => set({ msMax: whole(n, 2, 10) }), suffix: 'مرحله' } },
+    { k: 'collateral', t: 'collateral', sub: 'رزرو پشتوانه از بخش آزاد · طبق سقف وام و کارت' },
     { k: 'installment', t: 'installment', sub: f.bnpl ? 'هم‌زمان با هر خرید اقساطی کارکنان' : 'نیازمند فعال بودن خرید اقساطی' },
     { k: 'legal', t: 'legal', sub: 'همیشه فعال · فقط توسط بهره‌بردار با شماره مرجع' },
   ];
-  const polOn = (k: keyof Form['pol'] | 'legal') => (k === 'legal' ? true : k === 'installment' ? f.bnpl && f.pol.installment : f.pol[k]);
-  const polTxt = polRows.filter((p) => p.k !== 'legal' && polOn(p.k)).map((p) => LOCK_META[p.t].short).join('، ');
+  const polOn = (k: keyof Form['pol'] | 'legal' | 'none') => (k === 'legal' || k === 'none' ? true : k === 'installment' ? f.bnpl && f.pol.installment : f.pol[k]);
+  const polTxt = (receive: boolean) => polRows.filter((p) => !!p.receive === receive && polOn(p.k)).map((p) => LOCK_META[p.t].short).join('، ');
   const summary: [string, string][] = [
     ['شناسه ملی', f.nid ? faDigits(enDigits(f.nid)) : '—'],
     ['سقف وام', f.loan ? `${faDigits(f.loan)}٪ دارایی آزاد` : 'غیرفعال'],
     ['بازپرداخت', f.months.length ? f.months.map((m) => faDigits(m)).join(' / ') + ' ماه' : '—'],
     ['اعتبار کارت', f.card ? `${faDigits(f.card)}٪ دارایی آزاد` : 'غیرفعال'],
     ['خرید اقساطی', f.bnpl ? 'فعال' : 'غیرفعال'],
-    ['قفل‌های مجاز', polTxt || 'فقط مسدودی قانونی'],
+    ['شیوه‌های دریافت', polTxt(true)],
+    ['رزروهای مجاز', polTxt(false)],
     ['برداشت نقدی', f.cash ? 'مجاز' : 'غیرمجاز'],
     ['صندوق‌ها', funds.filter((x) => f.funds.includes(x.id)).map((x) => x.shortName).join('، ') || '—'],
     ['کاربران سازمان', faDigits(f.users.length) + ' نفر'],
@@ -287,7 +291,7 @@ export default function OpOrgNewPage() {
               {step === 2 && (
                 <>
                   <SettingsGroup title="تسهیلات" footer="این مقادیر سقف چیزی است که منابع انسانی سازمان می‌تواند به کارکنان بدهد.">
-                    <SettingRow label="سقف وام" desc="درصدی از دارایی آزاد کارمند که به‌عنوان وثیقه قفل می‌شود · ۰ یعنی غیرفعال" htmlFor="o-loan">
+                    <SettingRow label="سقف وام" desc="درصدی از دارایی آزاد کارمند که به‌عنوان پشتوانه رزرو می‌شود · ۰ یعنی غیرفعال" htmlFor="o-loan">
                       <NumberInput id="o-loan" label="سقف وام" value={f.loan} onChange={(n) => set({ loan: whole(n, 0, 60) })} suffix="٪" width={52} decimals />
                     </SettingRow>
                     <SettingRow label="گزینه‌های بازپرداخت" desc={errText(err.months) ?? 'کارمند یکی از این مدت‌ها را انتخاب می‌کند'} stack>
@@ -299,23 +303,28 @@ export default function OpOrgNewPage() {
                     <SettingRow label="سقف اعتبار هر نفر" desc={errText(err.perCap)} htmlFor="o-percap">
                       <NumberInput id="o-percap" label="سقف اعتبار هر نفر" value={f.perCap ? Number(f.perCap) : NaN} onChange={(n) => set({ perCap: Number.isFinite(n) ? String(Math.round(Math.abs(n))).slice(0, 12) : '' })} suffix="تومان" width={120} invalid={!!err.perCap} />
                     </SettingRow>
-                    <SettingRow label="خرید اقساطی" desc="فروشگاه‌های طرف قرارداد با قفل وثیقه روی دارایی">
+                    <SettingRow label="خرید اقساطی" desc="فروشگاه‌های طرف قرارداد با پشتوانه‌ی دارایی کارکنان">
                       <Switch on={f.bnpl} onChange={(v) => set({ bnpl: v })} label="خرید اقساطی" />
                     </SettingRow>
                   </SettingsGroup>
 
-                  <SettingsGroup title="سیاست‌های قفل مجاز" footer="سازمان فقط با این سیاست‌ها می‌تواند بسته ارسال کند یا وثیقه بگیرد. دارایی قفل‌شده سود می‌گیرد ولی تا آزادسازی قابل فروش یا برداشت نیست.">
-                    {polRows.map((p) => {
-                      const on = polOn(p.k);
-                      const dis = p.k === 'legal' || (p.k === 'installment' && !f.bnpl);
-                      return (
-                        <SettingRow key={p.k} label={<LockTypeChip type={p.t} long />} desc={p.sub}>
-                          {p.max && on && <NumberInput label={`حداکثر ${LOCK_META[p.t].label}`} value={p.max.value} onChange={p.max.set} suffix={p.max.suffix} width={40} decimals />}
-                          <Switch on={on} disabled={dis} label={LOCK_META[p.t].label} onChange={() => { if (p.k !== 'legal') set({ pol: { ...f.pol, [p.k]: !f.pol[p.k] } }); }} />
-                        </SettingRow>
-                      );
-                    })}
-                  </SettingsGroup>
+                  {([
+                    [true, 'شیوه‌های دریافت مجاز', 'سازمان هنگام ارسال بسته یکی از این شیوه‌ها را انتخاب می‌کند.'],
+                    [false, 'رزروهای مجاز', 'این رزروها را نمادنو مدیریت می‌کند. دارایی رزروشده مال کارمند می‌ماند و سود می‌گیرد؛ پس از آزادسازی قابل فروش یا برداشت است.'],
+                  ] as const).map(([receive, title, footer]) => (
+                    <SettingsGroup key={title} title={title} footer={footer}>
+                      {polRows.filter((p) => !!p.receive === receive).map((p) => {
+                        const on = polOn(p.k);
+                        const dis = p.k === 'legal' || p.k === 'none' || (p.k === 'installment' && !f.bnpl);
+                        return (
+                          <SettingRow key={p.k} label={<LockTypeChip type={p.t} long />} desc={p.sub}>
+                            {p.max && on && <NumberInput label={`حداکثر ${LOCK_META[p.t].label}`} value={p.max.value} onChange={p.max.set} suffix={p.max.suffix} width={40} decimals />}
+                            <Switch on={on} disabled={dis} label={LOCK_META[p.t].label} onChange={() => { if (p.k !== 'legal' && p.k !== 'none') set({ pol: { ...f.pol, [p.k]: !f.pol[p.k] } }); }} />
+                          </SettingRow>
+                        );
+                      })}
+                    </SettingsGroup>
+                  ))}
 
                   <SettingsGroup title="بسته‌ها و صندوق‌ها" footer={errText(err.funds) ?? 'کارکنان فقط به صندوق‌های مجاز تخصیص می‌دهند.'}>
                     <SettingRow label="برداشت نقدی" desc="اجازه برداشت ریالی در بسته‌های جدید">
@@ -334,10 +343,10 @@ export default function OpOrgNewPage() {
 
                   <SettingsGroup title="مدت قرارداد">
                     <SettingRow label="تاریخ شروع" desc={errText(err.start) ?? 'تاریخ شمسی، مثلاً ۱۴۰۵/۰۸/۰۱'} htmlFor="o-start">
-                      <NumInput id="o-start" label="تاریخ شروع" text ltr width={112} value={f.start} onChange={(v) => set({ start: faDigits(enDigits(v).replace(/[^\d/]/g, '').slice(0, 10)) })} placeholder="۱۴۰۵/۰۸/۰۱" invalid={!!err.start} suffix={<Icon d={ICON.calendar} size={16} />} />
+                      <DateInput id="o-start" label="تاریخ شروع" width={112} value={f.start} onChange={(v) => set({ start: faDigits(enDigits(v).replace(/[^\d/]/g, '').slice(0, 10)) })} placeholder="۱۴۰۵/۰۸/۰۱" invalid={!!err.start} />
                     </SettingRow>
                     <SettingRow label="تاریخ پایان" desc={errText(err.end)} htmlFor="o-end">
-                      <NumInput id="o-end" label="تاریخ پایان" text ltr width={112} value={f.end} onChange={(v) => set({ end: faDigits(enDigits(v).replace(/[^\d/]/g, '').slice(0, 10)) })} placeholder="۱۴۰۶/۰۷/۳۰" invalid={!!err.end} suffix={<Icon d={ICON.calendar} size={16} />} />
+                      <DateInput id="o-end" label="تاریخ پایان" width={112} value={f.end} onChange={(v) => set({ end: faDigits(enDigits(v).replace(/[^\d/]/g, '').slice(0, 10)) })} placeholder="۱۴۰۶/۰۷/۳۰" invalid={!!err.end} min={parseJalali(f.start) ?? undefined} />
                     </SettingRow>
                   </SettingsGroup>
                 </>

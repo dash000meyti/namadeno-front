@@ -110,7 +110,7 @@ export default function LoginPage() {
           <StepTitle title="رمز عبور" sub={<>سلام، رمز حساب <MaskedMobile mobile={mobile} /> را وارد کنید</>} />
           <PasswordField
             label="رمز عبور" value={pw} onChange={(v) => { setPw(v); setPwErr(''); }} onEnter={submitLogin}
-            help={pwErr || 'بعد از ۵ تلاش ناموفق، ورود ۱۵ دقیقه قفل می‌شود'} helpTone={pwErr ? 'error' : undefined}
+            help={pwErr || 'بعد از ۵ تلاش ناموفق، ورود ۱۵ دقیقه موقتاً متوقف می‌شود'} helpTone={pwErr ? 'error' : undefined}
           />
           <div style={{ height: 44, display: 'flex', alignItems: 'center', gap: 8 }}>
             <RowLink d={AUTH_ICONS.lock} label="فراموشی رمز" onClick={() => sendOtp('reset', () => go('fotp', 'fwd'))} />

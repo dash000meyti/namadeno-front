@@ -12,7 +12,8 @@ import {
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { LockTag } from '@/components/org/packages/Stepper';
-import { I, allocationText, effectiveStatus, jParts, milestoneStats, policySub, reasonMeta, splitCompact, statusLabel, type Tone as MetaTone } from '@/components/org/packages/meta';
+import { I, allocationText, effectiveStatus, jParts, milestoneStats, perPersonText, policySub, reasonMeta, splitCompact, statusLabel, type Tone as MetaTone } from '@/components/org/packages/meta';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { JALALI_MONTHS, faDigits, jDate, money } from '@/lib/format';
 import { now } from '@/lib/clock';
@@ -71,7 +72,8 @@ export default function OrgPackagesPage() {
     {
       key: 'title', label: 'بسته', width: 'minmax(0, 1.6fr)', render: (r) => {
         const rm = reasonMeta(r.reason);
-        const per = r.amountPerPerson ? `${money(r.amountPerPerson)} هر نفر` : 'مبلغ تعیین نشده';
+        const pp = perPersonText(r, money);
+        const per = pp ? `${pp} هر نفر` : 'مبلغ تعیین نشده';
         return <Ident lead={<Tile d={I.pkg} tone={kt(rm.tone)} />} title={r.title} sub={`${rm.label} · ${per} · ${jDate(r.sentAt ?? r.createdAt)}`} />;
       },
     },
@@ -85,7 +87,7 @@ export default function OrgPackagesPage() {
         return (<><span className="num sm">{faDigits(acc)} از {faDigits(n)}</span><Meter value={n ? acc / n : 0} tone={n && acc === n ? 'success' : 'primary'} width={72} thin /></>);
       },
     },
-    { key: 'lock', label: 'سیاست قفل', width: '132px', col: true, render: (r) => (<><LockTag type={r.lockPolicy.type} />{r.lockPolicy.type !== 'none' && <span className="sm el" style={{ maxWidth: '100%' }}>{policySub(r)}</span>}</>) },
+    { key: 'lock', label: 'شیوه‌ی دریافت', width: '132px', col: true, render: (r) => (<><LockTag type={r.lockPolicy.type} />{r.lockPolicy.type !== 'none' && <span className="sm el" style={{ maxWidth: '100%' }}>{policySub(r)}</span>}</>) },
     { key: 'st', label: 'وضعیت', width: '144px', render: (r) => { const s = statusLabel(r); return <Pill tone={kt(s.tone)} dot>{s.text}</Pill>; } },
   ];
 
@@ -137,6 +139,7 @@ function PackageInspector({ pkg, onClose }: { pkg: OrgPackage; onClose: () => vo
   const pendSum = pend.reduce((s, r) => s + r.amount, 0);
   const ms = pkg.lockPolicy.type === 'milestone' ? milestoneStats(pkg) : null;
   const released = ms ? Math.round((pkg.total * ms.relPct) / 100) : 0;
+  const reclaimed = ms ? Math.round((pkg.total * ms.backPct) / 100) : 0; // returned to the organization («بازپس‌گیری»)
   const detail = routes.org.package(pkg.id);
 
   return (
@@ -157,7 +160,7 @@ function PackageInspector({ pkg, onClose }: { pkg: OrgPackage; onClose: () => vo
       />
       <KeyStats items={[
         ['گیرندگان', `${faDigits(n)} نفر`],
-        ['هر نفر', pkg.amountPerPerson ? cmp(pkg.amountPerPerson) : '—'],
+        ['هر نفر', perPersonText(pkg, cmp) || '—'],
         ['جمع بسته', pkg.total ? cmp(pkg.total) : '—'],
       ]} />
 
@@ -169,17 +172,17 @@ function PackageInspector({ pkg, onClose }: { pkg: OrgPackage; onClose: () => vo
       )}
 
       {ms && live && (
-        <Section title="آزادسازی مرحله‌ای" action={<span className="num" style={{ color: 'var(--text-primary)' }}>{faDigits(ms.relN)} از {faDigits(ms.steps.length)} مرحله</span>}>
-          <FreeLocked free={released} locked={pkg.total - released} fmt={cmp} />
+        <Section title={LOCK_META.milestone.label} action={<span className="num" style={{ color: 'var(--text-primary)' }}>{faDigits(ms.relN)} از {faDigits(ms.steps.length)} مرحله</span>}>
+          <FreeLocked free={released} locked={pkg.total - released - reclaimed} fmt={cmp} />
           {ms.pending && <span className="mute" style={{ fontSize: 12.5 }}>مرحله {faDigits(ms.pendingIdx)} «{ms.pending.title}» در انتظار تأیید شماست</span>}
         </Section>
       )}
 
       <Section title="مشخصات">
         <KV rows={[
-          ['سیاست قفل', pkg.lockPolicy.type === 'none' ? 'بدون قفل · همه آزاد' : policySub(pkg)],
+          ['شیوه‌ی دریافت', pkg.lockPolicy.type === 'none' ? LOCK_META.none.label : `${LOCK_META[pkg.lockPolicy.type].label} · ${policySub(pkg)}`],
           ['تخصیص', allocationText(pkg)],
-          ['برداشت نقدی', pkg.cashAllowed ? 'مجاز' : 'غیرمجاز'],
+          ['برداشت نقدی', pkg.cashAllowed ? 'مجاز' : 'مجاز نیست'],
           ['ایجاد', <span key="c" className="num">{jDate(pkg.createdAt)}</span>],
           ['ارسال', <span key="s" className="num">{pkg.sentAt ? jDate(pkg.sentAt) : '—'}</span>],
           ['مهلت پذیرش', <span key="e" className="num">{pkg.expiresAt ? jDate(pkg.expiresAt) : '۳۰ روز پس از ارسال'}</span>],

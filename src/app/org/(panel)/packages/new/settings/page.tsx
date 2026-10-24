@@ -1,6 +1,11 @@
 'use client';
 /**
- * Send wizard, step 2 — package settings (type, amount, lock policy, cash, allocation, expiry, message).
+ * Send wizard, step 2 — package settings (title, amount, receive policy, allocation, expiry, message).
+ * Cash withdrawal is not asked: the free («آزاد») part is withdrawable whenever the contract allows cash (`cashAllowed` follows the contract).
+ * The package type is not asked: it follows the receive policy (milestone → project contract, otherwise bonus).
+ * When step 1 loaded amounts from a file (`amountSource: 'file'`), the amount per person is read-only here.
+ * Milestone steps: every step has a required due date («سررسید») and «نیاز به تأیید» (on = released after the
+ * organization approves it in «درخواست‌ها»; off = released automatically at the due date). All dates use DateInput.
  * Kit wizard page: heading + steps → settings groups beside the live summary → sticky action bar.
  */
 import Link from 'next/link';
@@ -12,27 +17,54 @@ import {
   ActionBar, Ava, BigNum, Card, Chips, Empty, ErrorBlock, KV, Meter, Note, NumInput, NumberInput, Pill, Section, SettingRow,
   SettingsGroup, SkeletonCard, Switch, Table, type Column, type Tone,
 } from '@/components/panel/kit';
+import { DateInput } from '@/components/ui/DateInput';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { LockTag, WizardHeader } from '@/components/org/packages/Stepper';
-import { I, REASONS, jalaliAddMonths, lockChip, parseJalali, splitCompact } from '@/components/org/packages/meta';
+import { I, jalaliAddMonths, lockChip, parseJalali, perPersonText, splitCompact } from '@/components/org/packages/meta';
 import { errMsg } from '@/components/org/packages/ui';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { enDigits, faDigits, jDate, money, time } from '@/lib/format';
 import { now } from '@/lib/clock';
 import type { LockPolicy, PackageReason } from '@/types/domain';
 
 type PolType = LockPolicy['type'];
-interface MsRow { key: number; title: string; pct: string; due: string }
+/** One milestone row: `due` = Jalali text of the date field, `approval` = «نیاز به تأیید». */
+interface MsRow { key: number; title: string; pct: string; due: string; approval: boolean }
 type Split = { gold: string; fixed: string; rial: string };
-const LKI = 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2';
 const VEST_QUICK: [number, string][] = [[3, '۳ ماه'], [6, '۶ ماه'], [12, '۱ سال']];
-const POLS: [PolType, string, string][] = [['none', 'بدون قفل', lockChip('none').d], ['vesting', 'قفل زمانی', LKI], ['milestone', 'آزادسازی مرحله‌ای', I.flag]];
+/** Receive policies («شیوه‌ی دریافت») offered in the wizard: label + icon from LOCK_META (customer wording, docs/WORDING.md). */
+const POLS: [PolType, string, string][] = (['none', 'vesting', 'milestone'] as const).map((k): [PolType, string, string] => [k, LOCK_META[k].label, LOCK_META[k].d]);
 let rowKey = 1;
 const defaultSteps = (): MsRow[] => [
-  ['تحلیل نیازمندی‌ها', 20, 1], ['طراحی رابط کاربری', 20, 2], ['پیاده‌سازی نسخه اول', 30, 3], ['تست و تحویل', 20, 4], ['پشتیبانی یک‌ماهه', 10, 0],
-].map(([title, pct, m]) => ({ key: rowKey++, title: String(title), pct: faDigits(String(pct)), due: m ? jalaliAddMonths(Number(m)) : '' }));
+  ['تحلیل نیازمندی‌ها', 20, 1], ['طراحی رابط کاربری', 20, 2], ['پیاده‌سازی نسخه اول', 30, 3], ['تست و تحویل', 20, 4], ['پشتیبانی یک‌ماهه', 10, 5],
+].map(([title, pct, m]) => ({ key: rowKey++, title: String(title), pct: faDigits(String(pct)), due: jalaliAddMonths(Number(m)), approval: true }));
 const num = (s: string) => { const n = Number(enDigits(s).replace(/[^\d.]/g, '')); return Number.isFinite(n) ? n : 0; };
+const timeOf = (iso: string | null) => (iso ? new Date(iso).getTime() : NaN);
+/** Due date of a new step: a month after the last step (or a month from today). */
+const nextDue = (rows: MsRow[]) => {
+  const last = parseJalali(rows[rows.length - 1]?.due ?? '');
+  return jalaliAddMonths(1, last ? new Date(last) : now());
+};
+/** Due-date problems of the milestone rows: the first message and the keys of the rows to mark. */
+function dueProblems(rows: MsRow[]): { msg?: string; keys: number[] } {
+  const isos = rows.map((r) => parseJalali(r.due));
+  const t = now().getTime();
+  const kind = rows.map((r, i): 0 | 1 | 2 | 3 | 4 => {
+    if (!r.due.trim()) return 1;
+    if (!isos[i]) return 2;
+    if (timeOf(isos[i]) <= t) return 3;
+    if (i > 0 && isos[i - 1] && timeOf(isos[i]) < timeOf(isos[i - 1])) return 4;
+    return 0;
+  });
+  const keys = rows.filter((_, i) => kind[i]).map((r) => r.key);
+  const msg = kind.includes(1) ? 'سررسید همه‌ی مراحل را وارد کنید.'
+    : kind.includes(2) ? 'سررسید مراحل را به شکل ۱۴۰۵/۰۹/۲۰ وارد کنید.'
+    : kind.includes(3) ? 'سررسید مراحل باید در آینده باشد.'
+    : kind.includes(4) ? 'سررسید هر مرحله باید هم‌زمان یا پس از مرحله‌ی قبل باشد.' : undefined;
+  return { msg, keys };
+}
 /** Field error (red) instead of the row's help text. */
 const errOr = (err?: string, help?: ReactNode) => (err ? <span className="nm-help err" role="alert">{err}</span> : help);
 
@@ -46,34 +78,35 @@ function SettingsStep() {
   const toast = useToast();
 
   const [ready, setReady] = useState(false);
-  const [reason, setReason] = useState<PackageReason>('bonus');
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState(0);
   const [pol, setPol] = useState<PolType>('vesting');
   const [vest, setVest] = useState('');
   const [msRows, setMsRows] = useState<MsRow[]>([]);
-  const [cash, setCash] = useState(true);
   const [alloc, setAlloc] = useState<'free' | 'fixed'>('free');
   const [split, setSplit] = useState<Split>({ gold: '۵۰', fixed: '۳۰', rial: '۲۰' });
   const [message, setMessage] = useState('');
   const [expiry, setExpiry] = useState('');
   const [errs, setErrs] = useState<Record<string, string>>({});
+  /** Milestone rows whose due date is marked as wrong. */
+  const [badDue, setBadDue] = useState<number[]>([]);
   const [savedAt, setSavedAt] = useState<string | undefined>();
 
   const settings = contract?.settings;
   const allowedPols = settings?.lockPolicies ?? ['none', 'vesting', 'milestone'];
-  const cashAllowedByContract = settings?.cashWithdrawalAllowed ?? true;
+  /** Withdrawal of the free part follows the contract; there is no separate switch. */
+  const cash = settings?.cashWithdrawalAllowed ?? true;
 
   useEffect(() => {
     if (ready || !pkg) return;
-    setReason(pkg.reason);
     setTitle(pkg.title);
     setAmount(pkg.amountPerPerson);
     const lp = pkg.lockPolicy;
     setPol(lp.type === 'none' && pkg.amountPerPerson === 0 && pkg.reason !== 'project_contract' ? 'vesting' : lp.type);
     setVest(lp.type === 'vesting' ? jDate(lp.releaseAt) : jalaliAddMonths(3));
-    setMsRows(lp.type === 'milestone' ? lp.steps.map((s) => ({ key: rowKey++, title: s.title, pct: faDigits(String(s.sharePct)), due: s.dueDate ? jDate(s.dueDate) : '' })) : defaultSteps());
-    setCash(pkg.cashAllowed);
+    setMsRows(lp.type === 'milestone'
+      ? lp.steps.map((s) => ({ key: rowKey++, title: s.title, pct: faDigits(String(s.sharePct)), due: s.dueDate ? jDate(s.dueDate) : '', approval: s.requiresApproval !== false }))
+      : defaultSteps());
     setAlloc(pkg.allocationMode);
     if (pkg.fixedSplit) setSplit({ gold: faDigits(String(pkg.fixedSplit.gold ?? 0)), fixed: faDigits(String(pkg.fixedSplit.fixed ?? 0)), rial: faDigits(String(pkg.fixedSplit.rial ?? 0)) });
     setMessage(pkg.message ?? '');
@@ -81,8 +114,6 @@ function SettingsStep() {
     setSavedAt(pkg.createdAt);
     setReady(true);
   }, [pkg, ready]);
-  // the contract may forbid cash withdrawal → force it off
-  useEffect(() => { if (ready && settings && !settings.cashWithdrawalAllowed) setCash(false); }, [ready, settings]);
 
   if (!draftId) {
     return (
@@ -105,42 +136,53 @@ function SettingsStep() {
 
   const isMs = pol === 'milestone';
   const n = pkg.recipients.length;
-  const total = amount * n;
+  const fromFile = pkg.amountSource === 'file';
+  const fileTotal = pkg.recipients.reduce((s, r) => s + r.amount, 0);
+  const total = fromFile ? fileTotal : amount * n;
+  /** Amount of one person (for milestone amounts); unknown when a file gives different amounts. */
+  const one = fromFile ? (n === 1 ? pkg.recipients[0].amount : NaN) : amount;
+  const fileRange = fromFile ? perPersonText(pkg, money) : '';
+  // package type follows the receive policy (no separate question)
+  const reason: PackageReason = isMs ? 'project_contract' : pkg.reason === 'project_contract' ? 'bonus' : pkg.reason;
   const remaining = contract ? contract.budgetYear - contract.budgetUsed : 0;
   const usePct = remaining > 0 ? (total * 100) / remaining : 0;
   const over = !!contract && total > remaining;
   const remainAfter = splitCompact(Math.max(0, remaining - total));
   const remainNow = splitCompact(remaining);
   const msTotal = msRows.reduce((s, r) => s + num(r.pct), 0);
+  /** Steps released automatically at their due date. */
+  const msAuto = msRows.filter((r) => !r.approval).length;
   const msOk = msTotal === 100;
   const effAlloc: 'free' | 'fixed' = isMs ? 'fixed' : alloc;
   const sp_ = { gold: num(split.gold), fixed: num(split.fixed), rial: cash ? num(split.rial) : 0 };
   const splitSum = sp_.gold + sp_.fixed + sp_.rial;
   const chip = lockChip(pol);
 
-  const pickReason = (r: PackageReason) => {
-    setReason(r);
-    if (r === 'project_contract' && allowedPols.includes('milestone')) setPol('milestone');
-    else if (r !== 'project_contract' && pol === 'milestone') setPol(allowedPols.includes('vesting') ? 'vesting' : 'none');
+  const setRow = (i: number, patch: Partial<MsRow>) => {
+    if (patch.due !== undefined) setBadDue((keys) => keys.filter((k) => k !== msRows[i]?.key));
+    setMsRows((rows) => rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   };
-  const setRow = (i: number, patch: Partial<MsRow>) => setMsRows((rows) => rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   const validate = (strict: boolean) => {
     const e: Record<string, string> = {};
     if (!title.trim()) e.title = 'عنوان بسته را وارد کنید.';
-    if (strict && amount <= 0) e.amount = 'مبلغ هر نفر را وارد کنید.';
+    if (strict && !fromFile && amount <= 0) e.amount = 'مبلغ هر نفر را وارد کنید.';
     if (pol === 'vesting') {
       const iso = parseJalali(vest);
       if (!iso) e.vest = 'تاریخ را به شکل ۱۴۰۵/۱۰/۱۵ وارد کنید.';
       else if (new Date(iso).getTime() <= now().getTime()) e.vest = 'تاریخ آزادسازی باید در آینده باشد.';
     }
+    let bad: number[] = [];
     if (isMs) {
+      const due = dueProblems(msRows);
+      bad = due.keys;
       if (!msRows.length) e.ms = 'حداقل یک مرحله تعریف کنید.';
       else if (msRows.some((r) => !r.title.trim())) e.ms = 'عنوان همه مراحل را وارد کنید.';
       else if (msRows.some((r) => num(r.pct) < 5)) e.ms = 'سهم هر مرحله حداقل ۵٪ است.';
       else if (!msOk) e.ms = 'جمع سهم مراحل باید دقیقاً ۱۰۰٪ باشد.';
-      else if (msRows.some((r) => r.due.trim() && !parseJalali(r.due))) e.ms = 'سررسید مراحل را به شکل ۱۴۰۵/۰۹/۲۰ وارد کنید یا خالی بگذارید.';
+      else if (due.msg) e.ms = due.msg;
     }
+    setBadDue(bad);
     if (effAlloc === 'fixed' && !isMs && splitSum !== 100) e.split = 'جمع تخصیص ثابت باید ۱۰۰٪ باشد.';
     if (strict && expiry.trim()) {
       const iso = parseJalali(expiry);
@@ -155,10 +197,10 @@ function SettingsStep() {
     const lockPolicy: LockPolicy = pol === 'vesting'
       ? { type: 'vesting', releaseAt: parseJalali(vest)! }
       : pol === 'milestone'
-        ? { type: 'milestone', steps: msRows.map((r) => ({ title: r.title.trim(), sharePct: num(r.pct), dueDate: r.due.trim() ? parseJalali(r.due) ?? undefined : undefined })) }
+        ? { type: 'milestone', steps: msRows.map((r) => ({ title: r.title.trim(), sharePct: num(r.pct), dueDate: parseJalali(r.due) ?? undefined, requiresApproval: r.approval })) }
         : { type: 'none' };
     return {
-      id: pkg.id, title: title.trim(), reason, amountPerPerson: amount, cashAllowed: cash, lockPolicy,
+      id: pkg.id, title: title.trim(), reason, ...(fromFile ? {} : { amountPerPerson: amount }), cashAllowed: cash, lockPolicy,
       allocationMode: effAlloc,
       fixedSplit: effAlloc === 'fixed' ? (isMs ? { gold: 100, fixed: 0 } : { gold: sp_.gold, fixed: sp_.fixed, ...(sp_.rial ? { rial: sp_.rial } : {}) }) : undefined,
       message: message.trim(),
@@ -182,14 +224,14 @@ function SettingsStep() {
   const lockNote = pol === 'none'
     ? 'کل بسته پس از تأیید کارمند آزاد است؛ تا تأیید، مبلغ از حساب سازمان رزرو می‌شود.'
     : pol === 'vesting'
-      ? `پس از تأیید کارمند، بخش صندوقی بسته در دارایی او با نوع «قفل زمانی سازمان» تا ${vest} قفل می‌شود.`
-      : `${money(amount)} تومان در صندوق طلای کارمند با نوع «آزادسازی مرحله‌ای» قفل و طی ${faDigits(msRows.length)} مرحله با تأیید سازمان آزاد می‌شود.`;
+      ? `پس از تأیید کارمند، بخش صندوقی بسته به‌عنوان «${LOCK_META.vesting.label}» تا ${vest} در دارایی او رزرو می‌شود و بازده می‌گیرد.`
+      : `${Number.isFinite(one) ? `${money(one)} تومان` : 'مبلغ هر نفر'} به‌عنوان «${LOCK_META.milestone.label}» در صندوق طلای کارمند رزرو می‌شود و طی ${faDigits(msRows.length)} مرحله آزاد می‌شود${msAuto ? `؛ ${msAuto === msRows.length ? 'همه‌ی مراحل' : faDigits(msAuto) + ' مرحله'} خودکار در سررسید` : ''}.`;
   const polHelp = pol === 'none'
-    ? 'کل بسته پس از تأیید کارمند آزاد است و می‌تواند به ریال فروخته یا برداشت شود.'
+    ? 'کل بسته پس از تأیید کارمند آزاد است؛ کارمند می‌تواند آن را به ریال بفروشد یا برداشت کند.'
     : pol === 'vesting'
-      ? 'بخش صندوقی بسته تا این تاریخ در دارایی کارمند قفل می‌ماند و بازده می‌گیرد؛ در این تاریخ خودکار آزاد می‌شود. بخش ریالی آزاد است.'
-      : 'جمع سهم‌ها باید دقیقاً ۱۰۰٪ باشد. هر مرحله پس از انجام تعهد توسط کارمند و تأیید سازمان آزاد می‌شود؛ تا آن زمان دارایی در حساب کارمند قفل است ولی بازده می‌گیرد.';
-  const allocHelp = isMs ? 'در قرارداد مرحله‌ای ثابت است' : effAlloc === 'free' ? 'کارمند هنگام دریافت بین طلا، درآمد ثابت و ریال انتخاب می‌کند' : 'سهم هر دارایی را تعیین کنید';
+      ? 'بخش صندوقی بسته تا این تاریخ به‌عنوان پس‌انداز در دارایی کارمند می‌ماند و بازده می‌گیرد؛ در این تاریخ خودکار آزاد می‌شود. بخش ریالی از ابتدا آزاد است.'
+      : 'جمع سهم‌ها باید دقیقاً ۱۰۰٪ باشد. هر مرحله در سررسید خود آزاد می‌شود: با «نیاز به تأیید»، پس از تأیید شما در درخواست‌ها؛ بدون آن، خودکار. تا آن زمان سهم در دارایی کارمند رزرو است و بازده می‌گیرد.';
+  const allocHelp = isMs ? `در ${LOCK_META.milestone.label} تخصیص ثابت است` : effAlloc === 'free' ? 'کارمند هنگام دریافت بین طلا، درآمد ثابت و ریال انتخاب می‌کند' : 'سهم هر دارایی را تعیین کنید';
   const composer: { key: keyof Split; label: string; tone: Tone }[] = [
     { key: 'gold', label: 'طلا', tone: 'warning' },
     { key: 'fixed', label: 'درآمد ثابت', tone: 'secondary' },
@@ -198,18 +240,30 @@ function SettingsStep() {
   const quick = VEST_QUICK.find(([m]) => vest === jalaliAddMonths(m))?.[0] ?? -1;
   const busy = update.isPending;
 
+  // fits the content column at 1280px: the amount sits under the title, the due date field is compact
   const msCols: Column<MsRow>[] = [
     { key: 'n', label: '', width: '28px', render: (_, i) => <Ava letter={faDigits(i + 1)} tone="primary" size="sm" /> },
     {
-      key: 'title', label: 'عنوان مرحله / تعهد', width: 'minmax(0, 1fr)', render: (m, i) => (
-        <span className="nm-in" style={{ width: '100%' }}>
-          <input type="text" value={m.title} onChange={(e) => setRow(i, { title: e.target.value })} aria-label={`عنوان مرحله ${faDigits(i + 1)}`} />
-        </span>
+      key: 'title', label: 'عنوان مرحله / تعهد', width: 'minmax(0, 1fr)', col: true, render: (m, i) => (
+        <>
+          <span className="nm-in" style={{ width: '100%' }}>
+            <input type="text" value={m.title} onChange={(e) => setRow(i, { title: e.target.value })} aria-label={`عنوان مرحله ${faDigits(i + 1)}`} />
+          </span>
+          <span className="sm num">{Number.isFinite(one) ? `${money((one * num(m.pct)) / 100)} تومان` : 'مبلغ طبق فایل'}</span>
+        </>
       ),
     },
-    { key: 'pct', label: 'سهم', width: '76px', render: (m, i) => <NumInput value={m.pct} onChange={(v) => setRow(i, { pct: faDigits(enDigits(v).replace(/\D/g, '').slice(0, 3)) })} suffix="٪" width={36} label={`سهم مرحله ${faDigits(i + 1)}`} /> },
-    { key: 'amt', label: 'مبلغ (تومان)', width: '96px', render: (m) => <span className="num">{money((amount * num(m.pct)) / 100)}</span> },
-    { key: 'due', label: 'سررسید (اختیاری)', width: '116px', render: (m, i) => <NumInput text value={m.due} onChange={(v) => setRow(i, { due: v })} placeholder="بدون سررسید" width={104} label={`سررسید مرحله ${faDigits(i + 1)}`} /> },
+    { key: 'pct', label: 'سهم', width: '68px', render: (m, i) => <NumInput value={m.pct} onChange={(v) => setRow(i, { pct: faDigits(enDigits(v).replace(/\D/g, '').slice(0, 3)) })} suffix="٪" width={36} label={`سهم مرحله ${faDigits(i + 1)}`} /> },
+    {
+      key: 'due', label: 'سررسید', width: '126px', render: (m, i) => (
+        <DateInput value={m.due} onChange={(v) => setRow(i, { due: v })} min={now()} width={86} label={`سررسید مرحله ${faDigits(i + 1)}`} invalid={badDue.includes(m.key)} />
+      ),
+    },
+    {
+      key: 'ap', label: 'نیاز به تأیید', width: '66px', align: 'center', render: (m, i) => (
+        <Switch on={m.approval} onChange={(v) => setRow(i, { approval: v })} label={`نیاز به تأیید مرحله ${faDigits(i + 1)}`} />
+      ),
+    },
     {
       key: 'del', label: '', width: '34px', render: (_, i) => (
         <button type="button" className="nm-ib" aria-label={`حذف مرحله ${faDigits(i + 1)}`} onClick={() => setMsRows((rows) => rows.filter((_r, j) => j !== i))}><Icon d={I.trash} size={16} /></button>
@@ -224,32 +278,35 @@ function SettingsStep() {
       <div className="nm-grid side">
         <div className="nm-stack">
           <SettingsGroup title="بسته">
-            <SettingRow label="نوع بسته" stack>
-              <Chips label="نوع بسته" value={reason} onChange={pickReason} options={REASONS.map((r) => ({ key: r.key, label: r.label }))} />
-            </SettingRow>
             <SettingRow label="عنوان بسته" htmlFor="pk-title" desc={errOr(errs.title)}>
               <span className={'nm-in' + (errs.title ? ' err' : '')} style={{ width: 280 }}>
                 <input id="pk-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="عنوان بسته" aria-invalid={!!errs.title || undefined} maxLength={80} />
               </span>
             </SettingRow>
-            <SettingRow label="مبلغ هر نفر" htmlFor="pk-amount" desc={errOr(errs.amount, `جمع برای ${faDigits(n)} نفر: ${money(total)} تومان`)}>
-              <NumberInput id="pk-amount" label="مبلغ هر نفر" value={amount || NaN} onChange={(v) => setAmount(Number.isFinite(v) ? Math.max(0, Math.min(1e12, v)) : 0)} suffix="تومان" width={150} invalid={!!errs.amount} />
-            </SettingRow>
-            <SettingRow label="نحوه مبلغ" desc="بارگذاری مبلغ هر نفر از فایل اکسل به‌زودی فعال می‌شود">
-              <div className="nm-chips" role="group" aria-label="نحوه مبلغ">
-                <button type="button" className="nm-chip" aria-pressed="true">یکسان برای همه</button>
-                <button type="button" className="nm-chip" aria-pressed="false" disabled>از فایل اکسل · به‌زودی</button>
-              </div>
-            </SettingRow>
+            {fromFile ? (
+              <SettingRow
+                label="مبلغ هر نفر"
+                desc={<>از فایل اکسل · جمع برای {faDigits(n)} نفر: <span className="num">{money(total)}</span> تومان · <Link href={routes.org.newRecipients(pkg.id)} className="nm-more">تغییر فایل</Link></>}
+              >
+                <span className="nm-in" aria-disabled="true" style={{ minWidth: 150, justifyContent: 'space-between', gap: 8, background: 'var(--bg-neutral)', color: 'var(--text-secondary)' }}>
+                  <span className="num" style={{ color: 'var(--text-primary)' }}>{fileRange || '—'}</span>
+                  <span style={{ fontSize: 12 }}>تومان</span>
+                </span>
+              </SettingRow>
+            ) : (
+              <SettingRow label="مبلغ هر نفر" htmlFor="pk-amount" desc={errOr(errs.amount, `جمع برای ${faDigits(n)} نفر: ${money(total)} تومان`)}>
+                <NumberInput id="pk-amount" label="مبلغ هر نفر" value={amount || NaN} onChange={(v) => setAmount(Number.isFinite(v) ? Math.max(0, Math.min(1e12, v)) : 0)} suffix="تومان" width={150} invalid={!!errs.amount} />
+              </SettingRow>
+            )}
           </SettingsGroup>
 
-          <SettingsGroup title="سیاست قفل" action={<Link href={routes.org.contract} className="nm-more">قواعد قرارداد<Icon d={I.chevL} size={14} /></Link>} footer={polHelp}>
-            <SettingRow label="نوع قفل" desc="مجاز طبق قرارداد سازمان" stack>
-              <div className="nm-chips" role="group" aria-label="سیاست قفل">
+          <SettingsGroup title="شیوه‌ی دریافت" action={<Link href={routes.org.contract} className="nm-more">قواعد قرارداد<Icon d={I.chevL} size={14} /></Link>} footer={polHelp}>
+            <SettingRow label="گزینه‌ها" desc="مجاز طبق قرارداد سازمان" stack>
+              <div className="nm-chips" role="group" aria-label="شیوه‌ی دریافت">
                 {POLS.map(([k, label, d]) => {
                   const allowed = allowedPols.includes(k);
                   return (
-                    <button key={k} type="button" className="nm-chip" aria-pressed={pol === k} disabled={!allowed} title={allowed ? undefined : 'در قرارداد سازمان مجاز نیست'} onClick={() => { setPol(k); setErrs({}); }}>
+                    <button key={k} type="button" className="nm-chip" aria-pressed={pol === k} disabled={!allowed} title={allowed ? undefined : 'در قرارداد فعلی سازمان فعال نیست'} onClick={() => { setPol(k); setErrs({}); }}>
                       <Icon d={d} size={15} />{label}
                     </button>
                   );
@@ -259,8 +316,8 @@ function SettingsStep() {
             {pol === 'vesting' && (
               <SettingRow label="آزاد در تاریخ" htmlFor="pk-vest" desc={errOr(errs.vest)} stack>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <NumInput id="pk-vest" text value={vest} onChange={setVest} placeholder="۱۴۰۵/۱۰/۱۵" label="تاریخ آزادسازی" width={130} invalid={!!errs.vest} />
-                  <Chips label="مدت قفل" value={quick} onChange={(m) => setVest(jalaliAddMonths(m))} options={VEST_QUICK.map(([m, l]) => ({ key: m, label: l }))} />
+                  <DateInput id="pk-vest" value={vest} onChange={setVest} min={now()} placeholder="۱۴۰۵/۱۰/۱۵" label="تاریخ آزادسازی" width={100} invalid={!!errs.vest} />
+                  <Chips label="مدت پس‌انداز" value={quick} onChange={(m) => setVest(jalaliAddMonths(m))} options={VEST_QUICK.map(([m, l]) => ({ key: m, label: l }))} />
                 </span>
               </SettingRow>
             )}
@@ -269,9 +326,9 @@ function SettingsStep() {
           {isMs && (
             <Card flush title="مراحل قرارداد" count={msRows.length}
               actions={<Pill tone={msOk ? 'success' : 'error'}>{msOk ? '۱۰۰٪ · درست' : `${faDigits(msTotal)}٪ · باید ۱۰۰٪ باشد`}</Pill>}>
-              <Table columns={msCols} rows={msRows} rowKey={(m) => String(m.key)} minWidth={560} empty={<Empty icon={I.flag} title="مرحله‌ای تعریف نشده است" />} />
+              <Table columns={msCols} rows={msRows} rowKey={(m) => String(m.key)} minWidth={540} empty={<Empty icon={I.flag} title="مرحله‌ای تعریف نشده است" />} />
               <div className="nm-tfoot">
-                <button type="button" className="nm-btn sm text" disabled={msRows.length >= 8} onClick={() => setMsRows((rows) => [...rows, { key: rowKey++, title: 'مرحله جدید', pct: '۰', due: '' }])}>
+                <button type="button" className="nm-btn sm text" disabled={msRows.length >= 8} onClick={() => setMsRows((rows) => [...rows, { key: rowKey++, title: 'مرحله جدید', pct: '۰', due: nextDue(rows), approval: true }])}>
                   <Icon d={I.plus} size={16} strokeWidth={2} />افزودن مرحله
                 </button>
                 {errs.ms && <span className="nm-help err" role="alert" style={{ marginRight: 'auto' }}>{errs.ms}</span>}
@@ -279,10 +336,7 @@ function SettingsStep() {
             </Card>
           )}
 
-          <SettingsGroup title="برداشت و تخصیص">
-            <SettingRow label="برداشت نقدی" desc={cashAllowedByContract ? 'کارمند می‌تواند بخش ریالی را به کارت بانکی خود برداشت کند' : 'در قرارداد سازمان مجاز نیست'}>
-              <Switch on={cash} onChange={setCash} label="برداشت نقدی" disabled={!cashAllowedByContract && !cash} />
-            </SettingRow>
+          <SettingsGroup title="تخصیص">
             <SettingRow label="تخصیص دارایی" desc={allocHelp} stack>
               <Chips label="تخصیص دارایی" value={effAlloc} onChange={setAlloc} disabled={isMs} options={[{ key: 'free', label: 'انتخاب آزاد کارمند' }, { key: 'fixed', label: 'تخصیص ثابت' }]} />
             </SettingRow>
@@ -307,7 +361,7 @@ function SettingsStep() {
 
           <SettingsGroup title="ارسال">
             <SettingRow label="مهلت تأیید کارمند" htmlFor="pk-expiry" desc={errOr(errs.expiry, 'پس از تأیید شما بلافاصله به صندوق ورودی کارکنان ارسال می‌شود')}>
-              <NumInput id="pk-expiry" text value={expiry} onChange={setExpiry} placeholder="۱۴۰۵/۰۹/۱۵" label="مهلت تأیید کارمند" width={130} invalid={!!errs.expiry} />
+              <DateInput id="pk-expiry" value={expiry} onChange={setExpiry} min={now()} clearable placeholder="۱۴۰۵/۰۹/۱۵" label="مهلت تأیید کارمند" width={100} invalid={!!errs.expiry} />
             </SettingRow>
             <SettingRow label="پیام به کارکنان" htmlFor="pk-msg" desc="اختیاری">
               <span className="nm-in" style={{ width: 280 }}>
@@ -319,7 +373,7 @@ function SettingsStep() {
           {over && <Note tone="err">جمع بسته ({money(total)} تومان) از موجودی باقی‌ماندهٔ سازمان بیشتر است؛ مبلغ یا تعداد گیرندگان را کاهش دهید.</Note>}
         </div>
 
-        <Card title="خلاصه" actions={<Pill>{REASONS.find((r) => r.key === reason)?.label}</Pill>}>
+        <Card title="خلاصه">
           <KV rows={[
             ['گیرندگان', (
               <span key="r" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -327,9 +381,8 @@ function SettingsStep() {
                 <Link href={routes.org.newRecipients(pkg.id)} className="nm-more">ویرایش</Link>
               </span>
             )],
-            ['مبلغ هر نفر', <span key="a" className="num">{amount ? `${money(amount)} تومان` : '—'}</span>],
-            ['برداشت نقدی', cash ? (pol === 'none' ? 'مجاز' : 'مجاز · فقط بخش آزاد') : 'غیرمجاز'],
-            ['سیاست قفل', <span key="p" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LockTag type={pol} />{polValue && <span className="num">{polValue}</span>}</span>],
+            ['مبلغ هر نفر', <span key="a" className="num">{fromFile ? (fileRange ? `${fileRange} تومان` : '—') : amount ? `${money(amount)} تومان` : '—'}</span>],
+            ['شیوه‌ی دریافت', <span key="p" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LockTag type={pol} />{polValue && <span className="num">{polValue}</span>}</span>],
           ]} />
           <Section title="جمع کل بسته‌ها"><BigNum value={money(total)} unit="تومان" /></Section>
           <Section title="منبع: حساب سازمان" action={<span className="num">موجودی {remainNow.value} {remainNow.unit}</span>}>

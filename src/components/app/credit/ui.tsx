@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { ApiRequestError } from '@/api/client';
+import { HOURGLASS } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { enDigits, faDigits, jDate, jDayMonth, money } from '@/lib/format';
 import { now } from '@/lib/clock';
@@ -33,9 +34,9 @@ export function addDays(iso: string | Date, days: number) {
   return new Date(new Date(iso).getTime() + days * DAY).toISOString();
 }
 
-const LOCK_WORD: Record<LockType, string> = { collateral: 'قفل وثیقه', vesting: 'قفل زمانی', installment: 'قفل اقساطی', milestone: 'قفل مرحله‌ای', legal: 'مسدودی' };
+const LOCK_WORD: Record<LockType, string> = { collateral: 'رزرو پشتوانه', vesting: 'پس‌انداز', installment: 'رزرو اقساطی', milestone: 'رزرو مرحله‌ای', legal: 'مسدودی' };
 
-/** What is already locked on a holding, in the design's words («۲۰٬۰۰۰٬۰۰۰ قفل زمانی», «قفل فعلی ۴۲٬۰۰۰٬۰۰۰», «همه آزاد»). */
+/** What is already reserved on a holding («۲۰٬۰۰۰٬۰۰۰ پس‌انداز», «رزرو فعلی ۴۲٬۰۰۰٬۰۰۰», «همه آزاد»). */
 export function lockedNote(h: Holding) {
   if (!h.locked) return 'همه آزاد';
   const types = Array.from(new Set(h.locks.map((l) => l.type)));
@@ -47,7 +48,7 @@ export function lockedNote(h: Holding) {
     }
     return `${money(h.locked)} ${LOCK_WORD[t]}`;
   }
-  return `قفل فعلی ${money(h.locked)}`;
+  return `رزرو فعلی ${money(h.locked)}`;
 }
 
 export function errText(e: unknown) {
@@ -83,7 +84,7 @@ export function KycBanner({ text = 'برای اعتبار کارت، وام و �
     <Link href={routes.app.kyc} style={{ flex: 'none', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 14, background: 'var(--soft-warning)', color: 'var(--text-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
       <span style={{ width: 36, height: 36, borderRadius: 10, background: 'rgb(var(--warning-main-rgb) / .2)', color: 'var(--warning-text)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={CI.shieldAlert} size={20} /></span>
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.6 }}>
-        <span style={{ fontSize: 13, fontWeight: 700 }}>احراز هویت سطح ۲ الزامی است</span>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>یک قدم مانده: احراز هویت سطح ۲</span>
         <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{text}</span>
       </span>
       <span style={{ height: 30, padding: '0 10px', borderRadius: 9, background: 'var(--primary-main)', color: 'var(--primary-contrast)', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>احراز هویت</span>
@@ -227,19 +228,19 @@ export function KvRows({ rows, h = 30, vSize = 13 }: { rows: KvRow[]; h?: number
   );
 }
 
-/** Free/locked bar + legend with a custom free label («آزاد پس از تأیید»). */
+/** Free/reserved bar + legend with a custom free label («آزاد پس از تأیید»). */
 export function LockSplit({ free, locked, freeLabel = 'آزاد' }: { free: number; locked: number; freeLabel?: string }) {
   const total = free + locked;
   const fp = total ? pct1(free / total) : 100;
   return (
     <>
-      <div className="lkbar" role="img" aria-label={`آزاد ${money(free)} · قفل ${money(locked)}`}>
+      <div className="lkbar" role="img" aria-label={`آزاد ${money(free)} · رزرو ${money(locked)}`}>
         {free > 0 && <span className="f" style={{ width: locked > 0 ? `${fp}%` : '100%' }} />}
         {locked > 0 && <span className="l" style={{ flex: 1 }} />}
       </div>
       <div className="lkleg">
         <span><span className="lkdot" />{freeLabel} <b>{money(free)}</b></span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={CI.lock} size={12} />قفل <b>{money(locked)}</b></span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={HOURGLASS} size={12} />رزرو <b>{money(locked)}</b></span>
       </div>
     </>
   );
@@ -268,7 +269,7 @@ export function PrimaryButton({ children, onClick, disabled, busy, d }: { childr
   );
 }
 
-/** Payment-source radios + «قفل‌شده … چرا؟» line (designs: pay-installment, card-settle). */
+/** Payment-source radios + «رزروشده … جزئیات» line (designs: pay-installment, card-settle). */
 export function SourcePicker({ value, onChange, portfolio, banks, funds, height = 50 }: { value: string; onChange: (v: string) => void; portfolio?: Portfolio; banks?: BankAccount[]; funds?: Fund[]; height?: number }) {
   const rial = portfolio?.holdings.find((h) => h.kind === 'rial');
   const fixed = portfolio?.holdings.find((h) => h.kind === 'fixed');
@@ -287,9 +288,9 @@ export function SourcePicker({ value, onChange, portfolio, banks, funds, height 
       </div>
       {picked && picked.locked > 0 && (
         <div className="row" style={{ minHeight: height < 50 ? 24 : 28, gap: 6, padding: '0 4px', fontSize: 11, lineHeight: 1.5, color: 'var(--text-secondary)', flex: 'none' }}>
-          <Icon d={CI.lock} size={12} />
-          <span className="num" style={{ flex: 1 }}>قفل‌شده: {money(picked.locked)} — قابل استفاده نیست</span>
-          <Link href={routes.app.asset(picked.kind)} style={{ fontWeight: 700, color: 'var(--primary-text)', textDecoration: 'none', whiteSpace: 'nowrap' }}>چرا؟</Link>
+          <Icon d={HOURGLASS} size={12} />
+          <span className="num" style={{ flex: 1 }}>رزروشده: {money(picked.locked)} · پس از آزاد شدن قابل استفاده است</span>
+          <Link href={routes.app.asset(picked.kind)} style={{ fontWeight: 700, color: 'var(--primary-text)', textDecoration: 'none', whiteSpace: 'nowrap' }}>جزئیات</Link>
         </div>
       )}
     </>

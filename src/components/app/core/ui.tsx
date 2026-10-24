@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { ApiRequestError } from '@/api/client';
+import { HOURGLASS } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { P } from './meta';
 
@@ -91,7 +92,7 @@ export function InboxTabs({ active, pending, accepted }: { active: 'new' | 'acce
   );
 }
 
-/** Free/locked card block used by the inbox screens: bar + legend lines. */
+/** Free/reserved card block used by the inbox screens: bar + legend lines. */
 export function FreeLockedBlock({ free, locked, freeNote, lockNote, allFreeNote = 'قابل فروش و برداشت', fmt }: {
   free: number; locked: number; freeNote?: string; lockNote?: string; allFreeNote?: string; fmt: (n: number) => string;
 }) {
@@ -107,12 +108,12 @@ export function FreeLockedBlock({ free, locked, freeNote, lockNote, allFreeNote 
   }
   return (
     <>
-      <div className="lkbar" role="img" aria-label={`آزاد ${fmt(free)} · قفل ${fmt(locked)}`}>
+      <div className="lkbar" role="img" aria-label={`آزاد ${fmt(free)} · رزرو ${fmt(locked)}`}>
         {free > 0 && <span className="f" style={{ width: `${freePct}%` }} />}
         <span className="l" style={{ flex: 1 }} />
       </div>
       <div className="lkleg"><span><span className="lkdot" />آزاد <b>{fmt(free)}</b></span>{freeNote && <span style={{ marginRight: 'auto', overflow: 'hidden', textOverflow: 'ellipsis' }}>{freeNote}</span>}</div>
-      <div className="lkleg"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={P.lock} size={12} />قفل <b>{fmt(locked)}</b></span>{lockNote && <span className="num" style={{ marginRight: 'auto', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis' }}>{lockNote}</span>}</div>
+      <div className="lkleg"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={HOURGLASS} size={12} />رزرو <b>{fmt(locked)}</b></span>{lockNote && <span className="num" style={{ marginRight: 'auto', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis' }}>{lockNote}</span>}</div>
     </>
   );
 }

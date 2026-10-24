@@ -7,12 +7,14 @@ import { AppHeader } from '@/components/app/AppHeader';
 import { BottomNav } from '@/components/app/BottomNav';
 import { Scr, Skeleton } from '@/components/app/Screen';
 import { Icon } from '@/components/ui/Icon';
+import { DatePickerButton } from '@/components/ui/DateInput';
 import { useToast } from '@/components/ui/Toast';
 import { OtpBoxes } from '@/components/app/core/auth';
 import { P } from '@/components/app/core/meta';
 import { ErrorNote } from '@/components/app/core/ui';
 import { enDigits, faDigits } from '@/lib/format';
-import { isMocking } from '@/lib/clock';
+import { isMocking, now } from '@/lib/clock';
+import { jalaliToIsoAny } from '@/lib/jalali';
 import { routes } from '@/lib/routes';
 
 const FA = '۰۱۲۳';
@@ -22,18 +24,19 @@ const TAG: Record<number, [string, string, string]> = {
   3: ['کامل', 'var(--soft-success)', 'var(--success-text)'],
 };
 const HINT: Record<number, string> = {
-  1: 'برای استفاده از سرویس‌های اعتباری (اعتبار کارت، وام، خرید اقساطی)، احراز هویت سطح ۲ الزامی است.',
+  1: 'برای استفاده از سرویس‌های اعتباری (اعتبار کارت، وام، خرید اقساطی)، سطح ۲ را کامل کنید.',
   2: 'برای خرید و فروش صندوق‌ها، سطح ۳ (سجام) را کامل کنید.',
   3: 'احراز هویت شما کامل است و به همه امکانات نمادنو دسترسی دارید.',
 };
 const DEF = [
   { n: 1, title: 'تطبیق شاهکار', source: 'شماره موبایل و کد ملی', desc: 'بررسی می‌شود شماره موبایل به نام صاحب کد ملی باشد. این سطح هنگام ثبت‌نام انجام شده است.', unlocks: ['مشاهده دارایی‌ها', 'دریافت بسته‌های سازمان'] },
-  { n: 2, title: 'هویت پایه', source: 'کد ملی و تاریخ تولد · ثبت احوال', desc: 'با کد ملی و تاریخ تولد، اطلاعات هویتی شما از ثبت احوال استعلام می‌شود. برای سرویس‌های اعتباری الزامی است.', unlocks: ['اعتبار کارت نمادنو', 'وام', 'خرید اقساطی'] },
-  { n: 3, title: 'احراز سجام', source: 'سامانه جامع اطلاعات مشتریان بازار سرمایه', desc: 'اطلاعات سجامی شما (کد بورسی، حساب بانکی، نشانی) دریافت می‌شود. برای خرید و فروش صندوق‌ها لازم است.', unlocks: ['خرید و فروش صندوق'] },
+  { n: 2, title: 'هویت پایه', source: 'کد ملی و تاریخ تولد · ثبت احوال', desc: 'با کد ملی و تاریخ تولد، اطلاعات هویتی شما از ثبت احوال استعلام می‌شود. برای سرویس‌های اعتباری لازم است.', unlocks: ['اعتبار کارت نمادنو', 'وام', 'خرید اقساطی'] },
+  { n: 3, title: 'احراز سجام', source: 'سامانه جامع اطلاعات مشتریان بازار سرمایه', desc: 'اطلاعات سجامی شما (کد معاملاتی، حساب بانکی، نشانی) دریافت می‌شود. برای خرید و فروش صندوق‌ها لازم است.', unlocks: ['خرید و فروش صندوق'] },
 ];
 
 const mask = (s: string) => faDigits(s.slice(0, 4)) + '•••' + faDigits(s.slice(-4));
 /** «13700512» → «1370/05/12» while typing */
+const BIRTH_MIN = jalaliToIsoAny(1300, 1, 1) ?? undefined;
 const fmtBirth = (digits: string) => [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6, 8)].filter(Boolean).join('/');
 
 function InfoRows({ rows, bg = 'var(--bg-neutral)' }: { rows: [string, string][]; bg?: string }) {
@@ -88,7 +91,7 @@ export default function KycPage() {
   const doneRows: Record<number, [string, string][]> = {
     1: [['شماره موبایل', me.data ? mask(me.data.mobile) : ''], ['کد ملی', me.data ? mask(me.data.nationalId) : '']],
     2: [['نام و نام خانوادگی', d?.fullName ?? me.data?.fullName ?? ''], ['نام پدر', d?.fatherName ?? '—'], ['تاریخ تولد', faDigits(d?.birthDate ?? me.data?.birthDate ?? '—')]],
-    3: [['کد بورسی', faDigits(d?.sejam?.bourseCode ?? '—')], ['حساب بانکی', faDigits(d?.sejam?.bankAccount ?? '—')], ['کد پستی', faDigits(d?.sejam?.postalCode ?? '—')]],
+    3: [['کد معاملاتی', faDigits(d?.sejam?.bourseCode ?? '—')], ['حساب بانکی', faDigits(d?.sejam?.bankAccount ?? '—')], ['کد پستی', faDigits(d?.sejam?.postalCode ?? '—')]],
   };
 
   return (
@@ -133,7 +136,7 @@ export default function KycPage() {
                       <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>{L.source}</span>
                     </span>
                     <span className="lbl" style={{ height: 22, padding: '0 8px', fontSize: 11, background: done ? 'var(--soft-success)' : cur ? 'var(--soft-primary)' : 'var(--soft-default)', color: done ? 'var(--success-text)' : cur ? 'var(--primary-text)' : 'var(--text-secondary)' }}>
-                      {done ? 'تکمیل شده' : cur ? 'قدم بعدی' : 'قفل'}
+                      {done ? 'تکمیل شده' : cur ? 'قدم بعدی' : 'در انتظار'}
                     </span>
                   </div>
                   <span style={{ fontSize: 12, lineHeight: 1.8, color: 'var(--text-secondary)' }}>{L.desc}</span>
@@ -160,7 +163,6 @@ export default function KycPage() {
                       <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <span style={{ fontSize: 12.5, fontWeight: 600 }}>تاریخ تولد</span>
                         <span style={{ height: 48, boxSizing: 'border-box', padding: '0 12px', borderRadius: 12, border: `1.5px solid ${birth ? 'var(--primary-main)' : 'var(--outline-border)'}`, background: 'var(--bg-paper)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <Icon d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M8 3v4M16 3v4" size={18} style={{ color: 'var(--text-secondary)' }} />
                           <input
                             type="text" inputMode="numeric" aria-label="تاریخ تولد" className="num" placeholder="روز / ماه / سال" dir={birth ? 'ltr' : 'rtl'}
                             value={faDigits(birth)}
@@ -168,6 +170,7 @@ export default function KycPage() {
                             onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') inquiry(); }}
                             style={{ flex: 1, minWidth: 0, height: 44, border: 0, background: 'transparent', padding: 0, fontFamily: 'inherit', fontSize: 16, color: 'var(--text-primary)', textAlign: 'right', outline: 'none' }}
                           />
+                          <DatePickerButton value={birth} onChange={(t) => { setBirth(enDigits(t)); l2.reset(); }} label="تاریخ تولد" min={BIRTH_MIN} max={now()} />
                         </span>
                         {isMocking() && me.data?.birthDate && <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>تاریخ تولد آزمایشی: {faDigits(me.data.birthDate)}</span>}
                       </label>

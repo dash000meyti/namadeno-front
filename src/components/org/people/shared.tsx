@@ -1,6 +1,7 @@
 'use client';
 /** Data helpers shared by the org panel screens: icon paths, status meta, number/date helpers, CSV, the milestone bar. UI comes from the Panel kit. */
 import { faDigits, money } from '@/lib/format';
+import { jParts, jalaliToIsoAny } from '@/lib/jalali';
 import type { Employee, MilestoneStep, RequestKind } from '@/types/domain';
 import { ApiRequestError } from '@/api/client';
 
@@ -68,41 +69,8 @@ export function compactParts(n: number): [string, string] {
   if (abs >= 1e6) return [f(abs / 1e6), 'میلیون تومان'];
   return [money(n), 'تومان'];
 }
-/** Jalali {y, m, d} of a date (Tehran time). */
-export function jParts(iso: string | Date) {
-  const parts = new Intl.DateTimeFormat('en-US-u-ca-persian', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'Asia/Tehran' }).formatToParts(new Date(iso));
-  const g = (t: string) => Number(parts.find((x) => x.type === t)?.value ?? 0);
-  return { y: g('year'), m: g('month'), d: g('day') };
-}
-
-/** Jalali date → ISO (12:00 Tehran). Returns null for an impossible date. */
-export function jalaliToIsoAny(jy: number, jm: number, jd: number): string | null {
-  if (jm < 1 || jm > 12 || jd < 1 || jd > (jm <= 6 ? 31 : jm < 12 ? 30 : 30)) return null;
-  let y = jy + 1595;
-  let days = -355668 + 365 * y + Math.floor(y / 33) * 8 + Math.floor(((y % 33) + 3) / 4) + jd + (jm < 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186);
-  let gy = 400 * Math.floor(days / 146097);
-  days %= 146097;
-  if (days > 36524) {
-    days -= 1;
-    gy += 100 * Math.floor(days / 36524);
-    days %= 36524;
-    if (days >= 365) days += 1;
-  }
-  gy += 4 * Math.floor(days / 1461);
-  days %= 1461;
-  if (days > 365) {
-    gy += Math.floor((days - 1) / 365);
-    days = (days - 1) % 365;
-  }
-  let gd = days + 1;
-  const ml = [0, 31, (gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  let gm = 0;
-  for (gm = 0; gm < 13 && gd > ml[gm]; gm++) gd -= ml[gm];
-  y = gy;
-  const iso = new Date(Date.UTC(y, gm - 1, gd, 8, 30)).toISOString();
-  const back = jParts(iso);
-  return back.y === jy && back.m === jm && back.d === jd ? iso : null;
-}
+/** Jalali helpers now live in src/lib/jalali.ts (shared with the app's date picker). */
+export { jParts, jalaliToIsoAny };
 
 /** Million with one decimal: 30_000_000 → «۳۰» */
 export const million = (n: number) => faDigits(String(Math.round(n / 1e5) / 10), true);

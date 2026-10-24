@@ -36,7 +36,7 @@ export function FundEditDialog({ f, onClose }: { f: OpFund; onClose: () => void 
   const [err, setErr] = useState('');
   const errors = {
     name: !d.name.trim() ? 'نام صندوق الزامی است.' : '',
-    symbol: !d.symbol.trim() ? 'نماد بورسی الزامی است.' : '',
+    symbol: !d.symbol.trim() ? 'نماد الزامی است.' : '',
     description: d.description.trim().length < 5 ? 'توضیح کوتاه را کامل‌تر بنویسید.' : '',
   };
   const shown = (k: keyof typeof errors) => (tried && errors[k] ? errors[k] : undefined);
@@ -55,7 +55,7 @@ export function FundEditDialog({ f, onClose }: { f: OpFund; onClose: () => void 
       footer={<><button type="button" className="nm-btn ghost" onClick={onClose}>انصراف</button><button type="button" className="nm-btn" onClick={save} disabled={update.isPending}>{update.isPending ? 'در حال ذخیره…' : 'ذخیره'}</button></>}>
       <div className="nm-grid c2" style={{ gap: 12 }}>
         <Field label="نام صندوق" htmlFor="e-name" error={shown('name')}><NumInput text full id="e-name" value={d.name} onChange={(v) => set({ name: v })} invalid={!!shown('name')} /></Field>
-        <Field label="نماد بورسی" htmlFor="e-sym" error={shown('symbol')}><NumInput text full id="e-sym" value={d.symbol} onChange={(v) => set({ symbol: v })} invalid={!!shown('symbol')} /></Field>
+        <Field label="نماد" htmlFor="e-sym" error={shown('symbol')}><NumInput text full id="e-sym" value={d.symbol} onChange={(v) => set({ symbol: v })} invalid={!!shown('symbol')} /></Field>
       </div>
       <Field label="نوع">
         <Chips label="نوع صندوق" value={d.category} onChange={(c) => set({ category: c })} options={CATEGORIES.map((c) => ({ key: c, label: `ETF ${CATEGORY_LABEL[c]}` }))} />

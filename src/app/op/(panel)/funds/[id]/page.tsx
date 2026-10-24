@@ -28,7 +28,7 @@ import { routes } from '@/lib/routes';
 type Tab = 'perf' | 'locks' | 'settings';
 const RANGES: [number, string][] = [[7, '۷ روز'], [30, '۳۰ روز'], [90, '۹۰ روز']];
 const SETTLEMENTS: Fund['settlement'][] = ['T+0', 'T+1', 'T+2'];
-const PAUSE_BODY = 'خرید و فروش واحدهای این صندوق برای همهٔ کاربران متوقف می‌شود. واحدهای فعلی، سود و NAV و قفل‌ها بدون تغییر باقی می‌مانند و هر زمان می‌توانید صندوق را دوباره فعال کنید.';
+const PAUSE_BODY = 'خرید و فروش واحدهای این صندوق برای همهٔ کاربران متوقف می‌شود. واحدهای فعلی، سود و NAV و رزروها بدون تغییر باقی می‌مانند و هر زمان می‌توانید صندوق را دوباره فعال کنید.';
 
 /** Legacy tone key → kit tone. */
 const kt = (t: ToneKey): Tone => (t === 'default' ? 'neutral' : t);
@@ -81,7 +81,7 @@ export default function OpFundPage() {
   });
 
   const lockCols: Column<LockRow>[] = [
-    { key: 't', label: 'نوع قفل', width: 'minmax(0, 1.4fr)', render: (r) => <LockTypeChip type={r.t} long /> },
+    { key: 't', label: 'نوع رزرو', width: 'minmax(0, 1.4fr)', render: (r) => <LockTypeChip type={r.t} long /> },
     { key: 'u', label: 'واحد', render: (r) => <span className="num">{money(r.units)}</span> },
     { key: 'v', label: 'ارزش (میلیارد تومان)', render: (r) => <span className="num" style={{ fontWeight: 600 }}>{bn(r.v)}</span> },
     { key: 'p', label: 'سهم از AUM', render: (r) => <span className="num mute">{dec(r.pct)}٪</span> },
@@ -112,12 +112,12 @@ export default function OpFundPage() {
         { label: 'NAV هر واحد', value: f.nav ? money(f.nav) : '—', unit: 'تومان', note: f.nav ? `${spct(d1, 2)} امروز` : 'در انتظار NAV اولیه', trend: trend(d1) },
         { label: 'AUM', value: bn(f.aum), unit: 'میلیارد تومان', note: h.length > 30 ? `${spct(aum30)} در ۳۰ روز` : '—', trend: trend(aum30) },
         { label: 'دارندگان واحد', value: money(f.investors), unit: 'نفر', note: `${signed(delta)} این ماه`, trend: trend(delta) },
-        { label: 'واحدهای قفل‌شده', value: `${faDigits(Math.round(lockedPct))}٪`, unit: 'از کل واحدها', note: `${bn(locked)} میلیارد · ${faDigits(lockRows.length)} نوع قفل` },
+        { label: 'واحدهای رزروشده', value: `${faDigits(Math.round(lockedPct))}٪`, unit: 'از کل واحدها', note: `${bn(locked)} میلیارد · ${faDigits(lockRows.length)} نوع رزرو` },
       ]} />
 
       <Tabs label="بخش‌های صندوق" size="lg" value={tab} onChange={setTab} items={[
         { key: 'perf', label: 'عملکرد' },
-        { key: 'locks', label: 'قفل‌ها', count: lockRows.length },
+        { key: 'locks', label: 'رزروها', count: lockRows.length },
         { key: 'settings', label: 'تنظیمات' },
       ]} />
 
@@ -131,7 +131,7 @@ export default function OpFundPage() {
             <OrdersCard f={f} />
             <Card title="اطلاعات صندوق" actions={<button type="button" className="nm-btn sm text" onClick={() => setModal('edit')}>ویرایش</button>}>
               <KV rows={[
-                ['نماد بورسی', f.symbol],
+                ['نماد', f.symbol],
                 ['نوع', `ETF ${CATEGORY_LABEL[f.category]}`],
                 ['مدیر صندوق', f.meta?.manager || '—'],
                 ['توضیح در اپ', f.description],
@@ -144,8 +144,8 @@ export default function OpFundPage() {
       )}
 
       {tab === 'locks' && (
-        <Card flush title="تفکیک AUM — آزاد / قفل" sub={`کل دارایی ${bn(f.aum)} میلیارد تومان`}
-          actions={locked > 0 ? <Pill tone="warning">{faDigits(Math.round(lockedPct))}٪ قفل</Pill> : undefined}>
+        <Card flush title="تفکیک AUM — آزاد / رزرو" sub={`کل دارایی ${bn(f.aum)} میلیارد تومان`}
+          actions={locked > 0 ? <Pill tone="warning">{faDigits(Math.round(lockedPct))}٪ رزرو</Pill> : undefined}>
           <div className="nm-card-b" style={{ paddingTop: 4 }}><FreeLocked free={free} locked={locked} fmt={bn} unit="میلیارد" /></div>
           <Table columns={lockCols} rows={lockRows} rowKey={(r) => r.t} minWidth={620}
             empty={<Empty icon={LOCK_META.none.d} tone="success" title="همهٔ واحدهای این صندوق آزاد است" />} />
@@ -242,7 +242,7 @@ function FundSettings({ f, visible }: { f: OpFund; visible: boolean }) {
   const save = () => {
     if (bad.fee || bad.sell) return toast('کارمزد باید بین ۰ تا ۵ درصد باشد', 'error');
     if (bad.min) return toast('حداقل خرید معتبر نیست', 'error');
-    if (bad.ltv) return toast('حداکثر نسبت وثیقه باید بین ۰ تا ۱۰۰ درصد باشد', 'error');
+    if (bad.ltv) return toast('حداکثر نسبت پشتوانه باید بین ۰ تا ۱۰۰ درصد باشد', 'error');
     if (!changes) return toast('تغییری برای ذخیره وجود ندارد', 'info');
     update.mutate({ id: f.id, feePct: d.feePct, settlement: d.settlement, meta: { sellFeePct: d.sellFeePct, minBuy: d.minBuy, collateralEnabled: d.collateralEnabled, maxLtvPct: d.maxLtvPct } }, {
       onSuccess: () => toast(`تنظیمات ${f.name} ذخیره شد`),
@@ -269,12 +269,12 @@ function FundSettings({ f, visible }: { f: OpFund; visible: boolean }) {
             <Chips label="نوع تسویه" value={d.settlement} onChange={(s) => set({ settlement: s })} options={SETTLEMENTS.map((s) => ({ key: s, label: <span dir="ltr">{s}</span> }))} />
           </SettingRow>
         </SettingsGroup>
-        <SettingsGroup title="وثیقه">
-          <SettingRow label="قابل وثیقه" desc="فقط از واحدهای آزاد؛ قفل نوع «وثیقه»">
-            <Switch on={d.collateralEnabled} onChange={(v) => set({ collateralEnabled: v })} label="قابل وثیقه" />
+        <SettingsGroup title="پشتوانه">
+          <SettingRow label="قابل استفاده به‌عنوان پشتوانه" desc="فقط از واحدهای آزاد؛ رزرو از نوع «پشتوانه»">
+            <Switch on={d.collateralEnabled} onChange={(v) => set({ collateralEnabled: v })} label="قابل استفاده به‌عنوان پشتوانه" />
           </SettingRow>
-          <SettingRow label="حداکثر نسبت وثیقه" htmlFor="max-ltv" desc="بین ۰ تا ۱۰۰ درصد ارزش واحدهای آزاد">
-            <NumberInput id="max-ltv" value={d.maxLtvPct} onChange={(n) => set({ maxLtvPct: n })} width={52} suffix="٪" label="حداکثر نسبت وثیقه" invalid={bad.ltv} disabled={!d.collateralEnabled} />
+          <SettingRow label="حداکثر نسبت پشتوانه" htmlFor="max-ltv" desc="بین ۰ تا ۱۰۰ درصد ارزش واحدهای آزاد">
+            <NumberInput id="max-ltv" value={d.maxLtvPct} onChange={(n) => set({ maxLtvPct: n })} width={52} suffix="٪" label="حداکثر نسبت پشتوانه" invalid={bad.ltv} disabled={!d.collateralEnabled} />
           </SettingRow>
         </SettingsGroup>
       </div>

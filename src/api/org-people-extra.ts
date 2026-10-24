@@ -5,8 +5,9 @@
  * Keys live under ['org', 'people', …] so every org mutation (qk.org.all) refreshes them.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AllocationSplit, ApprovalRequest, AssetKind, Employee, Holding, Loan, LockType, MilestoneStep } from '@/types/domain';
-import { get, post } from './client';
+import type { AllocationSplit, ApprovalRequest, AssetKind, Employee, Holding, Loan, LockType, MilestoneStep, OrgDepartment, OrgPanelRole } from '@/types/domain';
+import { del, get, patch, post } from './client';
+import { useOrgMe } from './org';
 import { qk } from './keys';
 
 /** HR-side facts about one employee (free/locked split, locks by type, facilities). */
@@ -102,7 +103,23 @@ export interface RequestRow extends ApprovalRequest {
   };
 }
 
-export interface ImportRow { fullName: string; employeeCode: string; nationalId: string; mobile: string; department: string; joinedAt?: string }
+/**
+ * A notification in the organization panel («اعلان‌ها», the bell): something that needs an action
+ * (a step waiting for approval, an unsent draft, colleagues not activated …) or a system update.
+ */
+export interface OrgNotification {
+  id: string;
+  kind: 'action' | 'update';
+  title: string;
+  body: string;
+  createdAt: string;
+  /** Where the row leads (the request, the package …). */
+  href?: string;
+  read: boolean;
+}
+
+/** One import row. Only `nationalId` is required; an empty `department` becomes «سایر», an empty name comes from the civil registry. */
+export interface ImportRow { fullName?: string; employeeCode?: string; nationalId: string; mobile?: string; department?: string; joinedAt?: string }
 export interface NewEmployeeInput extends Partial<Employee> { email?: string; role?: string; cardLimitPct?: number; sendSms?: boolean }
 
 const pk = {
@@ -111,6 +128,8 @@ const pk = {
   insights: ['org', 'people', 'insights'] as const,
   credit: ['org', 'people', 'credit'] as const,
   requests: ['org', 'people', 'requests'] as const,
+  departments: ['org', 'people', 'departments'] as const,
+  notifications: ['org', 'people', 'notifications'] as const,
 };
 
 export const useOrgPeopleFacts = () => useQuery({ queryKey: pk.facts, queryFn: () => get<Record<string, EmpFacts>>('/org/people/facts') });
@@ -135,5 +154,26 @@ function usePeopleMutation<V, R>(fn: (v: V) => Promise<R>) {
 export const useReopenOrgRequest = () => usePeopleMutation((id: string) => post<ApprovalRequest>(`/org/people/requests/${id}/reopen`));
 /** Bulk create employees from an Excel/CSV import. */
 export const useImportEmployees = () => usePeopleMutation((v: { rows: ImportRow[]; sendSms: boolean }) => post<{ created: Employee[]; errors: { row: number; message: string }[] }>('/org/people/employees/import', v));
+/** Units of the organization with employee counts. Readable by every panel role. */
+export const useOrgDepartments = () => useQuery({ queryKey: pk.departments, queryFn: () => get<OrgDepartment[]>('/org/departments') });
+/** Create / rename / delete a unit — the mock answers 403 `forbidden_role` unless the signed-in user is the organization's administrator. */
+export const useCreateDepartment = () => usePeopleMutation((v: { name: string; head?: string }) => post<OrgDepartment>('/org/departments', v));
+export const useUpdateDepartment = () => usePeopleMutation((v: { id: string; name?: string; head?: string }) => patch<OrgDepartment>(`/org/departments/${v.id}`, v));
+/** Deletes a unit; its employees move to the default unit «سایر» (`moved`). The default unit itself cannot be deleted. */
+export const useDeleteDepartment = () => usePeopleMutation((id: string) => del<{ ok: true; moved: number }>(`/org/departments/${id}`));
+/** Move existing employees into a unit (admin only). */
+export const useAddDepartmentMembers = () => usePeopleMutation((v: { id: string; employeeIds: string[] }) => post<OrgDepartment>(`/org/departments/${v.id}/members`, { employeeIds: v.employeeIds }));
+
+/** Notifications of the organization panel (needs action + system updates), newest first within each kind. */
+export const useOrgNotifications = () => useQuery({ queryKey: pk.notifications, queryFn: () => get<{ items: OrgNotification[] }>('/org/notifications') });
+/** Mark notifications as read (`ids` omitted = all). */
+export const useMarkOrgNotificationsRead = () => usePeopleMutation((v: { ids?: string[] }) => post<{ ok: true }>('/org/notifications/read', v));
+
+/** Panel role of the signed-in user (`undefined` while loading). Only `admin` manages units. */
+export function useOrgPanelRole(): OrgPanelRole | undefined {
+  const { data } = useOrgMe();
+  return data ? data.admin.panelRole ?? 'viewer' : undefined;
+}
+
 /** Bulk status change (suspend / reactivate) for several employees. */
 export const useBulkEmployeeStatus = () => usePeopleMutation((v: { ids: string[]; status: Employee['status'] }) => post<{ updated: number }>('/org/people/employees/status', v));

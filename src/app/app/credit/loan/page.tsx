@@ -8,6 +8,7 @@ import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
 import { Icon } from '@/components/ui/Icon';
 import { useCredit, useLoanQuote, useLoans, usePortfolio } from '@/api/app';
 import { ApiRequestError } from '@/api/client';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDate, jDayMonth, money } from '@/lib/format';
 import { now } from '@/lib/clock';
@@ -84,7 +85,7 @@ function LoanRequest() {
   return (
     <>
       <Scr gap={8}>
-        <Stepper steps={['مبلغ و مدت', 'وثیقه', 'تأیید']} current={1} />
+        <Stepper steps={['مبلغ و مدت', 'پشتوانه', 'تأیید']} current={1} />
 
         {(credit.isLoading || pf.isLoading) && <><Skeleton h={140} /><Skeleton h={66} /><Skeleton h={200} /></>}
         {(credit.isError || pf.isError) && <ErrorState onRetry={() => { credit.refetch(); pf.refetch(); }} />}
@@ -92,7 +93,7 @@ function LoanRequest() {
         {activeLoan && (
           <div role="status" style={{ minHeight: 44, boxSizing: 'border-box', padding: '6px 12px', borderRadius: 12, background: 'var(--soft-info)', color: 'var(--info-text)', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
             <Icon d={CI.info} size={18} />
-            <span style={{ flex: 1, fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>در هر زمان فقط یک وام فعال مجاز است؛ وام {money(activeLoan.principal)} تومانی شما هنوز تسویه نشده است.</span>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>هر بار یک وام فعال می‌توانید داشته باشید؛ وام {money(activeLoan.principal)} تومانی شما در حال بازپرداخت است.</span>
             <Link href={routes.app.payInstallment(activeLoan.id)} style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary-text)', whiteSpace: 'nowrap' }}>پرداخت قسط</Link>
           </div>
         )}
@@ -137,13 +138,13 @@ function LoanRequest() {
             {/* collateral: FREE part of each fund */}
             <div className="card" style={{ boxSizing: 'border-box', padding: '10px 16px 6px', display: 'flex', flexDirection: 'column', flex: 'none' }}>
               <div className="row" style={{ height: 24, gap: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 700 }}>انتخاب وثیقه</span>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>انتخاب پشتوانه</span>
                 <span className="num" style={{ marginRight: 'auto', fontSize: 12, fontWeight: 400, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>لازم: {money(amount)} تومان</span>
               </div>
               <span style={{ height: 18, fontSize: 11, color: 'var(--text-secondary)', lineHeight: '18px', whiteSpace: 'nowrap' }}>فقط بخش آزاد هر صندوق قابل استفاده است</span>
               {rows.map(({ h, on, take }, i) => {
                 const tone = TONE[KIND_TONE[h.kind] ?? 'def'];
-                const sub = take > 0 ? `${money(take)} قفل می‌شود` : on ? 'نیاز نیست' : lockedNote(h);
+                const sub = take > 0 ? `${money(take)} رزرو می‌شود` : on ? 'نیاز نیست' : lockedNote(h);
                 return (
                   <div key={h.kind} className="row" style={{ height: 50, borderBottom: `1px dashed ${i === rows.length - 1 ? 'transparent' : 'var(--divider)'}`, opacity: h.free > 0 ? 1 : 0.5 }}>
                     <span style={{ width: 36, height: 36, borderRadius: '50%', background: tone[0], color: tone[1], display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={KIND_ICON[h.kind] ?? CI.trend} size={18} /></span>
@@ -157,11 +158,11 @@ function LoanRequest() {
               })}
             </div>
 
-            {/* what becomes locked */}
+            {/* what becomes reserved */}
             <div className="card" style={{ boxSizing: 'border-box', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none', background: 'rgb(var(--info-main-rgb) / .06)' }}>
               <div className="row" style={{ height: 22, gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>با تأیید وام قفل می‌شود</span>
-                <span className="lktype" style={{ marginRight: 'auto', background: 'var(--soft-info)', color: 'var(--info-text)' }}><Icon d={CI.lock} size={12} />وثیقه اعتبار و وام</span>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>با تأیید وام رزرو می‌شود</span>
+                <span className="lktype" style={{ marginRight: 'auto', background: LOCK_META.collateral.bg, color: LOCK_META.collateral.fg }}><Icon d={LOCK_META.collateral.d} size={12} />{LOCK_META.collateral.label}</span>
               </div>
               {alloc.map(({ h, take }) => (
                 <div key={h.kind} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -171,8 +172,8 @@ function LoanRequest() {
                   <LockSplit free={h.free - take} locked={h.value - (h.free - take)} freeLabel="آزاد پس از تأیید" />
                 </div>
               ))}
-              {short && <span className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--error-text)', lineHeight: 1.5 }}>وثیقه کافی نیست · {money(left)} تومان دیگر انتخاب کنید</span>}
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 4 }}><Icon d={CI.refresh} size={14} />آزاد با تسویه کامل وام · تا آن زمان بازده می‌گیرد اما قابل فروش یا برداشت نیست</span>
+              {short && <span className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--error-text)', lineHeight: 1.5 }}>پشتوانه کافی نیست · {money(left)} تومان دیگر انتخاب کنید</span>}
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 4 }}><Icon d={CI.refresh} size={14} />رزرو تا تسویه‌ی کامل وام · در این مدت هم بازده می‌گیرد</span>
             </div>
 
             {/* continue */}

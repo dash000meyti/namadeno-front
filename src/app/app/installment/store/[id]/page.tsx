@@ -82,7 +82,7 @@ export default function StorePage() {
 
             <div role="status" style={{ minHeight: 44, boxSizing: 'border-box', padding: '6px 12px', borderRadius: 12, background: 'var(--soft-info)', color: 'var(--info-text)', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
               <Icon d={CI.info} size={18} />
-              <span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>قسط دقیق در «طرح اقساط» محاسبه می‌شود؛ ۵۰٪ مبلغ اقساطی از دارایی آزاد شما به‌عنوان «وثیقه خرید اقساطی» قفل و با پرداخت هر قسط، بخشی از آن آزاد می‌شود.</span>
+              <span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>قسط دقیق در «طرح اقساط» محاسبه می‌شود؛ ۵۰٪ مبلغ اقساطی از دارایی آزاد شما به‌عنوان «پشتوانه‌ی خرید اقساطی» رزرو و با پرداخت هر قسط، بخشی از آن آزاد می‌شود.</span>
             </div>
           </>
         )}

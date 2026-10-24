@@ -6,7 +6,7 @@ import { CtaBand } from '@/components/site/CtaBand';
 
 export const metadata: Metadata = {
   title: 'وبلاگ',
-  description: 'یادداشت‌های نمادنو درباره صندوق‌های بورسی، دارایی آزاد و قفل‌شده، اعتبار و مزایای سازمانی.',
+  description: 'یادداشت‌های نمادنو درباره حفظ ارزش دارایی، بخش آزاد و رزروشده، اعتبار و مزایای سازمانی.',
 };
 
 export default function BlogPage() {
@@ -15,7 +15,7 @@ export default function BlogPage() {
       <PageHero
         crumbs={[{ label: 'وبلاگ' }]}
         title="وبلاگ نمادنو"
-        lead="یادداشت‌هایی درباره‌ی حفظ ارزش دارایی، صندوق‌ها، اعتبار با پشتوانه‌ی دارایی و مزایای سازمانی؛ کوتاه، کاربردی و بی‌اصطلاحات پیچیده."
+        lead="یادداشت‌هایی درباره‌ی حفظ ارزش دارایی، طلا و درآمد ثابت، اعتبار با پشتوانه‌ی دارایی و مزایای سازمانی؛ کوتاه، کاربردی و بی‌اصطلاحات پیچیده."
       />
       <Suspense fallback={<div className="s-wrap s-g s-g3" style={{ paddingBlock: 24 }}>{[0, 1, 2].map((i) => <SkeletonCard key={i} h={320} />)}</div>}>
         <BlogIndex />

@@ -114,7 +114,7 @@ function syncCardLocks(ud: UserData, card: Card): number {
       if (take <= 0) continue;
       const existing = h.locks.find((l) => l.sourceId === card.id);
       if (existing) existing.amount += take;
-      else ledger.addLock(ud, kind as AssetKind, { type: 'collateral', amount: take, title: kind === 'rial' ? 'رزرو تسویه اعتبار کارت' : 'وثیقه اعتبار کارت', condition: 'آزاد با تسویه صورت‌حساب کارت', sourceId: card.id });
+      else ledger.addLock(ud, kind as AssetKind, { type: 'collateral', amount: take, title: kind === 'rial' ? 'رزرو تسویه اعتبار کارت' : 'پشتوانه‌ی اعتبار کارت', condition: 'آزاد با تسویه صورت‌حساب کارت', sourceId: card.id });
       need -= take;
     }
     recalcHoldings(ud);
@@ -187,12 +187,12 @@ export const appCreditHandlers: HttpHandler[] = [
       const take = Math.min(h?.free ?? 0, left);
       if (take > 0) { plan.push({ kind: k, take }); left -= take; }
     }
-    if (left > 0) return fail(422, 'insufficient_collateral', 'بخش آزاد دارایی‌های انتخاب‌شده برای وثیقه کافی نیست.', { short: left });
+    if (left > 0) return fail(422, 'insufficient_collateral', 'بخش آزاد دارایی‌های انتخاب‌شده برای پشتوانه‌ی این مبلغ کافی نیست؛ دارایی دیگری اضافه کنید یا مبلغ را کمتر کنید.', { short: left });
 
     const rate = loanRate(b.months);
     const monthly = loanMonthly(b.amount, b.months);
     const id = newId('loan');
-    const locks = plan.map((x) => ledger.addLock(ud, x.kind, { type: 'collateral', amount: x.take, title: 'وثیقه وام', condition: 'آزاد با تسویه وام', sourceId: id, paidCount: 0, totalCount: b.months }));
+    const locks = plan.map((x) => ledger.addLock(ud, x.kind, { type: 'collateral', amount: x.take, title: 'پشتوانه‌ی وام', condition: 'آزاد با تسویه وام', sourceId: id, paidCount: 0, totalCount: b.months }));
     const start = now();
     const loan: Loan = {
       id, principal: b.amount, months: b.months, ratePct: rate, monthlyPayment: monthly, startedAt: start.toISOString(),
@@ -202,7 +202,7 @@ export const appCreditHandlers: HttpHandler[] = [
     ud.loans.unshift(loan);
     ledger.credit(ud, 'rial', b.amount);
     ledger.addTx(ud, { category: 'loan', title: 'واریز وام', subtitle: `${faDigits(b.months)} ماهه · کیف پول ریالی`, amount: b.amount, holdingKind: 'rial', details: [{ label: 'قسط ماهانه', value: money(monthly) + ' تومان' }, { label: 'نرخ سالانه', value: faDigits(rate) + '٪' }] });
-    for (const x of plan) ledger.addTx(ud, { category: 'lock', title: 'قفل وثیقه وام — ' + holdingName(ud, x.kind), subtitle: 'آزاد با تسویه وام', amount: x.take, holdingKind: x.kind, lockType: 'collateral', lockEvent: 'locked' });
+    for (const x of plan) ledger.addTx(ud, { category: 'lock', title: 'رزرو پشتوانه‌ی وام — ' + holdingName(ud, x.kind), subtitle: 'آزاد با تسویه وام', amount: x.take, holdingKind: x.kind, lockType: 'collateral', lockEvent: 'locked' });
     ud.credit.activeLoanId = id;
     ledger.notify(ud, { title: 'وام شما فعال شد', body: `${money(b.amount)} تومان به کیف پول ریالی واریز شد`, tone: 'success', icon: 'check', href: '/app/credit' });
     return ok(loan);
@@ -234,11 +234,11 @@ export const appCreditHandlers: HttpHandler[] = [
       loan.status = 'settled';
       ud.credit.activeLoanId = undefined;
       const ids = new Set(locks.map((l) => l.id));
-      for (const l of locks) ledger.addTx(ud, { category: 'lock', title: 'آزادسازی وثیقه وام', subtitle: 'تسویه کامل وام · ' + holdingName(ud, l.holdingKind), amount: l.amount, holdingKind: l.holdingKind, lockType: 'collateral', lockEvent: 'released' });
+      for (const l of locks) ledger.addTx(ud, { category: 'lock', title: 'آزادسازی پشتوانه‌ی وام', subtitle: 'تسویه کامل وام · ' + holdingName(ud, l.holdingKind), amount: l.amount, holdingKind: l.holdingKind, lockType: 'collateral', lockEvent: 'released' });
       for (const h of ud.holdings) h.locks = h.locks.filter((l) => !ids.has(l.id));
       recalcHoldings(ud);
       const freed = locks.reduce((s, l) => s + l.amount, 0);
-      ledger.notify(ud, { title: 'وام تسویه شد', body: `${money(freed)} تومان وثیقه آزاد شد`, tone: 'success', icon: 'unlock', href: '/app/history' });
+      ledger.notify(ud, { title: 'وام تسویه شد', body: `${money(freed)} تومان از پشتوانه‌ی وام آزاد شد`, tone: 'success', icon: 'unlock', href: '/app/history' });
     }
     return ok(tx);
   }),
@@ -271,7 +271,7 @@ export const appCreditHandlers: HttpHandler[] = [
     const kind = b.collateralKind ?? 'fixed';
     const lockAmt = opt.collateral[0].amount;
     recalcHoldings(ud);
-    if (ledger.holding(ud, kind).free < lockAmt) return fail(422, 'insufficient_collateral', 'بخش آزاد این دارایی برای وثیقه کافی نیست.');
+    if (ledger.holding(ud, kind).free < lockAmt) return fail(422, 'insufficient_collateral', 'بخش آزاد این دارایی برای پشتوانه‌ی این مبلغ کافی نیست؛ دارایی دیگری انتخاب کنید یا مبلغ را کمتر کنید.');
     if (pre && !ledger.debit(ud, 'rial', pre)) return fail(422, 'insufficient_free', 'موجودی آزاد کیف پول ریالی برای پیش‌پرداخت کافی نیست.');
     const id = newId('inst');
     const lock = ledger.addLock(ud, kind, { type: 'installment', amount: lockAmt, title: 'خرید اقساطی ' + s.name, condition: 'با پرداخت هر قسط، بخشی آزاد می‌شود', sourceId: id, paidCount: 0, totalCount: b.months });
@@ -282,7 +282,7 @@ export const appCreditHandlers: HttpHandler[] = [
     };
     ud.installments.unshift(purchase);
     ledger.addTx(ud, { category: 'installment', title: 'خرید اقساطی — ' + s.name, subtitle: `${b.title} · ${faDigits(b.months)} قسط`, amount: -pre, holdingKind: pre ? 'rial' : undefined, details: [{ label: 'کد خرید', value: code }, { label: 'قسط ماهانه', value: money(opt.monthly) + ' تومان' }] });
-    ledger.addTx(ud, { category: 'lock', title: 'قفل وثیقه خرید اقساطی', subtitle: holdingName(ud, kind), amount: lockAmt, holdingKind: kind, lockType: 'installment', lockEvent: 'locked' });
+    ledger.addTx(ud, { category: 'lock', title: 'رزرو پشتوانه‌ی خرید اقساطی', subtitle: holdingName(ud, kind), amount: lockAmt, holdingKind: kind, lockType: 'installment', lockEvent: 'locked' });
     ledger.notify(ud, { title: 'خرید اقساطی ثبت شد', body: `کد خرید ${code} · ${s.name}`, tone: 'success', icon: 'cart', href: '/app/installment' });
     return ok(purchase);
   }),
@@ -313,7 +313,7 @@ export const appCreditHandlers: HttpHandler[] = [
       category: 'installment', title: `قسط خرید اقساطی — ${faDigits(ip.paidCount)} از ${faDigits(ip.months)}`, subtitle: `${ip.storeName} · از ${sourceLabel(ud, src)}`,
       amount: -total, holdingKind: src === 'bank' ? undefined : (src as AssetKind),
     });
-    if (lock && released > 0) ledger.addTx(ud, { category: 'lock', title: 'آزادسازی وثیقه با پرداخت قسط', subtitle: holdingName(ud, lock.holdingKind), amount: released, holdingKind: lock.holdingKind, lockType: 'installment', lockEvent: 'released' });
+    if (lock && released > 0) ledger.addTx(ud, { category: 'lock', title: 'آزادسازی پشتوانه با پرداخت قسط', subtitle: holdingName(ud, lock.holdingKind), amount: released, holdingKind: lock.holdingKind, lockType: 'installment', lockEvent: 'released' });
     return ok(tx);
   }),
 
@@ -324,12 +324,12 @@ export const appCreditHandlers: HttpHandler[] = [
     const c = ud.card;
     if (!c) return fail(404, 'no_card', 'کارتی برای شما صادر نشده است.');
     if (ud.profile.kycLevel < 2) return fail(403, 'kyc_required', 'برای اعتبار کارت، احراز هویت سطح ۲ الزامی است.', { requiredLevel: 2 });
-    if (c.status === 'blocked') return fail(409, 'card_blocked', 'کارت مسدود دائم است و قابل شارژ نیست.');
+    if (c.status === 'blocked') return fail(409, 'card_blocked', 'این کارت باطل شده و دیگر قابل شارژ نیست.');
     const b = await body<{ amount: number }>(request);
     if (!(b.amount >= 100_000)) return fail(422, 'bad_amount', 'حداقل مبلغ شارژ ۱۰۰٬۰۰۰ تومان است.');
     if (b.amount > c.creditLimit - c.creditUsed) return fail(422, 'over_limit', 'مبلغ از اعتبار در دسترس بیشتر است.');
     const need = Math.max(0, c.creditUsed + b.amount - cfg().cardUnsecuredLimit) - cardLocked(ud, c);
-    if (need > cardLockCapacity(ud)) return fail(422, 'insufficient_collateral', 'دارایی آزاد کافی برای وثیقه این مبلغ ندارید.', { need });
+    if (need > cardLockCapacity(ud)) return fail(422, 'insufficient_collateral', 'دارایی آزاد شما برای پشتوانه‌ی این مبلغ کافی نیست؛ مبلغ کمتری را امتحان کنید.', { need });
     c.creditUsed += b.amount;
     c.balance += b.amount;
     c.statementAmount = c.creditUsed;
@@ -337,7 +337,7 @@ export const appCreditHandlers: HttpHandler[] = [
     const tx = ledger.addTx(ud, {
       category: 'card', title: 'شارژ کارت از اعتبار', subtitle: 'کارت نمادنو', amount: b.amount,
       lockType: locked > 0 ? 'collateral' : undefined, lockEvent: locked > 0 ? 'locked' : undefined,
-      details: locked > 0 ? [{ label: 'افزایش قفل وثیقه', value: money(locked) + ' تومان' }] : undefined,
+      details: locked > 0 ? [{ label: 'افزایش رزرو پشتوانه', value: money(locked) + ' تومان' }] : undefined,
     });
     return ok({ card: c, transaction: tx });
   }),
@@ -359,7 +359,7 @@ export const appCreditHandlers: HttpHandler[] = [
     const tx = ledger.addTx(ud, {
       category: 'card', title: 'تسویه صورت‌حساب کارت', subtitle: 'از ' + sourceLabel(ud, src), amount: -amt, holdingKind: src === 'bank' ? undefined : (src as AssetKind),
       lockType: released > 0 ? 'collateral' : undefined, lockEvent: released > 0 ? 'released' : undefined,
-      details: released > 0 ? [{ label: 'آزادسازی وثیقه', value: money(released) + ' تومان' }] : undefined,
+      details: released > 0 ? [{ label: 'آزادسازی پشتوانه', value: money(released) + ' تومان' }] : undefined,
     });
     return ok({ card: c, transaction: tx, released });
   }),
@@ -368,7 +368,7 @@ export const appCreditHandlers: HttpHandler[] = [
     await latency();
     const c = u(request).card;
     if (!c) return fail(404, 'no_card', 'کارتی برای شما صادر نشده است.');
-    if (c.status !== 'active') return fail(409, 'card_frozen', 'کارت مسدود است؛ برای دریافت رمز پویا ابتدا مسدودی را رفع کنید.');
+    if (c.status !== 'active') return fail(409, 'card_frozen', 'رمز پویا فقط برای کارت فعال صادر می‌شود؛ اگر کارت را موقتاً متوقف کرده‌اید، ابتدا آن را دوباره فعال کنید.');
     return ok({ code: String(Math.floor(100000 + Math.random() * 900000)), expiresIn: 60 });
   }),
   http.post(p('/me/card/otp/sms'), async ({ request }) => {
@@ -381,10 +381,10 @@ export const appCreditHandlers: HttpHandler[] = [
     const ud = u(request);
     const c = ud.card;
     if (!c) return fail(404, 'no_card', 'کارتی برای شما صادر نشده است.');
-    if (c.status === 'blocked') return fail(409, 'card_blocked', 'کارت قبلاً مسدود دائم شده است.');
+    if (c.status === 'blocked') return fail(409, 'card_blocked', 'این کارت قبلاً باطل شده است.');
     c.status = 'blocked';
-    const tx: Transaction = ledger.addTx(ud, { category: 'card', title: 'مسدودسازی دائم کارت', subtitle: 'کارت نمادنو ' + c.maskedPan.slice(-4), amount: 0 });
-    ledger.notify(ud, { title: 'کارت شما مسدود دائم شد', body: 'برای صدور کارت جدید با پشتیبانی تماس بگیرید', tone: 'error', icon: 'card', href: '/app/card' });
+    const tx: Transaction = ledger.addTx(ud, { category: 'card', title: 'ابطال کارت', subtitle: 'کارت نمادنو ' + c.maskedPan.slice(-4), amount: 0 });
+    ledger.notify(ud, { title: 'کارت شما باطل شد', body: 'برای صدور کارت جدید با پشتیبانی تماس بگیرید', tone: 'error', icon: 'card', href: '/app/card' });
     return ok({ card: c, transaction: tx });
   }),
   http.post(p('/me/card/physical'), async ({ request }) => {

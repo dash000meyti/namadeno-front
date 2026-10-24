@@ -36,7 +36,7 @@ const scoreTone = (s: number): Tone => (s >= 700 ? 'success' : s >= 550 ? 'warni
 const kycOf = (u: PlatformUser, m?: UserMetaRow) => KYC[m?.kyc ?? (u.kycLevel < 2 ? 'pending' : 'ok')];
 
 function facLine(f: Facility) {
-  if (f.kind === 'card') return { name: f.status === 'blocked' ? 'اعتبار کارت (مسدود)' : 'اعتبار کارت', meta: `${fm(f.used)} از ${fm(f.amount)} میلیون`, pct: f.amount ? f.used / f.amount : 0 };
+  if (f.kind === 'card') return { name: f.status === 'blocked' ? 'اعتبار کارت (متوقف)' : 'اعتبار کارت', meta: `${fm(f.used)} از ${fm(f.amount)} میلیون`, pct: f.amount ? f.used / f.amount : 0 };
   const paid = f.paidCount ?? 0, total = f.totalCount ?? 0;
   if (f.kind === 'loan') return { name: `وام ${money(f.amount)} · ${faDigits(f.months ?? total)} ماهه`, meta: `${faDigits(paid)} از ${faDigits(total)} قسط · ${faDigits(total - paid)} مانده`, pct: total ? paid / total : 0 };
   return { name: f.title, meta: `${faDigits(paid)} از ${faDigits(total)} قسط`, pct: total ? paid / total : 0 };
@@ -74,7 +74,7 @@ export default function OpUsersPage() {
   const selUser = everyone.find((u) => u.id === sel) ?? (listQ.data ?? []).find((u) => u.id === sel);
 
   const exportCsv = () => {
-    const head = ['شناسه', 'نام', 'موبایل', 'سازمان', 'کل دارایی', 'آزاد', 'قفل‌شده', 'امتیاز اعتباری', 'KYC', 'وضعیت'];
+    const head = ['شناسه', 'نام', 'موبایل', 'سازمان', 'کل دارایی', 'آزاد', 'رزروشده', 'امتیاز اعتباری', 'KYC', 'وضعیت'];
     const lines = rows.map((u) => [u.id, u.fullName, u.mobile, u.orgName, u.portfolioValue, u.freeValue, u.lockedValue, u.creditScore, kycOf(u, meta[u.id])[0], STATUS[u.status][0]]);
     const csv = '﻿' + [head, ...lines].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     try {
@@ -91,13 +91,13 @@ export default function OpUsersPage() {
     { key: 'org', label: 'سازمان', width: 'minmax(0, 1fr)', render: (u) => <span className="el mute">{u.orgName}</span> },
     { key: 'free', label: 'آزاد (تومان)', width: '128px', col: true, render: (u) => (<><span className="num">{money(u.freeValue)}</span><span style={{ width: 96 }}><LockBar free={u.freeValue} locked={u.lockedValue} height={4} /></span></>) },
     {
-      key: 'locked', label: 'قفل‌شده (تومان)', width: '132px', col: true, render: (u) => {
+      key: 'locked', label: 'رزروشده (تومان)', width: '132px', col: true, render: (u) => {
         const m = meta[u.id];
         const legal = u.flags.includes('legal_hold') || !!m?.lockTypes.includes('legal');
         return (
           <>
             <span className="num" style={{ color: u.lockedValue ? undefined : 'var(--text-disabled)' }}>{u.lockedValue ? money(u.lockedValue) : '—'}</span>
-            {legal ? <Pill tone="error">مسدودی قانونی</Pill> : <span className="sm el">{u.lockedValue ? (m?.lockTypes.map((t) => LOCK_META[t].short).join(' · ') || 'قفل') : 'همه آزاد'}</span>}
+            {legal ? <Pill tone="error">مسدودی قانونی</Pill> : <span className="sm el">{u.lockedValue ? (m?.lockTypes.map((t) => LOCK_META[t].short).join(' · ') || 'رزرو') : 'همه آزاد'}</span>}
           </>
         );
       },
@@ -115,19 +115,19 @@ export default function OpUsersPage() {
 
   const tabs: { key: Filt; label: string }[] = [
     { key: 'all', label: 'همه' }, { key: 'active', label: 'فعال' }, { key: 'kyc', label: 'KYC در انتظار' },
-    { key: 'locked', label: 'دارای قفل' }, { key: 'legal', label: 'مسدودی قانونی' }, { key: 'blocked', label: 'مسدود' },
+    { key: 'locked', label: 'دارای رزرو' }, { key: 'legal', label: 'مسدودی قانونی' }, { key: 'blocked', label: 'مسدود' },
   ];
   const clear = () => { setFilt('all'); setOrg('all'); setQ(''); };
 
   return (
     <>
-      <PageHeading title="کاربران" crumbs={[{ label: 'عملیات' }]} sub="همه‌ی کاربران نمادنو، دارایی آزاد و قفل‌شده و وضعیت احراز هویت">
+      <PageHeading title="کاربران" crumbs={[{ label: 'عملیات' }]} sub="همه‌ی کاربران نمادنو، دارایی آزاد و رزروشده و وضعیت احراز هویت">
         <button type="button" className="nm-btn ghost" onClick={exportCsv} disabled={!rows.length}><Icon d={ICON.download} size={17} />خروجی Excel</button>
       </PageHeading>
 
       <StatStrip loading={!totals} items={totals ? [
         { label: 'کاربران', value: money(totals.users), unit: 'نفر', note: `+${money(totals.newThisMonth)} این ماه`, trend: 'up' },
-        { label: 'دارای دارایی قفل', value: money(totals.locked), unit: 'نفر', note: `${pctFa(totals.lockedPct)} کاربران` },
+        { label: 'دارای دارایی رزروشده', value: money(totals.locked), unit: 'نفر', note: `${pctFa(totals.lockedPct)} کاربران` },
         { label: 'KYC در انتظار', value: money(totals.kycPending), unit: 'نفر', note: `میانگین ${faDigits(totals.kycAvgDays, true)} روز`, trend: 'warn' },
         { label: 'مسدودی قانونی', value: money(totals.legal), unit: 'حساب', note: `${money(totals.suspended)} حساب مسدود موقت` },
       ] : []} />
@@ -233,7 +233,7 @@ function UserInspector({ user, meta, onClose }: { user: PlatformUser; meta?: Use
         </Section>
 
         {locks.length > 0 && (
-          <Section title="اقلام قفل">
+          <Section title="اقلام رزرو">
             <List>
               {locks.map(({ l, h }) => <ListRow key={l.id} lead={<LockTypeChip type={l.type} />} title={h} sub={l.condition} trail={<span className="num">{money(l.amount)}</span>} />)}
             </List>

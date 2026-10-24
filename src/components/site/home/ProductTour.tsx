@@ -15,14 +15,14 @@ const STEPS = [
   {
     id: 'invest',
     t: 'پول‌تان را به دارایی تبدیل کنید.',
-    d: 'از کیف پول ریالی، صندوق دلخواه‌تان را بخرید. قیمت هر واحد، تعداد واحدها و کارمزد، پیش از تأیید پیداست؛ بدون هزینه‌ی پنهان.',
-    tags: ['صندوق طلا', 'درآمد ثابت', 'خرید و فروش آنی'],
+    d: 'از کیف پول ریالی، دارایی دلخواه‌تان را بخرید. قیمت روز، مقدار خرید و کارمزد، پیش از تأیید پیداست؛ بدون هزینه‌ی پنهان.',
+    tags: ['طلا', 'درآمد ثابت', 'خرید و فروش آنی'],
     Screen: ConvertScreen,
   },
   {
     id: 'grow',
     t: 'رشدش را هر روز ببینید.',
-    d: 'دارایی‌تان دو بخش دارد: آزاد و قفل‌شده. هر عدد «قابل برداشت» فقط از بخش آزاد است و هر قفل، دلیل و زمان آزادسازی‌اش را بی‌پرده نشان می‌دهد.',
+    d: 'دارایی‌تان دو بخش دارد: آزاد و رزروشده. «قابل برداشت» همیشه از بخش آزاد است و کنار هر رزرو، دلیل و زمان آزاد شدنش پیداست. بخش رزروشده هم به نام شماست و رشد می‌کند.',
     locks: true,
     Screen: AssetsScreen,
   },
@@ -78,7 +78,7 @@ export function ProductTour() {
                 <p className="d">{s.d}</p>
                 <div className="tags">
                   {'locks' in s
-                    ? (['collateral', 'vesting', 'installment', 'milestone', 'legal'] as const).map((k) => <LockTypeChip key={k} type={k} />)
+                    ? (['vesting', 'collateral', 'installment', 'milestone'] as const).map((k) => <LockTypeChip key={k} type={k} />)
                     : s.tags.map((t) => <span key={t} className="chip line">{t}</span>)}
                 </div>
                 <div className="vis" aria-hidden="true">

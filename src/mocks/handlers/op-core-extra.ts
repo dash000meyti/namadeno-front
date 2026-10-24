@@ -385,7 +385,7 @@ export const opCoreHandlers: HttpHandler[] = [
       if (b.amount > h.free) return fail(422, 'exceeds_free', `مبلغ مسدودی از بخش آزاد «${h.name}» (${money(h.free)} تومان) بیشتر است.`, { free: h.free });
       const lock = ledger.addLock(ud, b.holdingKind, { type: 'legal', amount: b.amount, title: 'مسدودی قانونی — شماره ' + faDigits(b.reference), condition: 'تا رفع دستور مرجع · ' + reason, reference: b.reference });
       ledger.addTx(ud, { category: 'lock', title: 'مسدودی قانونی — ' + h.name, subtitle: 'تا رفع دستور مرجع', amount: b.amount, holdingKind: b.holdingKind, lockType: 'legal', lockEvent: 'locked' });
-      ledger.notify(ud, { title: 'مسدودی قانونی روی حساب شما اعمال شد', body: `${money(b.amount)} تومان از ${h.name} تا رفع دستور مرجع قفل شد. برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.`, tone: 'error', icon: 'lock', href: '/app/support' });
+      ledger.notify(ud, { title: 'مسدودی قانونی روی حساب شما اعمال شد', body: `${money(b.amount)} تومان از ${h.name} تا رفع دستور مرجع مسدود شد. برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.`, tone: 'error', icon: 'lock', href: '/app/support' });
       addLog(id, `اعمال مسدودی قانونی ${money(b.amount)} روی «${h.name}» — شماره ${faDigits(b.reference)}`, 'error');
       return ok(lock);
     }

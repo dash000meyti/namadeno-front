@@ -9,6 +9,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { useCard, useChargeCard, useMe, usePortfolio } from '@/api/app';
 import { useCreditExtra } from '@/api/app-credit-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { jDayMonth, money } from '@/lib/format';
 import { CI } from '@/components/app/credit/icons';
@@ -86,15 +87,15 @@ export default function CardChargePage() {
               {amt > avail && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--error-text)' }}>مبلغ از اعتبار در دسترس بیشتر است.</span>}
             </div>
 
-            {/* resulting collateral lock */}
+            {/* resulting collateral reserve */}
             <div className="card" style={{ boxSizing: 'border-box', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 6, flex: 'none', background: 'rgb(var(--info-main-rgb) / .06)' }}>
               <div className="row" style={{ height: 22, gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>افزایش قفل وثیقه</span>
-                <span className="lktype" style={{ marginRight: 'auto', background: 'var(--soft-info)', color: 'var(--info-text)' }}><Icon d={CI.lock} size={12} />وثیقه اعتبار و وام</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>افزایش رزرو پشتوانه</span>
+                <span className="lktype" style={{ marginRight: 'auto', background: LOCK_META.collateral.bg, color: LOCK_META.collateral.fg }}><Icon d={LOCK_META.collateral.d} size={12} />{LOCK_META.collateral.label}</span>
               </div>
               <div className="row" style={{ height: 26, gap: 8 }}>
                 <span className="num" style={{ fontSize: 18, whiteSpace: 'nowrap', color: 'var(--info-text)' }}>+{money(lockInc)} <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-secondary)' }}>تومان</span></span>
-                <span className="num" style={{ marginRight: 'auto', fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>قفل کارت {money(lockNow)} ← {money(lockAfter)}</span>
+                <span className="num" style={{ marginRight: 'auto', fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>رزرو کارت {money(lockNow)} ← {money(lockAfter)}</span>
               </div>
               {lockSrc.map((s) => (
                 <div key={s.kind} className="row" style={{ height: 20, gap: 6, fontSize: 12, whiteSpace: 'nowrap' }}>
@@ -102,8 +103,8 @@ export default function CardChargePage() {
                   <span className="num" style={{ marginRight: 'auto', fontSize: 11, color: 'var(--text-secondary)' }}>آزاد پس از آن {money(s.after)}</span>
                 </div>
               ))}
-              {lockShort && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--error-text)', lineHeight: 1.5 }}>دارایی آزاد کافی برای وثیقه این مبلغ ندارید؛ مبلغ کمتری انتخاب کنید.</span>}
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>تا {money(unsecured)} مصرف (بر اساس امتیاز اعتباری) بدون وثیقه است؛ بیش از آن به همان میزان از دارایی آزاد قفل و با تسویه صورت‌حساب آزاد می‌شود.</span>
+              {lockShort && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--error-text)', lineHeight: 1.5 }}>دارایی آزاد شما برای پشتوانه‌ی این مبلغ کافی نیست؛ مبلغ کمتری انتخاب کنید.</span>}
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>تا {money(unsecured)} مصرف بر پایه‌ی امتیاز اعتباری شماست و پشتوانه نمی‌خواهد؛ بیش از آن، به همان اندازه از دارایی آزاد رزرو و با تسویه‌ی صورت‌حساب دوباره آزاد می‌شود.</span>
             </div>
 
             {/* settlement */}
@@ -120,7 +121,7 @@ export default function CardChargePage() {
               <KvRows h={34} rows={[
                 { k: 'مبلغ شارژ', v: money(amt), u: 'تومان' },
                 { k: 'کارمزد', v: '۰', u: 'تومان' },
-                { k: 'وثیقه قفل‌شده کارت پس از شارژ', v: money(lockAfter), u: 'تومان' },
+                { k: 'رزرو پشتوانه‌ی کارت پس از شارژ', v: money(lockAfter), u: 'تومان' },
                 { k: 'موجودی کارت پس از شارژ', v: money(c.balance + amt), u: 'تومان' },
               ]} />
             </div>

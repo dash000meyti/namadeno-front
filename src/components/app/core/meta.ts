@@ -1,6 +1,7 @@
 /** Design constants shared by the app-core screens (icon paths, tones, allocation colors). */
 import type { AllocationSplit, AssetKind, LockPolicy, Transaction } from '@/types/domain';
 import { jDate } from '@/lib/format';
+import { HOURGLASS, LOCK_META } from '@/lib/locks';
 
 /** Icon paths copied from the design files. */
 export const P = {
@@ -65,17 +66,16 @@ export const PARTS: { key: PartKey; short: string; name: string; color: string; 
 
 export const splitPct = (s: AllocationSplit | undefined, k: PartKey) => (s ? (k === 'rial' ? s.rial ?? 0 : s[k]) ?? 0 : 0);
 
-/** Lock tag for a package lock policy (design: «بدون قفل» / «قفل زمانی» / «مرحله‌ای»). */
+/** Reserve tag for a package lock policy («آزاد» / «پس‌انداز» / «مرحله‌ای», from LOCK_META). */
 export function policyTag(lp: LockPolicy): { label: string; bg: string; fg: string; d: string } {
-  if (lp.type === 'vesting') return { label: 'قفل زمانی', bg: 'var(--soft-warning)', fg: 'var(--warning-text)', d: P.lock };
-  if (lp.type === 'milestone') return { label: 'مرحله‌ای', bg: 'var(--soft-primary)', fg: 'var(--primary-text)', d: P.flag };
-  return { label: 'بدون قفل', bg: 'var(--soft-success)', fg: 'var(--success-text)', d: P.unlock };
+  const m = LOCK_META[lp.type];
+  return { label: m.short, bg: m.bg, fg: m.fg, d: m.d };
 }
 
-/** One-line release condition of a lock policy. */
+/** One-line release condition of a package's reserve policy. */
 export function policyNote(lp: LockPolicy): string {
   if (lp.type === 'vesting') return 'بخش صندوقی · آزاد در ' + jDate(lp.releaseAt);
-  if (lp.type === 'milestone') return `بخش صندوقی · آزادسازی در ${faN(lp.steps.length)} مرحله با تأیید سازمان`;
+  if (lp.type === 'milestone') return `بخش صندوقی · دریافت در ${faN(lp.steps.length)} مرحله با تأیید سازمان`;
   return 'همه واحدها از لحظه دریافت آزادند';
 }
 
@@ -108,7 +108,7 @@ export function txVisual(t: Transaction): { d: string; tone: Tone } {
     case 'loan': return { d: P.creditFull, tone: 'info' };
     case 'installment': return { d: P.cart, tone: 'secondary' };
     case 'fund': return { d: P.percent, tone: 'secondary' };
-    case 'lock': return t.lockEvent === 'released' ? { d: P.unlock, tone: 'success' } : { d: P.lock, tone: 'info' };
+    case 'lock': return t.lockEvent === 'released' ? { d: LOCK_META.none.d, tone: 'success' } : { d: t.lockType ? LOCK_META[t.lockType].d : HOURGLASS, tone: 'info' };
     default: return { d: P.info, tone: 'default' };
   }
 }

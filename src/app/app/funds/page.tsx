@@ -8,6 +8,7 @@ import { BottomNav } from '@/components/app/BottomNav';
 import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
 import { Icon } from '@/components/ui/Icon';
 import { compactMoney, faDigits, money } from '@/lib/format';
+import { HOURGLASS } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import type { Fund, Holding } from '@/types/domain';
 import { RISK, fundMono, signedPct } from '@/components/app/money/lib';
@@ -99,7 +100,7 @@ function FundCard({ fund: f, holding: h }: { fund: Fund; holding?: Holding }) {
   const free = h?.free ?? 0;
   const locked = h?.locked ?? 0;
   const freePct = h && h.value ? Math.round((free / h.value) * 1000) / 10 : 0;
-  const aria = `${f.name}، بازدهی یک‌ساله ${ret}، ریسک ${soon ? '—' : risk.label}` + (owned ? `، در سبد شما · ${locked ? `آزاد ${compactMoney(free)}، قفل ${compactMoney(locked)}` : 'همه آزاد'}` : '');
+  const aria = `${f.name}، بازدهی یک‌ساله ${ret}، ریسک ${soon ? '—' : risk.label}` + (owned ? `، در سبد شما · ${locked ? `آزاد ${compactMoney(free)}، رزرو ${compactMoney(locked)}` : 'همه آزاد'}` : '');
   const style = { boxSizing: 'border-box' as const, padding: '12px 14px', display: 'flex', flexDirection: 'column' as const, gap: 8, color: 'var(--text-primary)', textDecoration: 'none', borderColor: owned ? 'rgb(var(--primary-main-rgb) / .28)' : 'var(--glass-border)', flex: 'none' };
 
   const body = (
@@ -130,12 +131,12 @@ function FundCard({ fund: f, holding: h }: { fund: Fund; holding?: Holding }) {
           {locked > 0 ? (
             <div className="lkleg" style={{ fontSize: 11, gap: 10 }}>
               <span><span className="lkdot" />آزاد <b>{compactMoney(free)}</b></span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="lock" size={12} />قفل <b>{compactMoney(locked)}</b></span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={HOURGLASS} size={12} />رزرو <b>{compactMoney(locked)}</b></span>
             </div>
           ) : (
             <div className="lkleg" style={{ fontSize: 11, gap: 10 }}><span><span className="lkdot" />همه آزاد <b>{compactMoney(free)}</b></span></div>
           )}
-          <div className="lkbar" role="img" aria-label={`آزاد ${compactMoney(free)} · قفل ${compactMoney(locked)}`} style={{ flex: 1, minWidth: 40, height: 5 }}>
+          <div className="lkbar" role="img" aria-label={`آزاد ${compactMoney(free)} · رزرو ${compactMoney(locked)}`} style={{ flex: 1, minWidth: 40, height: 5 }}>
             {free > 0 && <span className="f" style={{ width: locked > 0 ? `${freePct}%` : '100%' }} />}
             {locked > 0 && <span className="l" style={{ flex: 1 }} />}
           </div>

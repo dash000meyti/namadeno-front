@@ -22,7 +22,8 @@ export interface OrgReports {
   totalSent: number; byReason: Record<string, number>; allocation: { gold: number; fixed: number; rial: number };
   lockMix: { none: number; vesting: number; milestone: number }; acceptanceRate: number; monthly: { month: string; sent: number; accepted: number }[];
 }
-export type NewPackage = Partial<OrgPackage> & { recipientIds?: string[] };
+/** `recipientAmounts` (employeeId → Toman) sets a per-person amount from a file; it switches the package to `amountSource: 'file'`. */
+export type NewPackage = Partial<OrgPackage> & { recipientIds?: string[]; recipientAmounts?: Record<string, number> };
 
 export const useOrgMe = () => useQuery({ queryKey: qk.org.me, queryFn: () => get<{ organization: Organization; admin: Organization['admins'][number] }>('/org/me') });
 export const useOrgDashboard = () => useQuery({ queryKey: qk.org.dashboard, queryFn: () => get<OrgDashboard>('/org/dashboard') });

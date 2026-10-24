@@ -71,7 +71,7 @@ function ProductsInner() {
   const cols: Column<OpProduct>[] = [
     { key: 'p', label: 'محصول', width: 'minmax(0, 1.4fr)', render: (p) => <Ident lead={<Tile d={PRODUCT_UI[p.kind].d} tone={kt(PRODUCT_UI[p.kind].tone)} />} title={p.name} sub={PRODUCT_UI[p.kind].type} /> },
     { key: 'params', label: 'پارامترهای پیش‌فرض', width: 'minmax(0, 1.3fr)', render: (p) => <span className="el mute">{paramChips(p).join(' · ')}</span> },
-    { key: 'lock', label: 'قفل', width: '92px', render: (p) => <LockTypeChip type={PRODUCT_UI[p.kind].lock} /> },
+    { key: 'lock', label: 'نوع رزرو', width: '92px', render: (p) => <LockTypeChip type={PRODUCT_UI[p.kind].lock} /> },
     { key: 'orgs', label: 'سازمان‌ها', width: '76px', render: (p) => <span className="num">{orgs.data ? faDigits(orgsWith(p.kind, orgs.data).length) : '—'}</span> },
     { key: 'users', label: 'قرارداد فعال', width: '92px', render: (p) => <span className="num">{money(p.activeContracts)}</span> },
     { key: 'st', label: 'وضعیت', width: '88px', render: (p) => <Pill tone={kt(PRODUCT_STATUS[p.status].tone)} dot>{PRODUCT_STATUS[p.status].label}</Pill> },
@@ -141,10 +141,10 @@ const FIELDS: Record<OpProduct['kind'], FieldDef[]> = {
     { key: 'maxPctOfAssets', label: 'سقف وام نسبت به دارایی آزاد', suffix: '٪', w: 52, min: 1, max: 100 },
     { key: 'rateMax', label: 'نرخ مؤثر سالانه', suffix: '٪', w: 52, decimals: true, min: 0, max: 60 },
     { key: 'minScore', label: 'حداقل امتیاز اعتباری', suffix: 'امتیاز', w: 56, min: 300, max: 900 },
-    { key: 'liquidateAfter', label: 'نقد کردن وثیقه پس از', suffix: 'قسط معوق', w: 44, min: 1, max: 12 },
+    { key: 'liquidateAfter', label: 'نقد کردن پشتوانه پس از', suffix: 'قسط معوق', w: 44, min: 1, max: 12 },
   ],
   installment: [
-    { key: 'lockRatioPct', label: 'نسبت قفل اقساطی به مبلغ خرید', suffix: '٪', w: 52, min: 1, max: 100 },
+    { key: 'lockRatioPct', label: 'نسبت رزرو اقساطی به مبلغ خرید', suffix: '٪', w: 52, min: 1, max: 100 },
     { key: 'feePct', label: 'کارمزد خرید', suffix: '٪', w: 52, decimals: true, min: 0, max: 20 },
     { key: 'maxPurchase', label: 'حداکثر مبلغ هر خرید', suffix: 'تومان', w: 108, min: 1_000_000, max: 10_000_000_000 },
     { key: 'codeValidityHours', label: 'اعتبار کد خرید', suffix: 'ساعت', w: 52, min: 1, max: 720 },
@@ -222,9 +222,9 @@ function ProductInspector({ p, orgs, onClose }: { p: OpProduct; orgs?: Organizat
         )}
       </SettingsGroup>
 
-      <SettingsGroup title="قفل و وضعیت">
-        <SettingRow label={`قفل خودکار هنگام تأیید · نوع «${ui.lock === 'installment' ? 'اقساطی' : 'وثیقه'}»`} desc={`${ui.lockRule(p)}؛ ${ui.lockRelease}`}>
-          <Switch on={autoLock} onChange={setAutoLock} label="قفل خودکار وثیقه" />
+      <SettingsGroup title="رزرو و وضعیت">
+        <SettingRow label={`رزرو خودکار هنگام تأیید · نوع «${ui.lock === 'installment' ? 'اقساطی' : 'پشتوانه'}»`} desc={`${ui.lockRule(p)}؛ ${ui.lockRelease}`}>
+          <Switch on={autoLock} onChange={setAutoLock} label="رزرو خودکار هنگام تأیید" />
         </SettingRow>
         <SettingRow label="محصول فعال" desc="غیرفعال‌سازی فقط روی درخواست‌های جدید اثر دارد">
           <Switch on={active} onChange={setActive} label="محصول فعال" />

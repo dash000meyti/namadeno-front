@@ -6,6 +6,7 @@ import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
 import { Icon } from '@/components/ui/Icon';
 import { useCredit, usePortfolio } from '@/api/app';
 import { useCreditExtra } from '@/api/app-credit-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDayMonth, money, percent } from '@/lib/format';
 import { CI, TONE } from '@/components/app/credit/icons';
@@ -34,7 +35,7 @@ export default function ScorePage() {
 
   const tips = [
     { title: 'اقساط را قبل از سررسید بپردازید', body: 'پرداخت خودکار از کیف پول ریالی را فعال کنید؛ هر قسط به‌موقع تا ۵ امتیاز اضافه می‌کند.' },
-    { title: 'نسبت وثیقه را پایین نگه دارید', body: `اکنون ${money(creditLocked)} تومان (${percent(ratio, 1)} دارایی) به‌عنوان «وثیقه اعتبار و وام» و «وثیقه خرید اقساطی» قفل است. زیر ۱۵٪، این عامل «مثبت» می‌شود. قفل زمانی و مرحله‌ای سازمان در این نسبت حساب نمی‌شود.` },
+    { title: 'نسبت پشتوانه را پایین نگه دارید', body: `اکنون ${money(creditLocked)} تومان (${percent(ratio, 1)} دارایی) به‌عنوان «${LOCK_META.collateral.label}» و «${LOCK_META.installment.label}» رزرو است. زیر ۱۵٪، این عامل «مثبت» می‌شود. ${LOCK_META.vesting.label} و ${LOCK_META.milestone.label} در این نسبت حساب نمی‌شوند.` },
     { title: 'دارایی‌ها را متنوع کنید', body: 'نگه‌داشتن هم‌زمان صندوق طلا و درآمد ثابت، ریسک پرتفوی شما را کم و امتیاز را بالا می‌برد.' },
   ];
 

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const KYC: { level: string; title: string; text: string; unlocks: string[] }[] = [
   { level: '۱', title: 'تطبیق شاهکار', text: 'بررسی می‌شود شماره موبایل به نام صاحب کد ملی باشد. این سطح هنگام ثبت‌نام انجام می‌شود.', unlocks: ['مشاهده دارایی‌ها', 'دریافت بسته‌های سازمان'] },
   { level: '۲', title: 'هویت پایه', text: 'با کد ملی و تاریخ تولد، اطلاعات هویتی از ثبت احوال استعلام می‌شود. برای سرویس‌های اعتباری الزامی است.', unlocks: ['اعتبار کارت نمادنو', 'وام', 'خرید اقساطی'] },
-  { level: '۳', title: 'احراز سجام', text: 'اطلاعات سجامی (کد بورسی، حساب بانکی، نشانی) دریافت می‌شود. برای خرید و فروش صندوق‌ها لازم است.', unlocks: ['خرید و فروش صندوق'] },
+  { level: '۳', title: 'احراز سجام', text: 'اطلاعات سجام (هویت، حساب بانکی و نشانی) دریافت می‌شود. برای خرید و فروش دارایی‌ها لازم است.', unlocks: ['خرید و فروش دارایی'] },
 ];
 
 const LAYERS: { icon: IconName; title: string; points: string[] }[] = [
@@ -38,7 +38,7 @@ export default function SecurityPage() {
         eyebrow="امنیت در نمادنو"
         title="اعتماد، از روز اول."
         mute="دارایی شما، همیشه به نام شما."
-        lead="دارایی شما مستقیماً به نام خودتان و در صندوق‌های تحت نظارت سازمان بورس نگهداری می‌شود. امنیت در نمادنو از احراز هویت شروع می‌شود، با تأیید هر عملیات حساس ادامه پیدا می‌کند و با پایش لحظه‌ای ریسک کامل می‌شود."
+        lead="دارایی شما مستقیماً به نام خودتان و نزد امین‌های دارای مجوز رسمی نگهداری می‌شود. امنیت در نمادنو از احراز هویت شروع می‌شود، با تأیید هر عملیات حساس ادامه پیدا می‌کند و با پایش لحظه‌ای ریسک کامل می‌شود."
       />
 
       <Section tight>
@@ -79,30 +79,28 @@ export default function SecurityPage() {
         </div>
       </Section>
 
-      <Section>
+      <Section eyebrow="شفافیت و همراهی" title="در هر شرایطی شفاف،" mute="و کنار شما." lead="اگر بخشی از دارایی به حکم قانون مسدود شود، دقیقاً می‌دانید چرا؛ و با چند عادت ساده، حسابتان امن‌تر می‌ماند.">
         <div className="s-split" style={{ alignItems: 'start' }}>
           <div className="card s-card">
-            <span className="s-eyebrow"><span className="dot" />مسدودی قانونی</span>
-            <h2 className="s-h3">شفاف، حتی وقتی بخشی از دارایی مسدود است</h2>
+            <h3 className="s-h3">مسدودی قانونی، فقط همان مبلغ</h3>
             <p style={{ fontSize: 14, lineHeight: 2, color: 'var(--text-secondary)' }}>
-              اگر مرجع قضایی یا قانونی دستور مسدودی صادر کند، فقط همان مبلغ با برچسب زیر قفل می‌شود و دلیل و مرجع آن در اپ نمایش داده می‌شود. باقی دارایی آزاد شما قابل استفاده می‌ماند.
+              اگر مرجع قضایی یا قانونی دستور مسدودی صادر کند، فقط همان مبلغ با برچسب زیر مسدود می‌شود و دلیل و مرجع آن در اپ نمایش داده می‌شود. باقی دارایی شما آزاد و در دسترس می‌ماند.
             </p>
             <LockTypeChip type="legal" long style={{ alignSelf: 'flex-start' }} />
           </div>
           <div className="card s-card c-warning">
-            <span className="s-eyebrow" style={{ background: 'rgb(var(--warning-main-rgb) / .14)', color: 'var(--warning-text)' }}><span className="dot" />توصیه‌ها</span>
-            <h2 className="s-h3">شما هم کمک کنید</h2>
+            <h3 className="s-h3">شما هم کمک کنید</h3>
             <ul className="s-check">{TIPS.map((t) => <li key={t}><Icon name="info" style={{ color: 'var(--warning-main)' }} />{t}</li>)}</ul>
           </div>
         </div>
       </Section>
 
-      <Section tight>
+      <Section eyebrow="گزارش امنیتی" title="مشکلی دیدید؟" mute="به ما بگویید." lead="اگر به مشکل امنیتی برخوردید، جزئیات را محرمانه برای ما بفرستید. هر گزارش را با دقت بررسی می‌کنیم.">
         <div className="card s-card c-info" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
           <span className="s-itile"><Icon name="shield" /></span>
           <span className="s-col" style={{ flex: '1 1 260px', gap: 2 }}>
-            <span style={{ fontWeight: 700 }}>گزارش آسیب‌پذیری</span>
-            <span className="cap" style={{ fontSize: 13 }}>اگر مشکل امنیتی پیدا کرده‌اید، جزئیات را محرمانه به <span dir="ltr">security@namadno.ir</span> بفرستید. از گزارش مسئولانه شما قدردانی می‌کنیم.</span>
+            <span style={{ fontWeight: 700 }}><span dir="ltr">security@namadno.ir</span></span>
+            <span className="cap" style={{ fontSize: 13 }}>گزارش‌ها محرمانه می‌مانند و از گزارش مسئولانه‌ی شما قدردانی می‌کنیم.</span>
           </span>
           <Link href={`${routes.site.contact}?topic=other`} className="btn outlined c-primary">تماس با ما</Link>
         </div>

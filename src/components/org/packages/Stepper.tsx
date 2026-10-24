@@ -3,7 +3,7 @@
  * Shared pieces of the organization «بسته‌های دارایی» pages, built on the panel kit (docs/PANEL-KIT.md):
  *   WizardHeader  heading + Steps of the 3-step send wizard (recipients → settings → review; 4 = sent)
  *   StepMark      the numbered circle of a step (same look as kit Steps) for timelines in lists
- *   LockTag       lock-policy chip; «بدون قفل» stays neutral on the organization screens (meta.lockChip)
+ *   LockTag       receive-policy («شیوه‌ی دریافت») chip; the «آزاد» policy stays neutral on the organization screens (meta.lockChip)
  */
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -45,7 +45,7 @@ export function WizardHeader({ step, draftId, recipientsSub, sub, hideCancel }: 
   const live = !!draftId && step < 4;
   const steps: StepItem[] = [
     { label: 'گیرندگان', sub: recipientsSub ?? 'انتخاب کارکنان', href: live ? routes.org.newRecipients(draftId) : undefined },
-    { label: 'تنظیمات بسته', sub: 'مبلغ، تخصیص، قفل', href: live && step === 3 && draftId ? routes.org.newSettings(draftId) : undefined },
+    { label: 'تنظیمات بسته', sub: 'مبلغ، تخصیص، شیوه‌ی دریافت', href: live && step === 3 && draftId ? routes.org.newSettings(draftId) : undefined },
     { label: 'بررسی و ارسال', sub: 'تأیید و ارسال به کارکنان' },
   ];
   return (

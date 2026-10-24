@@ -1,7 +1,7 @@
 'use client';
 /**
  * Organization — contract settings (read-mostly). Kit settings page: heading (contract, status, validity and
- * «درخواست تغییر قرارداد») → settings groups: contract · credit limits · allowed lock policies | allowed funds ·
+ * «درخواست تغییر قرارداد») → settings groups: contract · credit terms · allowed receive policies (شیوه‌های دریافت) | allowed funds ·
  * approval chain (editable, saved through the action bar) · panel users (invite dialog).
  * Read-only values sit as plain text in the control slot; limits change only through the operator.
  */
@@ -18,23 +18,24 @@ import { useToast } from '@/components/ui/Toast';
 import { useOrgContract, useUpdateContract } from '@/api/org';
 import { useFunds } from '@/api/app';
 import { useApprovalChain, useUpdateApprovalChain } from '@/api/org-packages-extra';
+import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDate } from '@/lib/format';
-import type { Organization } from '@/types/domain';
+import type { Organization, OrgPanelRole } from '@/types/domain';
 import { I } from '@/components/org/packages/meta';
 import { errMsg } from '@/components/org/packages/ui';
 
 const FUND_COLOR: Record<string, string> = { gold: '--warning-main', fixed: '--chart-3', equity: '--chart-1', mixed: '--chart-2', energy: '--chart-5' };
-const COLLATERAL: Record<string, string> = { gold: 'قابل وثیقه تا ۷۰٪', fixed: 'قابل وثیقه تا ۹۰٪' };
+const COLLATERAL: Record<string, string> = { gold: 'پشتوانه‌ی وام تا ۷۰٪', fixed: 'پشتوانه‌ی وام تا ۹۰٪' };
 const LOCK_RULES: Record<'none' | 'vesting' | 'milestone', string> = {
   none: 'برای مزایا، عیدی و بسته‌های نقدی',
   vesting: 'حداکثر ۱۲ ماه · پیش‌فرض ۳ ماه · فقط بخش صندوقی',
   milestone: 'حداکثر ۸ مرحله · هر مرحله حداقل ۵٪ · جمع ۱۰۰٪',
 };
-const ROLES: { key: string; label: string; pick: string }[] = [
-  { key: 'hr', label: 'کارشناس HR', pick: 'منابع انسانی' },
-  { key: 'fin', label: 'مدیر مالی', pick: 'مدیر مالی' },
-  { key: 'view', label: 'مشاهده‌گر', pick: 'مشاهده‌گر' },
+const ROLES: { key: string; label: string; pick: string; panelRole: OrgPanelRole }[] = [
+  { key: 'hr', label: 'کارشناس HR', pick: 'منابع انسانی', panelRole: 'hr' },
+  { key: 'fin', label: 'مدیر مالی', pick: 'مدیر مالی', panelRole: 'finance' },
+  { key: 'view', label: 'مشاهده‌گر', pick: 'مشاهده‌گر', panelRole: 'viewer' },
 ];
 const roleTone = (role: string): Tone => (role.includes('مالی') ? 'success' : role.includes('مدیر') ? 'primary' : role.includes('مشاهده') ? 'neutral' : 'info');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -107,7 +108,7 @@ export default function OrgContractPage() {
     if (!EMAIL_RE.test(email.trim())) { setInviteErr({ field: 'email', msg: 'ایمیل سازمانی معتبر وارد کنید.' }); return; }
     if (o.admins.some((a) => a.email.toLowerCase() === email.trim().toLowerCase())) { setInviteErr({ field: 'email', msg: 'این ایمیل قبلاً به پنل اضافه شده است.' }); return; }
     const r = ROLES.find((x) => x.key === role)!;
-    const admins: Organization['admins'] = [...o.admins, { id: 'oa-' + Date.now().toString(36), name: name.trim(), role: r.label, email: email.trim() }];
+    const admins: Organization['admins'] = [...o.admins, { id: 'oa-' + Date.now().toString(36), name: name.trim(), role: r.label, email: email.trim(), panelRole: r.panelRole }];
     updateContract.mutate({ admins }, {
       onSuccess: () => { setInvite(false); toast(`دعوت‌نامه برای ${name.trim()} ارسال شد`); },
       onError: (e) => setInviteErr({ field: 'form', msg: errMsg(e) }),
@@ -137,25 +138,25 @@ export default function OrgContractPage() {
             <SettingRow label="تمدید">{val('خودکار · سالانه')}</SettingRow>
           </SettingsGroup>
 
-          <SettingsGroup title={groupTitle(I.percent, 'success', 'محدودیت‌های تسهیلات')}>
+          <SettingsGroup title={groupTitle(I.percent, 'success', 'شرایط تسهیلات')}>
             <SettingRow label="سقف وام">{val(s.loanEnabled ? `${faDigits(s.loanMaxPct)}٪ دارایی` : 'غیرفعال')}</SettingRow>
             <SettingRow label="دوره‌های بازپرداخت">{val(s.loanEnabled ? `${s.loanMonthsOptions.map((m) => faDigits(m)).join(' / ')} ماه` : '—')}</SettingRow>
             <SettingRow label="اعتبار کارت">{val(s.cardEnabled ? 'تا ۲۵٪ دارایی' : 'غیرفعال')}</SettingRow>
-            <SettingRow label="برداشت نقدی بسته‌ها">{val(s.cashWithdrawalAllowed ? 'مجاز · فقط بخش آزاد' : 'غیرمجاز')}</SettingRow>
+            <SettingRow label="برداشت نقدی بسته‌ها">{val(s.cashWithdrawalAllowed ? 'مجاز · فقط بخش آزاد' : 'غیرفعال')}</SettingRow>
           </SettingsGroup>
 
-          <SettingsGroup title={groupTitle(I.lock, 'info', 'سیاست‌های قفل مجاز')} footer="از قرارداد بهره‌بردار · هنگام ارسال بسته قابل انتخاب">
+          <SettingsGroup title={groupTitle(HOURGLASS, 'info', 'شیوه‌های دریافت مجاز')} footer="از قرارداد بهره‌بردار · هنگام ارسال بسته قابل انتخاب">
             {(['none', 'vesting', 'milestone'] as const).map((k) => {
               const on = s.lockPolicies.includes(k);
               return (
                 <SettingRow key={k} label={<LockTypeChip type={k} long />} desc={LOCK_RULES[k]}>
-                  <Pill tone={on ? 'success' : 'neutral'}>{on ? 'مجاز' : 'غیرمجاز'}</Pill>
+                  <Pill tone={on ? 'success' : 'neutral'}>{on ? 'مجاز' : 'تعریف نشده'}</Pill>
                 </SettingRow>
               );
             })}
           </SettingsGroup>
 
-          <Note tone="mute">قفل وثیقه، اقساطی و مسدودی قانونی را نمادنو اعمال می‌کند. سقف‌ها و سیاست‌های قرارداد فقط از طریق بهره‌بردار و با «درخواست تغییر قرارداد» تغییر می‌کنند.</Note>
+          <Note tone="mute">{LOCK_META.collateral.label}، {LOCK_META.installment.label} و {LOCK_META.legal.label} را نمادنو مدیریت می‌کند. برای تغییر سقف‌ها و سیاست‌های قرارداد، «درخواست تغییر قرارداد» بفرستید تا بهره‌بردار آن را بررسی و اعمال کند.</Note>
         </div>
 
         <div className="nm-stack">
@@ -168,9 +169,9 @@ export default function OrgContractPage() {
                   key={f.id} dim={!allowed}
                   lead={<i aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 3, background: `var(${FUND_COLOR[f.kind] ?? '--chart-5'})`, flex: 'none' }} />}
                   label={f.name}
-                  desc={<>نماد <span className="num">{f.symbol}</span> · {soon ? 'در انتظار راه‌اندازی بهره‌بردار' : COLLATERAL[f.id] ?? 'قابل وثیقه طبق قواعد بهره‌بردار'} · {allowed ? 'قفل زمانی پیش‌فرض ۳ ماه' : 'در قرارداد فعلی تعریف نشده'}</>}
+                  desc={<>نماد <span className="num">{f.symbol}</span> · {soon ? 'در انتظار راه‌اندازی بهره‌بردار' : COLLATERAL[f.id] ?? 'پشتوانه‌ی وام طبق قواعد بهره‌بردار'} · {allowed ? `${LOCK_META.vesting.short} پیش‌فرض ۳ ماه` : 'در قرارداد فعلی تعریف نشده'}</>}
                 >
-                  <Pill tone={allowed ? 'success' : soon ? 'info' : 'neutral'}>{allowed ? 'مجاز' : soon ? 'به‌زودی' : 'غیرمجاز'}</Pill>
+                  <Pill tone={allowed ? 'success' : soon ? 'info' : 'neutral'}>{allowed ? 'مجاز' : soon ? 'به‌زودی' : 'غیرفعال'}</Pill>
                 </LeadRow>
               );
             }) : <SettingRow label="صندوقی در قرارداد تعریف نشده است" />}

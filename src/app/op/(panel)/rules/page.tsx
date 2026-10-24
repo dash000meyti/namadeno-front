@@ -6,7 +6,7 @@ import { useOpRules } from '@/api/op';
 import { useRulesMeta, useSaveRules, type RuleChange } from '@/api/op-system-extra';
 import type { LockType, PlatformRule } from '@/types/domain';
 import { faDigits, jDate, money } from '@/lib/format';
-import { LOCK_META } from '@/lib/locks';
+import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { errMsg } from '@/components/op/system/fmt';
 import { IC } from '@/components/op/system/ui';
 import {
@@ -27,14 +27,14 @@ const DOCS = ['کارت ملی', 'سلفی', 'ویدیو'];
 const GROUPS: GroupDef[] = [
   { title: 'بسته‌های دارایی', d: IC.inbox, tone: 'primary', rows: [
     { kind: 'field', id: 'r-pkg-min-amount', label: 'حداقل مبلغ بسته', sub: 'کمتر از این مبلغ ارسال نمی‌شود', suffix: 'تومان', w: 100, min: 0 },
-    { kind: 'field', id: 'r-pkg-max-vesting', label: 'حداکثر قفل زمانی بسته', sub: 'همچنین سقف کلی در «انواع قفل دارایی»', suffix: 'ماه', w: 52, min: 1, max: 120 },
+    { kind: 'field', id: 'r-pkg-max-vesting', label: 'حداکثر مدت پس‌انداز بسته', sub: 'همچنین سقف کلی در «انواع رزرو دارایی»', suffix: 'ماه', w: 52, min: 1, max: 120 },
     { kind: 'switch', id: 'r-pkg-cfo-approval', label: 'نیاز به تأیید مدیر مالی', sub: 'برای بسته‌های بالای ۵۰۰ میلیون' },
   ] },
   { title: 'تسهیلات', d: IC.percent, tone: 'success', rows: [
     { kind: 'field', id: 'r-credit-min-score', label: 'حداقل امتیاز اعتباری', sub: 'برای وام و خرید اقساطی · بازه ۳۰۰ تا ۹۰۰', suffix: 'امتیاز', w: 60, min: 300, max: 900 },
-    { kind: 'field', id: 'r-credit-max-ltv', label: 'حداکثر نسبت وثیقه', sub: 'سهم قابل قفل از بخش آزاد هر صندوق', suffix: '٪', w: 52, min: 0, max: 100 },
-    { kind: 'field', id: 'r-credit-overdue', label: 'اقساط معوق مجاز', sub: 'پس از آن وثیقه نقد می‌شود', suffix: 'قسط', w: 52, min: 0, max: 24 },
-    { kind: 'switch', id: 'r-credit-auto-lock', label: 'قفل خودکار وثیقه', sub: 'هم‌زمان با تأیید وام یا خرید اقساطی' },
+    { kind: 'field', id: 'r-credit-max-ltv', label: 'حداکثر نسبت پشتوانه', sub: 'سهم قابل رزرو از بخش آزاد هر صندوق', suffix: '٪', w: 52, min: 0, max: 100 },
+    { kind: 'field', id: 'r-credit-overdue', label: 'اقساط معوق مجاز', sub: 'پس از آن پشتوانه نقد می‌شود', suffix: 'قسط', w: 52, min: 0, max: 24 },
+    { kind: 'switch', id: 'r-credit-auto-lock', label: 'رزرو خودکار پشتوانه', sub: 'هم‌زمان با تأیید وام یا خرید اقساطی' },
   ] },
   { title: 'برداشت نقدی', d: IC.wallet, tone: 'info', rows: [
     { kind: 'field', id: 'r-limit-withdraw-daily', label: 'سقف برداشت روزانه', sub: 'به ازای هر کاربر', suffix: 'تومان', w: 100, min: 0 },
@@ -50,14 +50,14 @@ const GROUPS: GroupDef[] = [
 const CREATORS: [string, string][] = [['system', 'سیستم'], ['org', 'سازمان'], ['operator', 'بهره‌بردار']];
 type LimitDef = { kind: 'field'; id: string; label: string; suffix: string; w: number; min: number; max: number } | { kind: 'switch'; id: string; label: string };
 const LOCK_TYPES: { type: LockType; cond: string; limits: LimitDef[] }[] = [
-  { type: 'collateral', cond: 'آزاد با تسویه وام یا تسویه اعتبار کارت · LTV بالای سقف = فراخوان وثیقه', limits: [{ kind: 'field', id: 'r-lock-collateral-ltv', label: 'حداکثر نسبت وثیقه', suffix: '٪ آزاد', w: 48, min: 1, max: 100 }] },
-  { type: 'vesting', cond: 'آزاد در تاریخ تعیین‌شده توسط سازمان؛ مثال: آزاد در ۱۴۰۵/۱۰/۱۵', limits: [{ kind: 'field', id: 'r-lock-vesting', label: 'حداکثر مدت قفل', suffix: 'ماه', w: 48, min: 1, max: 120 }] },
+  { type: 'collateral', cond: 'آزاد با تسویه وام یا تسویه اعتبار کارت · LTV بالای سقف = درخواست تکمیل پشتوانه', limits: [{ kind: 'field', id: 'r-lock-collateral-ltv', label: 'حداکثر نسبت پشتوانه', suffix: '٪ آزاد', w: 48, min: 1, max: 100 }] },
+  { type: 'vesting', cond: 'آزاد در تاریخ تعیین‌شده توسط سازمان؛ مثال: آزاد در ۱۴۰۵/۱۰/۱۵', limits: [{ kind: 'field', id: 'r-lock-vesting', label: 'حداکثر مدت پس‌انداز', suffix: 'ماه', w: 48, min: 1, max: 120 }] },
   { type: 'installment', cond: 'با پرداخت هر قسط، بخشی متناسب آزاد می‌شود', limits: [{ kind: 'field', id: 'r-lock-installment-share', label: 'حداکثر سهم از آزاد', suffix: '٪', w: 48, min: 1, max: 100 }] },
   { type: 'milestone', cond: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود · جمع درصد مراحل باید ۱۰۰٪ باشد', limits: [{ kind: 'field', id: 'r-lock-milestone', label: 'حداکثر تعداد مراحل', suffix: 'مرحله', w: 48, min: 1, max: 20 }, { kind: 'field', id: 'r-lock-milestone-months', label: 'حداکثر مدت قرارداد', suffix: 'ماه', w: 48, min: 1, max: 120 }] },
   { type: 'legal', cond: 'تا رفع دستور مرجع / پایان بررسی ریسک · فقط در پنل بهره‌بردار', limits: [{ kind: 'switch', id: 'r-lock-legal-ref', label: 'شماره مرجع الزامی' }, { kind: 'switch', id: 'r-lock-legal-2nd', label: 'رفع با تأیید نفر دوم' }] },
 ];
 
-const dotOf = (text: string, group: string) => (text.startsWith('فعال‌سازی') ? '--success-main' : text.startsWith('غیرفعال') ? '--error-main' : group === 'برداشت' ? '--info-main' : group === 'KYC' || group === 'قفل دارایی' ? '--warning-main' : group === 'ریسک' ? '--error-main' : '--primary-main');
+const dotOf = (text: string, group: string) => (text.startsWith('فعال‌سازی') ? '--success-main' : text.startsWith('غیرفعال') ? '--error-main' : group === 'برداشت' ? '--info-main' : group === 'KYC' || group === 'رزرو دارایی' ? '--warning-main' : group === 'ریسک' ? '--error-main' : '--primary-main');
 const valText = (v: unknown) => (typeof v === 'number' ? money(v) : faDigits(String(v ?? '—')));
 
 export default function OpRulesPage() {
@@ -87,7 +87,7 @@ export default function OpRulesPage() {
   const fieldDefs = useMemo(() => [
     ...GROUPS.flatMap((g) => g.rows).filter((r): r is Extract<RowDef, { kind: 'field' }> => r.kind === 'field'),
     ...LOCK_TYPES.flatMap((t) => t.limits).filter((l): l is Extract<LimitDef, { kind: 'field' }> => l.kind === 'field'),
-    { id: 'r-lock-total-cap', label: 'سقف مجموع قفل هر کاربر', min: 1, max: 100 },
+    { id: 'r-lock-total-cap', label: 'سقف مجموع رزرو هر کاربر', min: 1, max: 100 },
   ], []);
   const invalidId = (id: string) => {
     const d = fieldDefs.find((f) => f.id === id);
@@ -136,7 +136,7 @@ export default function OpRulesPage() {
         <span className="mute" style={{ fontSize: 12.5 }}>نسخهٔ قوانین <span className="num" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{meta.data ? faDigits(meta.data.version) : '—'}</span></span>
       </PageHeading>
 
-      <Tabs label="نمای قوانین" size="lg" value={view} onChange={setView} items={[{ key: 'general', label: 'قوانین عمومی' }, { key: 'locks', label: 'انواع قفل دارایی', count: enabledN }]} />
+      <Tabs label="نمای قوانین" size="lg" value={view} onChange={setView} items={[{ key: 'general', label: 'قوانین عمومی' }, { key: 'locks', label: 'انواع رزرو دارایی', count: enabledN }]} />
 
       {rules.isLoading ? <SkeletonCard h={420} /> : rules.isError ? <ErrorBlock error={rules.error} message={errMsg(rules.error)} onRetry={() => rules.refetch()} /> : (
         <>
@@ -199,9 +199,9 @@ export default function OpRulesPage() {
                     </SettingsGroup>
                   );
                 })}
-                <SettingsGroup title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Tile d={IC.lock} tone="neutral" size="sm" />همه‌ی قفل‌ها</span>} footer="قفل مالکیت را تغییر نمی‌دهد؛ سود و NAV ادامه دارد ولی فروش و برداشت تا آزادسازی ممکن نیست.">
-                  <SettingRow label="سقف مجموع قفل هر کاربر" desc="سهم کل دارایی که می‌تواند هم‌زمان قفل باشد">{num('r-lock-total-cap', 'سقف مجموع قفل هر کاربر', '٪ کل دارایی', 52)}</SettingRow>
-                  <SettingRow label="اعلان آزادسازی قفل به کاربر">{sw('r-lock-notify-release', 'اعلان آزادسازی')}</SettingRow>
+                <SettingsGroup title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Tile d={HOURGLASS} tone="neutral" size="sm" />همه‌ی رزروها</span>} footer="رزرو مالکیت را تغییر نمی‌دهد؛ سود و NAV ادامه دارد و فروش و برداشت پس از آزادسازی ممکن است.">
+                  <SettingRow label="سقف مجموع رزرو هر کاربر" desc="سهم کل دارایی که می‌تواند هم‌زمان رزرو باشد">{num('r-lock-total-cap', 'سقف مجموع رزرو هر کاربر', '٪ کل دارایی', 52)}</SettingRow>
+                  <SettingRow label="اعلان آزادسازی رزرو به کاربر">{sw('r-lock-notify-release', 'اعلان آزادسازی')}</SettingRow>
                 </SettingsGroup>
               </div>
             </div>

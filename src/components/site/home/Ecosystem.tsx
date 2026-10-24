@@ -34,12 +34,12 @@ export function Ecosystem() {
     >
       <div className="s-bento">
         <Reveal className="s-bento-it wide">
-          <Head icon="gold" label="صندوق‌ها" c="c-warning" title="پس‌انداز در دارایی‌های ماندگار" text="طلا، درآمد ثابت، سهامی شاخصی، مختلط و نقره؛ با چند لمس بخرید، رشدش را هر روز ببینید و هر وقت خواستید به ریال برگردانید." />
+          <Head icon="gold" label="دارایی‌ها" c="c-warning" title="پس‌اندازی که ارزشش می‌ماند" text="طلا، درآمد ثابت، سهام، سبد مختلط و نقره؛ با چند لمس بخرید، رشدش را هر روز ببینید و هر وقت خواستید به ریال برگردانید." />
           <div className="s-bento-funds" aria-busy={funds.isLoading}>
             {funds.isLoading && [0, 1, 2, 3].map((i) => <span key={i} className="s-skl" style={{ height: 44, borderRadius: 12 }} />)}
             {list.map((f) => (
               <div key={f.id} className="row">
-                <span className="n">{f.name}</span>
+                <span className="n">{f.shortName || f.name.replace(/^صندوق\s*/, '')}</span>
                 <span className="r">بازده سالانه <b>{percent(f.return1y, 0)}</b></span>
               </div>
             ))}
@@ -68,7 +68,7 @@ export function Ecosystem() {
         </Reveal>
 
         <Reveal className="s-bento-it wide" delay={200}>
-          <Head icon="gift" label="مزایای سازمانی" c="c-primary" title="پاداش سازمان‌تان، مستقیم به دارایی" text="اگر سازمان شما همراه نمادنو است، پاداش، عیدی و مزایا به‌صورت واحد صندوق به همین حساب می‌رسد؛ تأیید می‌کنید و سهم هر صندوق را خودتان انتخاب می‌کنید." />
+          <Head icon="gift" label="مزایای سازمانی" c="c-primary" title="پاداش سازمان‌تان، مستقیم به دارایی" text="اگر سازمان شما همراه نمادنو است، پاداش، عیدی و مزایا به‌صورت دارایی به همین حساب می‌رسد؛ تأیید می‌کنید و سهم هر دارایی را خودتان انتخاب می‌کنید." />
           <div className="s-bento-gift">
             <span className="ic"><Icon name="gift" /></span>
             <span className="s-col" style={{ lineHeight: 1.5 }}>

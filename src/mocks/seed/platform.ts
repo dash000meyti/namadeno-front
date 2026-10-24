@@ -1,6 +1,6 @@
 /** Organizations, employees, packages, requests, operator data, stores, FAQ and blog. */
 import type {
-  ApprovalRequest, BlogPost, CreditProduct, Employee, FaqItem, OrgPackage, Organization, PlatformRule, PlatformUser,
+  ApprovalRequest, BlogPost, CreditProduct, Employee, FaqItem, MilestoneStep, OrgPackage, Organization, PlatformRule, PlatformUser,
   RiskAlert, Store,
 } from '@/types/domain';
 import { daysFromNow, jalaliToIso, minutesAgo } from '@/lib/clock';
@@ -34,8 +34,13 @@ export const ORGANIZATIONS: Organization[] = ORG_ROWS.map(([id, name, contract, 
     cardEnabled: products.includes('credit'), installmentEnabled: products.includes('bnpl'),
   },
   admins: id === 'org-arman'
-    ? [{ id: 'oa-201', name: 'نیما رضایی', role: 'مدیر منابع انسانی', email: 'n.rezaei@arman.ir' }, { id: 'oa-202', name: 'لیلا کاظمی', role: 'کارشناس جبران خدمات', email: 'l.kazemi@arman.ir' }]
-    : [{ id: 'oa-' + id, name: 'مدیر منابع انسانی', role: 'مدیر منابع انسانی', email: 'hr@' + id.slice(4) + '.ir' }],
+    ? [
+      { id: 'oa-200', name: 'مهسا تهرانی', role: 'مدیر سازمان', email: 'm.tehrani@arman.co', panelRole: 'admin' },
+      { id: 'oa-201', name: 'نیما رضایی', role: 'مدیر منابع انسانی', email: 'nima.rezaei@arman.co', panelRole: 'hr' },
+      { id: 'oa-202', name: 'لیلا کاظمی', role: 'کارشناس جبران خدمات', email: 'l.kazemi@arman.co', panelRole: 'hr' },
+      { id: 'oa-203', name: 'رضا حسینی', role: 'مدیر مالی', email: 'r.hosseini@arman.co', panelRole: 'finance' },
+    ]
+    : [{ id: 'oa-' + id, name: 'مدیر منابع انسانی', role: 'مدیر منابع انسانی', email: 'hr@' + id.slice(4) + '.ir', panelRole: 'admin' }],
 }));
 
 // ───────────── Employees of هلدینگ آرمان ─────────────
@@ -70,10 +75,26 @@ const recipients = (ids: string[], amount: number, status: (i: number) => 'pendi
   });
 const ACTIVE_IDS = ARMAN_EMPLOYEES.filter((e) => e.status === 'active').map((e) => e.id);
 
+const BRAND_STEPS: MilestoneStep[] = [
+  { id: 'ms-1', title: 'مفهوم و طرح اولیه', sharePct: 30, status: 'released', releasedAt: jalaliToIso(1405, 7, 15), dueDate: jalaliToIso(1405, 7, 15), requiresApproval: true },
+  { id: 'ms-2', title: 'طراحی نشان و لوگوتایپ', sharePct: 30, status: 'released', releasedAt: jalaliToIso(1405, 8, 5), dueDate: jalaliToIso(1405, 8, 5), requiresApproval: false },
+  { id: 'ms-3', title: 'راهنمای کاربرد برند', sharePct: 40, status: 'pending_approval', dueDate: jalaliToIso(1405, 8, 12), requiresApproval: true },
+];
+
 export const ARMAN_PACKAGES: OrgPackage[] = [
   { id: 'pkg-mehr', title: 'پاداش مهر ۱۴۰۵', reason: 'bonus', createdAt: jalaliToIso(1405, 7, 12), sentAt: jalaliToIso(1405, 7, 14), status: 'sent', amountPerPerson: 20_000_000, total: 20_000_000 * ACTIVE_IDS.length, recipients: recipients(ACTIVE_IDS, 20_000_000, (i) => (i === 0 || i % 3 === 0 ? 'pending' : 'accepted')), allocationMode: 'free', cashAllowed: true, lockPolicy: { type: 'vesting', releaseAt: jalaliToIso(1405, 10, 15) }, message: 'با سپاس از تلاش‌های شما در پروژه‌های فصل دوم.', expiresAt: jalaliToIso(1405, 8, 30) },
   { id: 'pkg-welfare-aban', title: 'مزایای رفاهی', reason: 'welfare', createdAt: jalaliToIso(1405, 7, 9), sentAt: jalaliToIso(1405, 7, 10), status: 'sent', amountPerPerson: 5_000_000, total: 5_000_000 * ACTIVE_IDS.length, recipients: recipients(ACTIVE_IDS, 5_000_000, (i) => (i === 0 || i === 4 ? 'pending' : 'accepted')), allocationMode: 'fixed', fixedSplit: { gold: 0, fixed: 100 }, cashAllowed: false, lockPolicy: { type: 'none' } },
-  { id: 'pkg-ms-portal', title: 'قرارداد پروژه پرتال منابع انسانی', reason: 'project_contract', createdAt: jalaliToIso(1405, 6, 1), sentAt: jalaliToIso(1405, 6, 1), status: 'sent', amountPerPerson: 20_000_000, total: 20_000_000, recipients: recipients(['u-1001'], 20_000_000, () => 'accepted'), allocationMode: 'fixed', fixedSplit: { gold: 100, fixed: 0 }, cashAllowed: false, lockPolicy: { type: 'milestone', steps: MS_STEPS.map(({ title, sharePct, dueDate }) => ({ title, sharePct, dueDate })) }, milestoneProgress: MS_STEPS.map((s) => ({ ...s })) },
+  { id: 'pkg-ms-portal', title: 'قرارداد پروژه پرتال منابع انسانی', reason: 'project_contract', createdAt: jalaliToIso(1405, 6, 1), sentAt: jalaliToIso(1405, 6, 1), status: 'sent', amountPerPerson: 20_000_000, total: 20_000_000, recipients: recipients(['u-1001'], 20_000_000, () => 'accepted'), allocationMode: 'fixed', fixedSplit: { gold: 100, fixed: 0 }, cashAllowed: false, lockPolicy: { type: 'milestone', steps: MS_STEPS.map(({ title, sharePct, dueDate, requiresApproval }) => ({ title, sharePct, dueDate, requiresApproval })) }, milestoneProgress: MS_STEPS.map((s) => ({ ...s })) },
+  // second project contract: step 2 was released automatically at its due date; step 3 needs approval and its due date has passed
+  // (the mock opens its approval request on the first API call — see processDueMilestones in handlers/org.ts)
+  {
+    id: 'pkg-ms-brand', title: 'قرارداد طراحی هویت بصری', reason: 'project_contract', createdAt: jalaliToIso(1405, 6, 20), sentAt: jalaliToIso(1405, 6, 20), status: 'sent',
+    amountPerPerson: 10_000_000, total: 10_000_000,
+    recipients: [{ employeeId: 'u-1006', name: 'امیر جعفری', amount: 10_000_000, status: 'accepted', acceptedAt: jalaliToIso(1405, 6, 22) }],
+    allocationMode: 'fixed', fixedSplit: { gold: 100, fixed: 0 }, cashAllowed: false,
+    lockPolicy: { type: 'milestone', steps: BRAND_STEPS.map(({ title, sharePct, dueDate, requiresApproval }) => ({ title, sharePct, dueDate, requiresApproval })) },
+    milestoneProgress: BRAND_STEPS.map((s) => ({ ...s })),
+  },
   { id: 'pkg-shahrivar', title: 'پاداش شهریور ۱۴۰۵', reason: 'bonus', createdAt: jalaliToIso(1405, 6, 12), sentAt: jalaliToIso(1405, 6, 14), status: 'completed', amountPerPerson: 15_000_000, total: 15_000_000 * ACTIVE_IDS.length, recipients: recipients(ACTIVE_IDS, 15_000_000, () => 'accepted'), allocationMode: 'free', cashAllowed: true, lockPolicy: { type: 'none' } },
   { id: 'pkg-tir', title: 'پاداش تیر ۱۴۰۵', reason: 'bonus', createdAt: jalaliToIso(1405, 4, 1), sentAt: jalaliToIso(1405, 4, 2), status: 'completed', amountPerPerson: 20_000_000, total: 20_000_000 * ACTIVE_IDS.length, recipients: recipients(ACTIVE_IDS, 20_000_000, () => 'accepted'), allocationMode: 'fixed', fixedSplit: { gold: 0, fixed: 100 }, cashAllowed: false, lockPolicy: { type: 'vesting', releaseAt: jalaliToIso(1405, 10, 15) } },
   { id: 'pkg-eid', title: 'عیدی ۱۴۰۵', reason: 'eid', createdAt: jalaliToIso(1405, 1, 3), sentAt: jalaliToIso(1405, 1, 5), status: 'completed', amountPerPerson: 8_000_000, total: 8_000_000 * ACTIVE_IDS.length, recipients: recipients(ACTIVE_IDS, 8_000_000, () => 'accepted'), allocationMode: 'fixed', fixedSplit: { gold: 100, fixed: 0 }, cashAllowed: false, lockPolicy: { type: 'none' } },
@@ -83,7 +104,7 @@ export const ARMAN_PACKAGES: OrgPackage[] = [
 // ───────────── Requests (org + operator) ─────────────
 export const REQUESTS: ApprovalRequest[] = [
   { id: 'RQ-2041', kind: 'loan', title: 'درخواست وام ۳۰٬۰۰۰٬۰۰۰ تومان · ۱۲ ماهه', requesterId: 'u-1003', requesterName: 'مریم احمدی', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 30_000_000, createdAt: minutesAgo(95), status: 'pending' },
-  { id: 'RQ-2040', kind: 'milestone_release', title: 'آزادسازی مرحله ۳ «پیاده‌سازی نسخه اول»', requesterId: 'u-1001', requesterName: 'سارا محمدی', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 6_000_000, createdAt: minutesAgo(70), status: 'pending', note: 'تحویل نسخه اول در محیط تست انجام شده است.' },
+  { id: 'RQ-2040', kind: 'milestone_release', title: 'آزادسازی مرحله ۳ «پیاده‌سازی نسخه اول»', requesterId: 'u-1001', requesterName: 'سارا محمدی', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 6_000_000, createdAt: minutesAgo(70), status: 'pending', note: 'تحویل نسخه اول در محیط تست انجام شده است.', packageId: 'pkg-ms-portal', stepId: 'ms-3', trigger: 'employee' },
   { id: 'RQ-2039', kind: 'credit_increase', title: 'افزایش سقف اعتبار کارت به ۵۰ میلیون', requesterId: 'u-1002', requesterName: 'علی کریمی', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 50_000_000, createdAt: daysFromNow(-1, '14:20'), status: 'pending' },
   { id: 'RQ-2038', kind: 'cash_withdrawal', title: 'برداشت نقدی از بسته پاداش', requesterId: 'u-1006', requesterName: 'امیر جعفری', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 8_000_000, createdAt: daysFromNow(-1, '10:05'), status: 'pending' },
   { id: 'RQ-2037', kind: 'installment', title: 'خرید اقساطی یخچال · ۶ قسط', requesterId: 'u-1007', requesterName: 'حسین نوری', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 42_000_000, createdAt: daysFromNow(-2, '16:40'), status: 'approved', decidedAt: daysFromNow(-1, '09:10'), decidedBy: 'نیما رضایی' },
@@ -124,14 +145,14 @@ export const PRODUCTS: CreditProduct[] = [
 ];
 
 export const RULES: PlatformRule[] = [
-  { id: 'r-lock-collateral', group: 'locks', title: 'قفل وثیقه اعتبار و وام', description: 'هنگام دریافت وام یا اعتبار کارت، معادل مبلغ از دارایی آزاد قفل می‌شود.', enabled: true },
-  { id: 'r-lock-vesting', group: 'locks', title: 'قفل زمانی سازمان (Vesting)', description: 'سازمان می‌تواند بسته را تا تاریخ مشخص قفل کند.', enabled: true, value: 365, unit: 'روز حداکثر' },
-  { id: 'r-lock-milestone', group: 'locks', title: 'آزادسازی مرحله‌ای', description: 'سازمان مبلغ قرارداد را قفل و با تأیید هر مرحله آزاد می‌کند.', enabled: true, value: 10, unit: 'مرحله حداکثر' },
-  { id: 'r-lock-installment', group: 'locks', title: 'وثیقه خرید اقساطی', description: 'با پرداخت هر قسط بخشی از وثیقه آزاد می‌شود.', enabled: true },
+  { id: 'r-lock-collateral', group: 'locks', title: 'پشتوانه‌ی وام و اعتبار', description: 'هنگام دریافت وام یا اعتبار کارت، معادل مبلغ از دارایی آزاد به‌عنوان پشتوانه رزرو می‌شود.', enabled: true },
+  { id: 'r-lock-vesting', group: 'locks', title: 'پس‌انداز سازمانی (Vesting)', description: 'سازمان می‌تواند بسته را تا تاریخ مشخص برای همکار پس‌انداز کند.', enabled: true, value: 365, unit: 'روز حداکثر' },
+  { id: 'r-lock-milestone', group: 'locks', title: 'دریافت مرحله‌ای', description: 'سازمان مبلغ قرارداد را رزرو می‌کند و با تأیید هر مرحله، سهم همان مرحله آزاد می‌شود.', enabled: true, value: 10, unit: 'مرحله حداکثر' },
+  { id: 'r-lock-installment', group: 'locks', title: 'پشتوانه‌ی خرید اقساطی', description: 'با پرداخت هر قسط بخشی از پشتوانه آزاد می‌شود.', enabled: true },
   { id: 'r-lock-legal', group: 'locks', title: 'مسدودی قانونی', description: 'فقط بهره‌بردار با شماره دستور مرجع می‌تواند اعمال یا رفع کند.', enabled: true },
   { id: 'r-limit-withdraw-daily', group: 'limits', title: 'سقف برداشت روزانه', description: 'حداکثر برداشت از کیف پول ریالی در یک روز.', enabled: true, value: 100_000_000, unit: 'تومان' },
   { id: 'r-limit-trade', group: 'limits', title: 'سقف خرید/فروش روزانه صندوق', description: 'برای هر کاربر در هر صندوق.', enabled: true, value: 500_000_000, unit: 'تومان' },
-  { id: 'r-credit-loan-pct', group: 'credit', title: 'سقف وام نسبت به دارایی آزاد', description: 'قفل‌های زمانی و مرحله‌ای در ظرفیت وثیقه حساب نمی‌شوند.', enabled: true, value: 40, unit: 'درصد' },
+  { id: 'r-credit-loan-pct', group: 'credit', title: 'سقف وام نسبت به دارایی آزاد', description: 'پس‌انداز سازمانی و دریافت مرحله‌ای در ظرفیت پشتوانه حساب نمی‌شوند.', enabled: true, value: 40, unit: 'درصد' },
   { id: 'r-credit-card-pct', group: 'credit', title: 'سقف اعتبار کارت نسبت به دارایی', description: 'اعتبار کارت با رزرو بخشی از کیف پول ریالی.', enabled: true, value: 25, unit: 'درصد' },
   { id: 'r-kyc-credit', group: 'kyc', title: 'الزام احراز هویت سطح ۲ برای سرویس‌های اعتباری', description: 'شاهکار + استعلام ثبت احوال.', enabled: true, value: 2, unit: 'سطح' },
   { id: 'r-kyc-trade', group: 'kyc', title: 'الزام سجام برای خرید و فروش صندوق', description: 'سطح ۳ احراز هویت.', enabled: true, value: 3, unit: 'سطح' },
@@ -166,38 +187,38 @@ export const STORES: Store[] = [
 
 // ───────────── FAQ ─────────────
 export const FAQ: FaqItem[] = [
-  { id: 'f6', q: 'آیا برای استفاده از نمادنو باید عضو یک سازمان باشم؟', a: 'خیر. هر کسی با شماره موبایلی که به نام خودش است، در چند دقیقه حساب نمادنو باز می‌کند، صندوق می‌خرد و از خدمات اعتباری استفاده می‌کند. اگر سازمان شما همراه نمادنو باشد، پاداش و مزایایتان هم مستقیم به همین حساب می‌رسد.' },
-  { id: 'f7', q: 'افتتاح حساب نمادنو چه چیزی لازم دارد؟', a: 'کد ملی و شماره موبایلی که به نام خودتان است. احراز هویت کاملاً آنلاین و داخل اپ انجام می‌شود: برای خدمات اعتباری، هویت پایه (ثبت احوال) و برای خرید و فروش صندوق، احراز سجام کافی است.' },
-  { id: 'f1', q: 'دارایی آزاد و قفل‌شده یعنی چه؟', a: 'دارایی آزاد را هر وقت بخواهید به ریال تبدیل می‌کنید یا برداشت می‌کنید. دارایی قفل‌شده هم کاملاً مال شماست و سود و رشد ارزشش برای شماست، اما تا رفع شرط آزادسازی (تسویه وام، رسیدن تاریخ یا تأیید مرحله توسط سازمان) قابل فروش یا برداشت نیست. «قابل برداشت» همیشه فقط از بخش آزاد محاسبه می‌شود.' },
-  { id: 'f4', q: 'چطور بدون فروش دارایی، وام بگیرم؟', a: 'تا ۴۰٪ دارایی آزادتان را می‌توانید وام بگیرید. معادل وام، بخشی از دارایی آزاد به‌عنوان وثیقه قفل می‌شود و همچنان برای شما رشد می‌کند؛ با پرداخت هر قسط، سهمی از وثیقه آزاد می‌شود. قفل‌های سازمانی در ظرفیت وثیقه حساب نمی‌شوند.' },
-  { id: 'f8', q: 'هزینه‌ی خرید و فروش صندوق چقدر است؟', a: 'کارمزد هر صندوق در صفحه‌ی همان صندوق و پیش از تأیید نهایی هر تراکنش نمایش داده می‌شود. هزینه‌ی پنهان یا کارمزد نگهداری از سوی نمادنو وجود ندارد.' },
-  { id: 'f3', q: 'چطور از یک صندوق به صندوق دیگر بروم؟', a: 'هر صندوق فقط به کیف پول ریالی تبدیل می‌شود و ریال به هر صندوقی. برای جابه‌جایی، ابتدا صندوق مبدأ را به ریال بفروشید و سپس صندوق مقصد را بخرید.' },
+  { id: 'f6', q: 'آیا برای استفاده از نمادنو باید عضو یک سازمان باشم؟', a: 'خیر. هر کسی با شماره موبایلی که به نام خودش است، در چند دقیقه حساب نمادنو باز می‌کند، دارایی می‌خرد و از خدمات اعتباری استفاده می‌کند. اگر سازمان شما همراه نمادنو باشد، پاداش و مزایایتان هم مستقیم به همین حساب می‌رسد.' },
+  { id: 'f7', q: 'افتتاح حساب نمادنو چه چیزی لازم دارد؟', a: 'کد ملی و شماره موبایلی که به نام خودتان است. احراز هویت کاملاً آنلاین و داخل اپ انجام می‌شود: برای خدمات اعتباری، هویت پایه (ثبت احوال) و برای خرید و فروش دارایی، احراز سجام کافی است.' },
+  { id: 'f1', q: 'دارایی آزاد و رزروشده یعنی چه؟', a: 'دارایی آزاد را هر وقت بخواهید به ریال تبدیل می‌کنید یا برداشت می‌کنید. دارایی رزروشده هم کاملاً مال شماست و سود و رشد ارزشش برای شماست؛ فقط تا رسیدن زمان آزادسازی (تسویه وام، رسیدن تاریخ یا تأیید مرحله توسط سازمان) برای همان هدف کنار گذاشته شده و پس از آن مثل بخش آزاد قابل فروش و برداشت است. «قابل برداشت» همیشه فقط از بخش آزاد محاسبه می‌شود.' },
+  { id: 'f4', q: 'چطور بدون فروش دارایی، وام بگیرم؟', a: 'تا ۴۰٪ دارایی آزادتان را می‌توانید وام بگیرید. معادل وام، بخشی از دارایی آزاد به‌عنوان پشتوانه رزرو می‌شود و همچنان برای شما رشد می‌کند؛ با پرداخت هر قسط، سهمی از پشتوانه آزاد می‌شود. پس‌انداز سازمانی و دریافت مرحله‌ای در ظرفیت پشتوانه حساب نمی‌شوند.' },
+  { id: 'f8', q: 'هزینه‌ی خرید و فروش دارایی چقدر است؟', a: 'کارمزد هر دارایی در صفحه‌ی همان دارایی و پیش از تأیید نهایی هر تراکنش نمایش داده می‌شود. هزینه‌ی پنهان یا کارمزد نگهداری از سوی نمادنو وجود ندارد.' },
+  { id: 'f3', q: 'چطور از یک دارایی به دارایی دیگر بروم؟', a: 'هر دارایی فقط به کیف پول ریالی تبدیل می‌شود و ریال به هر دارایی. برای جابه‌جایی، مثلاً طلا را به ریال بفروشید و با همان ریال درآمد ثابت بخرید.' },
   { id: 'f5', q: 'برداشت چه زمانی به حساب من می‌رسد؟', a: 'برداشت‌ها در چرخه‌ی پایا تسویه می‌شوند و معمولاً تا پایان روز کاری بعد به حسابی که به نام خودتان است واریز می‌شوند.' },
-  { id: 'f2', q: 'قفل زمانی سازمان یعنی چه؟', a: 'سازمان می‌تواند پاداش را با تاریخ آزادسازی بفرستد. واحدهای آن تا تاریخ مشخص‌شده قابل فروش نیستند، اما سود و رشد ارزش‌شان از همان روز اول برای شماست و در آن تاریخ خودکار آزاد می‌شوند.' },
+  { id: 'f2', q: 'پس‌انداز سازمانی یعنی چه؟', a: 'سازمان می‌تواند پاداش را به‌صورت پس‌انداز و با تاریخ آزادسازی بفرستد. این دارایی از همان روز اول مال شماست و سود و رشد ارزشش برای شماست؛ تا تاریخ مشخص‌شده برایتان پس‌انداز می‌ماند و در همان روز خودکار آزاد می‌شود.' },
 ];
 
 // ───────────── Blog ─────────────
 export const BLOG: BlogPost[] = [
-  { slug: 'free-vs-locked-assets', title: 'دارایی آزاد و قفل‌شده؛ هرآنچه باید بدانید', excerpt: 'چرا بخشی از دارایی شما قفل است و چه زمانی آزاد می‌شود؟ پنج نوع قفل در نمادنو را بشناسید.', category: 'آموزش', author: 'تیم محصول نمادنو', publishedAt: jalaliToIso(1405, 8, 10), readMinutes: 6, cover: 'security', body: [
-    'در نمادنو هر کیف پول و هر صندوق دو بخش دارد: آزاد و قفل‌شده. بخش آزاد را می‌توانید هر زمان به ریال بفروشید یا برداشت کنید.',
-    'بخش قفل‌شده همچنان متعلق به شماست و سود یا تغییر ارزش آن به حساب شما می‌آید؛ فقط تا رفع شرط آزادسازی قابل فروش یا برداشت نیست.',
-    'پنج نوع قفل داریم: وثیقه اعتبار و وام، قفل زمانی سازمان، وثیقه خرید اقساطی، آزادسازی مرحله‌ای قراردادها و مسدودی قانونی.',
+  { slug: 'free-vs-locked-assets', title: 'دارایی آزاد و رزروشده؛ هرآنچه باید بدانید', excerpt: 'چرا بخشی از دارایی شما رزرو است و چه زمانی آزاد می‌شود؟ پنج نوع رزرو در نمادنو را بشناسید.', category: 'آموزش', author: 'تیم محصول نمادنو', publishedAt: jalaliToIso(1405, 8, 10), readMinutes: 6, cover: 'security', body: [
+    'در نمادنو هر کیف پول و هر دارایی دو بخش دارد: آزاد و رزروشده. بخش آزاد را می‌توانید هر زمان به ریال بفروشید یا برداشت کنید.',
+    'بخش رزروشده همچنان متعلق به شماست و سود یا تغییر ارزش آن به حساب شما می‌آید؛ فقط تا رسیدن زمان یا شرط آزادسازی برای هدف مشخصی کنار گذاشته شده و پس از آن مثل بخش آزاد قابل فروش و برداشت است.',
+    'پنج نوع رزرو داریم: پشتوانه‌ی وام و اعتبار، پس‌انداز سازمانی، پشتوانه‌ی خرید اقساطی، دریافت مرحله‌ای قراردادها و مسدودی قانونی.',
   ] },
-  { slug: 'gold-fund-inflation', title: 'صندوق طلا؛ سپری در برابر تورم', excerpt: 'صندوق‌های طلا چطور کار می‌کنند و چرا برای حفظ ارزش پاداش‌ها گزینه مناسبی هستند.', category: 'سرمایه‌گذاری', author: 'واحد تحلیل', publishedAt: jalaliToIso(1405, 7, 28), readMinutes: 5, cover: 'gold', body: [
-    'صندوق طلا با پشتوانه شمش و سکه، ارزش دارایی شما را به قیمت جهانی طلا و نرخ ارز گره می‌زند.',
-    'خرید و فروش آن از طریق کیف پول ریالی و بدون نیاز به کد بورسی جداگانه انجام می‌شود.',
+  { slug: 'gold-fund-inflation', title: 'طلا؛ سپری در برابر تورم', excerpt: 'دارایی طلا چطور کار می‌کند و چرا برای حفظ ارزش پاداش‌ها گزینه مناسبی است.', category: 'سرمایه‌گذاری', author: 'واحد تحلیل', publishedAt: jalaliToIso(1405, 7, 28), readMinutes: 5, cover: 'gold', body: [
+    'طلای نمادنو با پشتوانه شمش و سکه، ارزش پس‌انداز شما را به قیمت جهانی طلا و نرخ ارز گره می‌زند.',
+    'خرید و فروش آن از طریق کیف پول ریالی و بدون ثبت‌نام جداگانه انجام می‌شود.',
   ] },
-  { slug: 'fixed-income-daily-profit', title: 'سود روزشمار صندوق درآمد ثابت', excerpt: 'سود صندوق درآمد ثابت هر روز در NAV محاسبه می‌شود؛ یعنی چه و چه مزیتی دارد؟', category: 'سرمایه‌گذاری', author: 'واحد تحلیل', publishedAt: jalaliToIso(1405, 7, 15), readMinutes: 4, cover: 'fixed', body: [
-    'در صندوق‌های درآمد ثابت، سود به‌صورت روزانه در ارزش هر واحد (NAV) لحاظ می‌شود.',
-    'نوسان این صندوق‌ها پایین است و برای بخش امن سبد مناسب‌اند.',
+  { slug: 'fixed-income-daily-profit', title: 'سود روزشمار درآمد ثابت', excerpt: 'سود درآمد ثابت هر روز در ارزش روز آن محاسبه می‌شود؛ یعنی چه و چه مزیتی دارد؟', category: 'سرمایه‌گذاری', author: 'واحد تحلیل', publishedAt: jalaliToIso(1405, 7, 15), readMinutes: 4, cover: 'fixed', body: [
+    'در دارایی درآمد ثابت، سود به‌صورت روزانه در ارزش روز هر سهم لحاظ می‌شود.',
+    'نوسان آن پایین است و برای بخش امن سبد مناسب است.',
   ] },
-  { slug: 'asset-backed-loan', title: 'وام با پشتوانه دارایی؛ بدون ضامن', excerpt: 'تا ۴۰٪ دارایی آزاد خود وام بگیرید؛ دارایی‌تان قفل می‌شود اما سودش ادامه دارد.', category: 'اعتبار', author: 'تیم اعتبار', publishedAt: jalaliToIso(1405, 7, 2), readMinutes: 5, cover: 'credit', body: [
+  { slug: 'asset-backed-loan', title: 'وام با پشتوانه دارایی؛ بدون ضامن', excerpt: 'تا ۴۰٪ دارایی آزاد خود وام بگیرید؛ دارایی‌تان پشتوانه‌ی وام می‌شود و سودش ادامه دارد.', category: 'اعتبار', author: 'تیم اعتبار', publishedAt: jalaliToIso(1405, 7, 2), readMinutes: 5, cover: 'credit', body: [
     'وام نمادنو بر پایه دارایی آزاد شماست و نیازی به ضامن یا کسر از حقوق ندارد.',
-    'معادل مبلغ وام از دارایی آزاد قفل می‌شود و با تسویه آخرین قسط آزاد می‌شود.',
+    'معادل مبلغ وام از دارایی آزاد به‌عنوان پشتوانه رزرو می‌شود و با تسویه آخرین قسط آزاد می‌شود.',
   ] },
-  { slug: 'hr-benefits-as-assets', title: 'پاداش کارکنان؛ به‌جای ریال، دارایی', excerpt: 'سازمان‌ها چطور با نمادنو مزایای کارکنان را به دارایی ماندگار تبدیل می‌کنند.', category: 'سازمان‌ها', author: 'تیم فروش سازمانی', publishedAt: jalaliToIso(1405, 6, 20), readMinutes: 7, cover: 'org', body: [
-    'منابع انسانی به‌جای پرداخت ریالی، بسته دارایی می‌فرستد و می‌تواند سیاست قفل زمانی یا مرحله‌ای تعیین کند.',
-    'کارکنان در اپلیکیشن بسته را تأیید و بین صندوق‌ها تخصیص می‌دهند.',
+  { slug: 'hr-benefits-as-assets', title: 'پاداش همکاران؛ به‌جای ریال، دارایی', excerpt: 'سازمان‌ها چطور با نمادنو مزایای همکاران را به دارایی ماندگار تبدیل می‌کنند.', category: 'سازمان‌ها', author: 'تیم فروش سازمانی', publishedAt: jalaliToIso(1405, 6, 20), readMinutes: 7, cover: 'org', body: [
+    'منابع انسانی به‌جای پرداخت ریالی، بسته دارایی می‌فرستد و می‌تواند آن را به‌صورت پس‌انداز سازمانی یا دریافت مرحله‌ای تعریف کند.',
+    'همکاران در اپ نمادنو بسته را تأیید و بین دارایی‌ها تخصیص می‌دهند.',
   ] },
   { slug: 'security-at-namadno', title: 'امنیت حساب در نمادنو', excerpt: 'احراز هویت سه‌سطحی، رمز پویا و نظارت ریسک؛ از دارایی شما چطور محافظت می‌کنیم.', category: 'امنیت', author: 'تیم امنیت', publishedAt: jalaliToIso(1405, 6, 5), readMinutes: 4, cover: 'security', body: [
     'احراز هویت در سه سطح انجام می‌شود: شاهکار، استعلام ثبت احوال و سجام.',

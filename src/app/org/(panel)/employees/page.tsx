@@ -1,12 +1,12 @@
 'use client';
 /**
- * Organization panel — employees. Kit list page: summary (team assets with the free/locked split; three cells double as
+ * Organization panel — employees. Kit list page: summary (team assets with the free/reserved split; three cells double as
  * quick filters) → list card (status tabs, department, search, selectable table, bulk actions) → employee inspector.
  */
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useOrgEmployees, useUpdateEmployee } from '@/api/org';
-import { useBulkEmployeeStatus, useOrgPeopleFacts, type EmpFacts } from '@/api/org-people-extra';
+import { useBulkEmployeeStatus, useOrgDepartments, useOrgPeopleFacts, type EmpFacts } from '@/api/org-people-extra';
 import type { Employee } from '@/types/domain';
 import {
   Ava, BulkBar, Card, Confirm, Empty, Ident, PageHeading, Pill, SearchField, Select, StatStrip, Table, TableFoot, Tabs, Tile, Toolbar,
@@ -69,6 +69,7 @@ export default function OrgEmployeesPage() {
   useEffect(() => { const t = setTimeout(() => setDebounced(enDigits(q.trim())), 300); return () => clearTimeout(t); }, [q]);
 
   const all = useOrgEmployees();
+  const units = useOrgDepartments();
   const list = useOrgEmployees({ q: debounced || undefined, department: dept === 'all' ? undefined : dept });
   const facts = useOrgPeopleFacts();
   const update = useUpdateEmployee();
@@ -76,7 +77,7 @@ export default function OrgEmployeesPage() {
   const pkg = useStartPackage((e) => show(errMsg(e), 'error'));
 
   const everyone = all.data ?? [];
-  const departments = [...new Set(everyone.map((e) => e.department))];
+  const departments = [...new Set([...(units.data ?? []).map((d) => d.name), ...everyone.map((e) => e.department)])];
   const base = list.data ?? [];
   const f = facts.data ?? {};
   const counts: Record<Tab, number> = { all: base.length, active: 0, invited: 0, inactive: 0 };
@@ -117,9 +118,9 @@ export default function OrgEmployeesPage() {
   const stats: Stat[] = [
     {
       label: dept === 'all' ? 'دارایی کارکنان' : `دارایی واحد ${dept}`, value: totalParts[0], unit: totalParts[1],
-      note: sum.total ? `آزاد ${pct(((sum.total - sum.locked) / sum.total) * 100)} · قفل ${pct((sum.locked / sum.total) * 100)}` : 'هنوز دارایی ثبت نشده',
+      note: sum.total ? `آزاد ${pct(((sum.total - sum.locked) / sum.total) * 100)} · رزرو ${pct((sum.locked / sum.total) * 100)}` : 'هنوز دارایی ثبت نشده',
     },
-    { label: 'دارای قفل', value: faDigits(sum.nLocked), unit: 'نفر', note: sum.locked ? `جمع قفل ${compactMoney(sum.locked)} تومان` : 'همه‌ی دارایی‌ها آزاد است', onClick: () => toggle('locked'), active: more.locked },
+    { label: 'دارای رزرو فعال', value: faDigits(sum.nLocked), unit: 'نفر', note: sum.locked ? `جمع رزرو ${compactMoney(sum.locked)} تومان` : 'همه‌ی دارایی‌ها آزاد است', onClick: () => toggle('locked'), active: more.locked },
     { label: 'دارای وام یا اعتبار', value: faDigits(sum.nFacility), unit: 'نفر', note: sum.nFacility ? `وام ${compactMoney(sum.loan)} · سقف کارت ${compactMoney(sum.card)}` : 'بدون تسهیلات فعال', onClick: () => toggle('facility'), active: more.facility },
     {
       label: 'بسته در انتظار پذیرش', value: faDigits(sum.nPending), unit: 'نفر', note: sum.nPending ? `${faDigits(sum.pending)} بسته هنوز پذیرفته نشده` : 'همه‌ی بسته‌ها پذیرفته شده',
@@ -137,7 +138,7 @@ export default function OrgEmployeesPage() {
       render: (e) => { const v = valueOf(e, f[e.id]); return <><span className="num">{money(v.portfolio)}</span><span style={{ width: 100 }}><LockBar free={v.free} locked={v.locked} height={4} /></span></>; },
     },
     {
-      key: 'locked', label: 'قفل‌شده (تومان)', width: '124px', col: true,
+      key: 'locked', label: 'رزروشده (تومان)', width: '124px', col: true,
       render: (e) => {
         const v = valueOf(e, f[e.id]);
         return v.locked > 0
@@ -169,7 +170,7 @@ export default function OrgEmployeesPage() {
 
   return (
     <>
-      <PageHeading title="کارکنان" crumbs={[{ label: 'عملیات' }]} sub="کارکنان سازمان، دارایی آزاد و قفل‌شده، تسهیلات و بسته‌های دریافتی">
+      <PageHeading title="کارکنان" crumbs={[{ label: 'عملیات' }]} sub="کارکنان سازمان، دارایی آزاد و رزروشده، تسهیلات و بسته‌های دریافتی">
         <Link href={routes.org.employeeNew + '?tab=excel'} className="nm-btn ghost"><Icon d={I.upload} size={17} />ورود از اکسل</Link>
         <Link href={routes.org.employeeNew} className="nm-btn"><Icon d={I.plus} size={17} strokeWidth={2} />افزودن کارمند</Link>
       </PageHeading>
@@ -216,7 +217,7 @@ export default function OrgEmployeesPage() {
           busy={update.isPending}
           onSendPackage={() => pkg.start([pickedEmp.id])}
           onSuspend={() => setSuspendIds([pickedEmp.id])}
-          onReactivate={() => setStatus(pickedEmp, 'active', `تعلیق حساب ${pickedEmp.fullName} برداشته شد`)}
+          onReactivate={() => setStatus(pickedEmp, 'active', `حساب ${pickedEmp.fullName} دوباره فعال شد`)}
         />
       )}
 

@@ -14,6 +14,7 @@ import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { LockBar } from '@/components/ui/LockBar';
+import { HOURGLASS } from '@/lib/locks';
 import { enDigits, faDigits, money } from '@/lib/format';
 
 export type Tone = 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
@@ -31,6 +32,7 @@ const P = {
   ext: 'M14 5h5v5M19 5l-8 8M17 13v6H5V7h6',
   alert: 'M12 3l10 18H2zM12 10v5M12 18h.01',
   inbox: 'M3 13l2.5-7h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 13h5l1.5 2.5h5L16 13h5',
+  upload: 'M12 15V4M7.5 8.5L12 4l4.5 4.5M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2',
 };
 
 const TONE_CYCLE: Tone[] = ['primary', 'info', 'success', 'warning', 'secondary', 'neutral'];
@@ -91,7 +93,7 @@ export function Meter({ value, tone = 'primary', width, thin, label }: { value: 
 }
 
 /**
- * Free / locked split (product rule: free = value − Σ locks). Two-part bar + the two amounts.
+ * Free / reserved split (product rule: free = value − Σ locks; customer wording «آزاد / رزرو»). Two-part bar + the two amounts.
  * `fmt` formats amounts (default: full Toman); pass a compact formatter in tight places.
  */
 export function FreeLocked({ free, locked, fmt = money, height = 8, unit }: { free: number; locked: number; fmt?: (n: number) => string; height?: number; unit?: string }) {
@@ -101,7 +103,7 @@ export function FreeLocked({ free, locked, fmt = money, height = 8, unit }: { fr
       <div className="nm-legend">
         <span><i style={{ background: 'var(--primary-main)', borderRadius: '50%' }} />آزاد <b>{fmt(free)}</b>{unit && ` ${unit}`}</span>
         {locked > 0
-          ? <span><Icon d={'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2'} size={12} />قفل <b>{fmt(locked)}</b>{unit && ` ${unit}`}</span>
+          ? <span><Icon d={HOURGLASS} size={12} />رزرو <b>{fmt(locked)}</b>{unit && ` ${unit}`}</span>
           : <span>همه آزاد</span>}
       </div>
     </div>
@@ -242,17 +244,21 @@ export function BigNum({ value, unit, style }: { value: ReactNode; unit?: ReactN
   return <span className="nm-big" style={style}><span className="num">{value}</span>{unit != null && <span className="u">{unit}</span>}</span>;
 }
 
-/** Row in a list: lead (Ava/Tile) + title/sub + trailing content. Link, button or plain. */
-export function ListRow({ lead, title, sub, trail, href, onClick, subLtr, label }: { lead?: ReactNode; title: ReactNode; sub?: ReactNode; trail?: ReactNode; href?: string; onClick?: () => void; subLtr?: boolean; label?: string }) {
+/**
+ * Row in a list: lead (Ava/Tile) + title/sub + trailing content. Link, button or plain.
+ * `pressed` (with `onClick`) makes it a selectable row with a checkbox at the end (pickers inside dialogs).
+ */
+export function ListRow({ lead, title, sub, trail, href, onClick, subLtr, label, pressed }: { lead?: ReactNode; title: ReactNode; sub?: ReactNode; trail?: ReactNode; href?: string; onClick?: () => void; subLtr?: boolean; label?: string; pressed?: boolean }) {
   const inner = (
     <>
       {lead}
       <span className="nm-col"><b>{title}</b>{sub != null && <small className={subLtr ? 'num' : undefined}>{sub}</small>}</span>
       {trail != null && <span className="trail">{trail}</span>}
+      {pressed !== undefined && <span className="nm-check" aria-hidden="true"><i>{pressed && <Icon d={P.check} size={13} strokeWidth={3} />}</i></span>}
     </>
   );
   if (href) return <Link href={href} className="nm-li" aria-label={label}>{inner}</Link>;
-  if (onClick) return <button type="button" className="nm-li" onClick={onClick} aria-label={label}>{inner}</button>;
+  if (onClick) return <button type="button" className="nm-li" onClick={onClick} aria-label={label} aria-pressed={pressed}>{inner}</button>;
   return <div className="nm-li">{inner}</div>;
 }
 export function List({ children }: { children: ReactNode }) { return <div className="nm-list">{children}</div>; }
@@ -588,6 +594,35 @@ export function Field({ label, htmlFor, help, error, children, style }: { label:
       <label className="l" htmlFor={htmlFor}>{label}</label>
       {children}
       {error ? <span className="nm-help err" role="alert">{error}</span> : help ? <span className="nm-help">{help}</span> : null}
+    </div>
+  );
+}
+
+/**
+ * Drop zone for a spreadsheet: click or drag a file. The page reads and validates it (e.g. with readSheet).
+ * `children` = extra buttons beside «انتخاب فایل» (e.g. «استفاده از فایل نمونه»).
+ */
+export function FileDrop({ onFile, busy, title, hint, accept = '.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pickLabel = 'انتخاب فایل', children }: {
+  onFile: (file: File) => void; busy?: boolean; title: ReactNode; hint?: ReactNode; accept?: string; pickLabel?: string; children?: ReactNode;
+}) {
+  const ref = useRef<HTMLInputElement | null>(null);
+  const [drag, setDrag] = useState(false);
+  return (
+    <div
+      className={cx('nm-drop', drag && 'on')}
+      onClick={() => ref.current?.click()}
+      onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+      onDragLeave={() => setDrag(false)}
+      onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) onFile(f); }}
+    >
+      <input ref={ref} type="file" accept={accept} hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
+      <Tile d={P.upload} tone="primary" size="xl" />
+      <b>{busy ? 'در حال خواندن فایل…' : title}</b>
+      {hint != null && <span className="mute">{hint}</span>}
+      <span className="act" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="nm-btn sm" disabled={busy} onClick={() => ref.current?.click()}><Icon d={P.upload} size={15} />{pickLabel}</button>
+        {children}
+      </span>
     </div>
   );
 }

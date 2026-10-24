@@ -1,8 +1,11 @@
 'use client';
 import { PanelShell, type NavGroup, type SearchItem } from '@/components/panel/PanelShell';
 import { useOrgMe, useOrgRequests } from '@/api/org';
+import { useOrgNotifications } from '@/api/org-people-extra';
 import { setSession } from '@/api/client';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
+import { FEATURES } from '@/lib/features';
 import { faDigits } from '@/lib/format';
 
 const I = {
@@ -14,22 +17,29 @@ const I = {
   reports: 'M4 20h16M7 16V10M12 16V5M17 16v-3',
   contract: 'M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8zM14 3v5h5M9 13h6M9 17h4',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1',
+  units: 'M9 3h6v5H9zM3 16h6v5H3zM15 16h6v5h-6zM12 8v4M6 16v-4h12v4',
 };
 
 export default function OrgPanelLayout({ children }: { children: React.ReactNode }) {
   const { data: me } = useOrgMe();
   const { data: pending } = useOrgRequests('pending');
   const count = pending?.length ?? 0;
+  // the bell shows unread notifications (needs action + system updates); «درخواست‌ها» keeps its own badge
+  const { data: notes } = useOrgNotifications();
+  const unread = notes?.items.filter((n) => !n.read).length ?? 0;
   const org = me?.organization;
+  // Units are managed only by the organization's administrator; other panel roles do not see the item.
+  const isAdmin = me?.admin.panelRole === 'admin';
   const groups: NavGroup[] = [
     { title: 'عملیات', items: [
       { label: 'داشبورد', href: routes.org.dashboard, tone: 'primary', d: I.dashboard },
       { label: 'کارکنان', href: routes.org.employees, tone: 'secondary', d: I.users },
       { label: 'بسته‌های دارایی', short: 'بسته‌ها', href: routes.org.packages, tone: 'warning', d: I.pkg },
-      { label: 'تسهیلات و اعتبار', short: 'اعتبار', href: routes.org.credit, tone: 'success', d: I.credit },
+      { label: 'تسهیلات و اعتبار', short: 'اعتبار', href: routes.org.credit, tone: 'success', d: I.credit, soon: !FEATURES.orgCredit },
       { label: 'درخواست‌ها', href: routes.org.requests, tone: 'info', d: I.inbox, badge: count },
     ] },
     { title: 'مدیریت', items: [
+      ...(isAdmin ? [{ label: 'واحدها', href: routes.org.departments, tone: 'info' as const, d: I.units }] : []),
       { label: 'گزارش‌ها', href: routes.org.reports, tone: 'secondary', d: I.reports },
       { label: 'تنظیمات قرارداد', short: 'قرارداد', href: routes.org.contract, tone: 'ink', d: I.contract },
     ] },
@@ -38,10 +48,12 @@ export default function OrgPanelLayout({ children }: { children: React.ReactNode
     { title: 'کارکنان', sub: 'فهرست و پروفایل کارکنان', kind: 'صفحه', d: I.users, href: routes.org.employees },
     { title: 'سارا محمدی', sub: 'کد پرسنلی ۱۰۴۸ · فنی', kind: 'کارمند', d: I.user, href: routes.org.employee('u-1001'), tone: ['var(--soft-info)', 'var(--info-text)'] },
     { title: 'پاداش مهر ۱۴۰۵', sub: 'بسته ارسال‌شده', kind: 'بسته', d: I.pkg, href: routes.org.package('pkg-mehr'), tone: ['var(--soft-warning)', 'var(--warning-text)'] },
-    { title: 'قرارداد پروژه پرتال منابع انسانی', sub: 'آزادسازی مرحله‌ای', kind: 'بسته', d: I.pkg, href: routes.org.package('pkg-ms-portal') },
+    { title: 'قرارداد پروژه پرتال منابع انسانی', sub: LOCK_META.milestone.label, kind: 'بسته', d: I.pkg, href: routes.org.package('pkg-ms-portal') },
     { title: 'ارسال بسته دارایی', sub: 'شروع ارسال جدید', kind: 'عملیات', d: I.pkg, href: routes.org.newRecipients() },
     { title: 'درخواست‌ها', sub: faDigits(count) + ' درخواست در انتظار', kind: 'صفحه', d: I.inbox, href: routes.org.requests },
+    { title: 'اعلان‌ها', sub: faDigits(unread) + ' اعلان خوانده‌نشده', kind: 'صفحه', d: I.inbox, href: routes.org.notifications },
     { title: 'گزارش‌ها', sub: 'گزارش بسته‌ها و تخصیص', kind: 'صفحه', d: I.reports, href: routes.org.reports },
+    ...(isAdmin ? [{ title: 'واحدها', sub: 'ساخت و ویرایش واحدهای سازمان', kind: 'صفحه', d: I.units, href: routes.org.departments }] : []),
   ];
   return (
     <PanelShell
@@ -56,7 +68,7 @@ export default function OrgPanelLayout({ children }: { children: React.ReactNode
       searchPlaceholder="جستجو…"
       searchItems={search}
       primaryAction={{ label: 'ارسال بسته', href: routes.org.newRecipients(), d: I.pkg }}
-      bell={{ href: routes.org.requests, count, label: 'اعلان‌ها و درخواست‌ها' }}
+      bell={{ href: routes.org.notifications, count: unread, label: 'اعلان‌ها' }}
       settingsHref={routes.org.contract}
     >
       {children}

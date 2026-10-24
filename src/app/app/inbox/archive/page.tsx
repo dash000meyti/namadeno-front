@@ -12,6 +12,7 @@ import { PARTS, P, policyTag, splitPct, type PartKey } from '@/components/app/co
 import { EmptyCard, InboxTabs } from '@/components/app/core/ui';
 import { faDigits, jDate, money } from '@/lib/format';
 import { now } from '@/lib/clock';
+import { HOURGLASS } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import type { InboxPackage, Lock, Portfolio } from '@/types/domain';
 
@@ -81,22 +82,22 @@ export default function InboxArchivePage() {
         ) : accepted.isError ? (
           <ErrorState message="دریافت فهرست ممکن نشد" onRetry={() => accepted.refetch()} />
         ) : rows.length === 0 ? (
-          <EmptyCard d={P.inbox} tone="primary" title="هنوز بسته‌ای تأیید نکرده‌اید" text="بسته‌هایی که تأیید می‌کنید، با وضعیت آزاد و قفل‌شده‌شان اینجا می‌مانند." />
+          <EmptyCard d={P.inbox} tone="primary" title="هنوز بسته‌ای تأیید نکرده‌اید" text="بسته‌هایی که تأیید می‌کنید، با بخش آزاد و رزروشده‌شان اینجا می‌مانند." />
         ) : (
           <>
-            {/* summary: free vs locked of confirmed packages */}
+            {/* summary: free vs reserved of confirmed packages */}
             <div className="card" style={{ boxSizing: 'border-box', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none' }}>
               <div style={{ height: 22, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>دریافتی‌های تأیید‌شده {years.length <= 1 ? yearLabel : ''}</span>
                 <span className="num" style={{ marginRight: 'auto', fontSize: 16, whiteSpace: 'nowrap' }}>{money(sumT)} <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-secondary)' }}>تومان</span></span>
               </div>
-              <div className="lkbar" role="img" aria-label={`آزاد ${money(sumT - sumL)} · قفل ${money(sumL)}`}>
+              <div className="lkbar" role="img" aria-label={`آزاد ${money(sumT - sumL)} · رزرو ${money(sumL)}`}>
                 {sumT - sumL > 0 && <span className="f" style={sumL > 0 ? { width: `${freePct}%` } : { flex: 1 }} />}
                 {sumL > 0 && <span className="l" style={{ flex: 1 }} />}
               </div>
               <div className="lkleg">
                 <span><span className="lkdot" />آزاد <b>{money(sumT - sumL)}</b></span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={P.lock} size={12} />قفل <b>{money(sumL)}</b></span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={HOURGLASS} size={12} />رزرو <b>{money(sumL)}</b></span>
               </div>
             </div>
 

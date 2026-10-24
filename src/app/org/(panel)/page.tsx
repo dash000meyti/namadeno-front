@@ -1,7 +1,7 @@
 'use client';
 /**
  * Organization dashboard — kit overview page: key numbers, the latest batch, requests waiting for a decision,
- * team assets (free/locked + mix), one quiet contract line. Detailed charts live in Reports.
+ * team assets (free/reserved + mix), one quiet contract line. Detailed charts live in Reports.
  */
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
@@ -10,11 +10,13 @@ import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { useDecideOrgRequest, useOrgDashboard, useOrgPackages, useOrgRequests } from '@/api/org';
 import { useOrgPeopleInsights, useReopenOrgRequest } from '@/api/org-people-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDate, jDayMonth, money, pct, percent, time } from '@/lib/format';
 import type { ApprovalRequest, OrgPackage } from '@/types/domain';
 import { usePanelToast } from '@/components/org/people/PanelToast';
 import { I, compactParts, errMsg } from '@/components/org/people/shared';
+import { perPersonText } from '@/components/org/packages/meta';
 
 const REQ_TYPE: Record<ApprovalRequest['kind'], string> = {
   milestone_release: 'تأیید مرحله قرارداد', loan: 'درخواست وام', cash_withdrawal: 'برداشت نقدی',
@@ -140,7 +142,7 @@ export default function OrgDashboardPage() {
               <KV rows={[
                 ['گیرندگان', <span key="n" className="num">{faDigits(batch.n)} نفر</span>],
                 ['جمع بسته', <span key="t" className="num">{compact(latest.total)}</span>],
-                ['هر نفر', <span key="p" className="num">{compact(latest.amountPerPerson)}</span>],
+                ['هر نفر', <span key="p" className="num">{perPersonText(latest, compact) || '—'}</span>],
               ]} />
               <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
                 {batch.isDraft
@@ -174,12 +176,15 @@ export default function OrgDashboardPage() {
                       {!decided ? (
                         <>
                           <button type="button" className="nm-ib tn tn-success" disabled={isBusy} aria-label={`تأیید درخواست ${q.requesterName}`} onClick={() => act(q, true)}><Icon d={I.check} size={16} strokeWidth={2.2} /></button>
-                          <button type="button" className="nm-ib" disabled={isBusy} aria-label={`رد درخواست ${q.requesterName}`} onClick={() => act(q, false)}><Icon d={I.x} size={16} strokeWidth={2.2} /></button>
+                          {/* a contract step is reclaimed with a reason → on the requests page */}
+                          {ms
+                            ? <Link href={`${routes.org.requests}?id=${q.id}`} className="nm-ib" aria-label={`بازپس‌گیری مرحله‌ی ${q.requesterName} در صفحه‌ی درخواست‌ها`}><Icon d={I.x} size={16} strokeWidth={2.2} /></Link>
+                            : <button type="button" className="nm-ib" disabled={isBusy} aria-label={`رد درخواست ${q.requesterName}`} onClick={() => act(q, false)}><Icon d={I.x} size={16} strokeWidth={2.2} /></button>}
                         </>
                       ) : (
                         <>
-                          <Pill tone={q.status === 'approved' ? 'success' : 'error'}>{q.status === 'approved' ? 'تأیید شد' : 'رد شد'}</Pill>
-                          {!(ms && q.status === 'approved') && <button type="button" className="nm-ib" disabled={isBusy} aria-label={`بازگردانی تصمیم ${q.requesterName}`} onClick={() => undo(q)}><Icon d={I.undo} size={16} /></button>}
+                          <Pill tone={q.status === 'approved' ? 'success' : 'error'}>{q.status === 'approved' ? 'تأیید شد' : ms ? 'بازپس گرفته شد' : 'رد شد'}</Pill>
+                          {!ms && <button type="button" className="nm-ib" disabled={isBusy} aria-label={`بازگردانی تصمیم ${q.requesterName}`} onClick={() => undo(q)}><Icon d={I.undo} size={16} /></button>}
                         </>
                       )}
                     </span>
@@ -191,14 +196,14 @@ export default function OrgDashboardPage() {
         </Card>
       </div>
 
-      {/* Team assets: free/locked + mix */}
+      {/* Team assets: free/reserved + mix */}
       {!d || !ins ? <SkeletonCard h={180} /> : (
         <Card title="دارایی کارکنان" sub="مجموع دارایی کارکنان در نمادنو" more={{ label: 'گزارش‌ها', href: routes.org.reports }}>
           <div className="nm-grid c2" style={{ gap: 40, alignItems: 'center' }}>
             <div className="nm-stack" style={{ gap: 12 }}>
               <BigNum value={totalParts[0]} unit={totalParts[1]} />
               <FreeLocked free={total - locked} locked={locked} fmt={compact} />
-              {total > 0 && <span className="mute" style={{ fontSize: 12 }}>{pct((locked / total) * 100)} دارایی کارکنان قفل است (قفل زمانی، وثیقه و مرحله‌ای)</span>}
+              {total > 0 && <span className="mute" style={{ fontSize: 12 }}>{pct((locked / total) * 100)} از دارایی کارکنان رزرو است و بازده می‌گیرد ({LOCK_META.vesting.label}، {LOCK_META.collateral.short} و {LOCK_META.milestone.label})</span>}
             </div>
             <Allocation compact items={[
               { label: 'طلا', value: ins.allocation.gold, color: 'var(--warning-main)' },
@@ -214,7 +219,7 @@ export default function OrgDashboardPage() {
         <Link href={routes.org.contract} className="nm-li" style={{ padding: '6px 8px', borderRadius: 12, fontSize: 12.5, color: 'var(--text-secondary)', minHeight: 40 }}>
           <Pill tone={org.status === 'active' ? 'success' : 'warning'} dot>{org.status === 'active' ? 'قرارداد فعال' : org.status === 'onboarding' ? 'در حال راه‌اندازی' : 'تعلیق'}</Pill>
           <span>قرارداد <span className="ltr">{org.contractNo}</span> · اعتبار تا <span className="num">{jDate(org.contractEnd)}</span></span>
-          <span className="nm-more" style={{ marginRight: 'auto' }}>قرارداد و محدودیت‌ها<Icon d={I.chevL} size={14} /></span>
+          <span className="nm-more" style={{ marginRight: 'auto' }}>قرارداد و شرایط<Icon d={I.chevL} size={14} /></span>
         </Link>
       )}
     </>

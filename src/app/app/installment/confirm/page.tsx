@@ -9,6 +9,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { useFunds, useMe, usePortfolio, useStore } from '@/api/app';
 import { useCreateInstallmentX, useInstallmentQuoteX, type StoreX } from '@/api/app-credit-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDate, jDayMonth, money, percent, units } from '@/lib/format';
 import { now } from '@/lib/clock';
@@ -77,7 +78,7 @@ function Confirm() {
   return (
     <>
       <Scr gap={8}>
-        <Stepper steps={['انتخاب کالا', 'طرح و وثیقه', 'تأیید']} current={2} />
+        <Stepper steps={['انتخاب کالا', 'طرح و پشتوانه', 'تأیید']} current={2} />
         {me.data && me.data.kycLevel < 2 && <KycBanner text="ثبت خرید اقساطی پس از تکمیل احراز هویت پایه (ثبت احوال) ممکن است." />}
         {(store.isLoading || pf.isLoading) && <><Skeleton h={230} /><Skeleton h={190} /></>}
         {store.isError && <ErrorState message={store.error?.message} onRetry={() => store.refetch()} />}
@@ -98,11 +99,11 @@ function Confirm() {
               ]} />
             </div>
 
-            {/* collateral: exactly what becomes locked */}
+            {/* collateral: exactly what becomes reserved */}
             {h && (
               <div className="card" style={{ boxSizing: 'border-box', padding: '8px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none' }}>
                 <div className="row" style={{ height: 24, gap: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700 }}>وثیقه‌ای که قفل می‌شود</span>
+                  <span style={{ fontSize: 14, fontWeight: 700 }}>پشتوانه‌ای که رزرو می‌شود</span>
                   {h.free > 0 && <span className="num" style={{ marginRight: 'auto', fontSize: 11, fontWeight: 400, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{percent(Math.min(100, (coll / h.free) * 100), 1)} از بخش آزاد صندوق</span>}
                 </div>
                 <div className="row" style={{ height: 44 }}>
@@ -111,15 +112,15 @@ function Confirm() {
                     <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>{h.name}</span>
                     <span className="num" style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{money(coll)} تومان{nav ? ` · ${units(coll / nav, 1)} واحد` : ''}</span>
                   </span>
-                  <span className="lktype" style={{ background: 'var(--soft-secondary)', color: 'var(--secondary-text)' }}><Icon d={CI.lock} size={12} />اقساطی</span>
+                  <span className="lktype" style={{ background: LOCK_META.installment.bg, color: LOCK_META.installment.fg }}><Icon d={LOCK_META.installment.d} size={12} />{LOCK_META.installment.short}</span>
                 </div>
-                <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap' }}>پیش از تأیید: آزاد {money(h.free)} · قفل {money(h.locked)} از {money(h.value)}</span>
+                <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap' }}>پیش از تأیید: آزاد {money(h.free)} · رزرو {money(h.locked)} از {money(h.value)}</span>
                 <LockSplit free={Math.max(0, h.free - coll)} locked={h.locked + Math.min(coll, h.free)} freeLabel="آزاد پس از تأیید" />
                 <div className="row" style={{ minHeight: 32, gap: 8, boxSizing: 'border-box', padding: '6px 10px', borderRadius: 8, background: 'var(--soft-secondary)', color: 'var(--secondary-text)' }}>
                   <Icon d={CI.refresh} size={16} />
-                  <span className="num" style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.5 }}>وثیقه خرید اقساطی · با پرداخت هر قسط، {money(coll / Math.max(1, months))} آزاد می‌شود</span>
+                  <span className="num" style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.5 }}>{LOCK_META.installment.label} · با پرداخت هر قسط، {money(coll / Math.max(1, months))} آزاد می‌شود</span>
                 </div>
-                {shortCollateral && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--error-text)', lineHeight: 1.5 }}>بخش آزاد {h.name} برای این وثیقه کافی نیست؛ طرح را ویرایش کنید.</span>}
+                {shortCollateral && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--error-text)', lineHeight: 1.5 }}>بخش آزاد {h.name} برای این پشتوانه کافی نیست؛ طرح را ویرایش کنید.</span>}
               </div>
             )}
             {shortRial && <span className="num" style={{ padding: '0 4px', fontSize: 12, fontWeight: 600, color: 'var(--error-text)', lineHeight: 1.5 }}>پیش‌پرداخت از کیف پول ریالی برداشت می‌شود و موجودی آزاد آن ({money(rial?.free ?? 0)} تومان) کافی نیست.</span>}
@@ -127,10 +128,10 @@ function Confirm() {
             {/* agreement */}
             <label style={{ height: 44, boxSizing: 'border-box', padding: '0 4px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 'none' }}>
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ width: 20, height: 20, margin: 0, accentColor: 'var(--primary-main)', flex: 'none' }} />
-              <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}>شرایط <span style={{ fontWeight: 700, color: 'var(--primary-text)' }}>قرارداد خرید اقساطی</span> و قفل وثیقه را می‌پذیرم</span>
+              <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}>شرایط <span style={{ fontWeight: 700, color: 'var(--primary-text)' }}>قرارداد خرید اقساطی</span> و رزرو پشتوانه را می‌پذیرم</span>
             </label>
 
-            <div role="status" style={{ minHeight: 48, boxSizing: 'border-box', padding: '6px 12px', borderRadius: 12, background: 'var(--soft-warning)', color: 'var(--warning-text)', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}><Icon d={CI.warn} size={18} /><span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>کد خرید ۷۲ ساعت اعتبار دارد؛ در صورت استفاده‌نشدن، وثیقه خودکار آزاد می‌شود.</span></div>
+            <div role="status" style={{ minHeight: 48, boxSizing: 'border-box', padding: '6px 12px', borderRadius: 12, background: 'var(--soft-warning)', color: 'var(--warning-text)', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}><Icon d={CI.warn} size={18} /><span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>کد خرید ۷۲ ساعت اعتبار دارد؛ اگر استفاده نشود، پشتوانه خودکار آزاد می‌شود.</span></div>
 
             <ApiErrorNotice error={create.error} />
             <PrimaryButton d={CI.code} onClick={submit} disabled={!agree || shortCollateral || shortRial || !h} busy={create.isPending}>ثبت و دریافت کد خرید</PrimaryButton>

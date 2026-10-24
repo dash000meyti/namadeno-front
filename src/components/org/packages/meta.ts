@@ -58,10 +58,10 @@ export const AV: [string, string][] = [
   ['var(--soft-info)', 'var(--info-text)'], ['var(--soft-success)', 'var(--success-text)'],
 ];
 
-/** Lock-type chip data (design `lkt`; «بدون قفل» uses the neutral tone on the org screens). */
+/** Receive-policy («شیوه‌ی دریافت») chip data (design `lkt`; the «آزاد» policy uses the neutral tone on the org screens). Icons = LOCK_META. */
 export function lockChip(type: LockPolicy['type'], long = false) {
   const m = LOCK_META[type];
-  if (type === 'none') return { label: long ? m.label : m.short, bg: 'var(--soft-default)', fg: 'var(--default-text)', d: 'M7 11V8a5 5 0 0 1 9.6-2M5 11h14v10H5z' };
+  if (type === 'none') return { label: long ? m.label : m.short, bg: 'var(--soft-default)', fg: 'var(--default-text)', d: m.d };
   return { label: long ? m.label : m.short, bg: m.bg, fg: m.fg, d: m.d };
 }
 
@@ -74,20 +74,30 @@ export function splitCompact(n: number): { value: string; unit: string } {
   return { value: faDigits(String(Math.round(n))), unit: '' };
 }
 
-/** Released / pending figures of a milestone package. */
+/** A milestone step is released automatically at its due date («نیاز به تأیید» off). Missing = needs approval. */
+export const isAutoStep = (s: { requiresApproval?: boolean }) => s.requiresApproval === false;
+
+/**
+ * Released / pending figures of a milestone package. `pending` = the current step;
+ * `waiting` = the current step when it needs the organization's approval (not an automatic one);
+ * `backPct` / `backN` = reclaimed steps («بازپس‌گیری»: returned to the organization); `donePct` = released + reclaimed.
+ */
 export function milestoneStats(pkg: OrgPackage) {
   const steps = pkg.milestoneProgress ?? [];
   const rel = steps.filter((s) => s.status === 'released');
   const relPct = rel.reduce((s, x) => s + x.sharePct, 0);
+  const back = steps.filter((s) => s.status === 'reclaimed');
+  const backPct = back.reduce((s, x) => s + x.sharePct, 0);
   const pending = steps.find((s) => s.status === 'pending_approval');
-  return { steps, relN: rel.length, relPct, pending, pendingIdx: pending ? steps.indexOf(pending) + 1 : 0 };
+  const waiting = pending && !isAutoStep(pending) ? pending : undefined;
+  return { steps, relN: rel.length, relPct, backN: back.length, backPct, donePct: relPct + backPct, pending, waiting, pendingIdx: pending ? steps.indexOf(pending) + 1 : 0 };
 }
 
 /** Status shown in lists: «sent» packages that are fully accepted (and fully released) read as completed. */
 export function effectiveStatus(pkg: OrgPackage): OrgPackage['status'] {
   if (pkg.status !== 'sent') return pkg.status;
   const allAccepted = pkg.recipients.length > 0 && pkg.recipients.every((r) => r.status !== 'pending');
-  if (pkg.lockPolicy.type === 'milestone') return allAccepted && milestoneStats(pkg).relPct >= 100 ? 'completed' : 'sent';
+  if (pkg.lockPolicy.type === 'milestone') return allAccepted && milestoneStats(pkg).donePct >= 100 ? 'completed' : 'sent';
   return allAccepted ? 'completed' : 'sent';
 }
 
@@ -97,7 +107,8 @@ export function statusLabel(pkg: OrgPackage): { text: string; tone: Tone } {
   if (st === 'cancelled') return { text: 'لغوشده', tone: 'error' };
   if (st === 'completed') return { text: 'تکمیل‌شده', tone: 'success' };
   const ms = milestoneStats(pkg);
-  if (pkg.lockPolicy.type === 'milestone' && ms.pending) return { text: `منتظر تأیید مرحله ${faDigits(ms.pendingIdx)}`, tone: 'warning' };
+  if (pkg.lockPolicy.type === 'milestone' && ms.waiting) return { text: `منتظر تأیید مرحله ${faDigits(ms.pendingIdx)}`, tone: 'warning' };
+  if (pkg.lockPolicy.type === 'milestone' && ms.pending) return { text: `در جریان · مرحله ${faDigits(ms.pendingIdx)}`, tone: 'info' };
   return { text: 'ارسال‌شده', tone: 'info' };
 }
 
@@ -107,9 +118,9 @@ export function policySub(pkg: OrgPackage): string {
   if (lp.type === 'vesting') return 'آزاد در ' + jDate(lp.releaseAt);
   if (lp.type === 'milestone') {
     const ms = milestoneStats(pkg);
-    return `${faDigits(ms.relN)} از ${faDigits(ms.steps.length || lp.steps.length)} مرحله · ${faDigits(ms.relPct)}٪ آزاد`;
+    return `${faDigits(ms.relN)} از ${faDigits(ms.steps.length || lp.steps.length)} مرحله · ${faDigits(ms.relPct)}٪ آزاد${ms.backN ? ` · ${faDigits(ms.backN)} بازپس‌گرفته` : ''}`;
   }
-  return pkg.status === 'draft' ? 'بدون قفل' : 'همه آزاد';
+  return pkg.status === 'draft' ? LOCK_META.none.label : 'همه آزاد';
 }
 
 export function allocationText(pkg: Pick<OrgPackage, 'allocationMode' | 'fixedSplit'>): string {
@@ -121,6 +132,19 @@ export function allocationText(pkg: Pick<OrgPackage, 'allocationMode' | 'fixedSp
   if (s.rial) parts.push(`ریال ${faDigits(s.rial)}٪`);
   if (parts.length === 1) return '۱۰۰٪ ' + (s.gold ? 'صندوق طلا' : s.fixed ? 'درآمد ثابت' : 'ریال');
   return 'تخصیص ثابت · ' + parts.join(' · ');
+}
+
+/** Amount per person: one number for everyone, or the min–max range of a per-person Excel file. */
+export function perPerson(pkg: Pick<OrgPackage, 'amountPerPerson' | 'amountSource' | 'recipients'>): { fromFile: boolean; min: number; max: number } {
+  if (pkg.amountSource !== 'file') return { fromFile: false, min: pkg.amountPerPerson, max: pkg.amountPerPerson };
+  const a = pkg.recipients.map((r) => r.amount);
+  return { fromFile: true, min: a.length ? Math.min(...a) : 0, max: a.length ? Math.max(...a) : 0 };
+}
+/** «۲۵٬۰۰۰٬۰۰۰» or «۱۰٬۰۰۰٬۰۰۰ تا ۴۰٬۰۰۰٬۰۰۰» (empty string when no amount is set yet). */
+export function perPersonText(pkg: Pick<OrgPackage, 'amountPerPerson' | 'amountSource' | 'recipients'>, fmt: (n: number) => string): string {
+  const p = perPerson(pkg);
+  if (!p.max) return '';
+  return p.min === p.max ? fmt(p.min) : `${fmt(p.min)} تا ${fmt(p.max)}`;
 }
 
 // ───────────── Jalali date input helpers ─────────────

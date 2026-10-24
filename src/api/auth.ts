@@ -1,7 +1,8 @@
 'use client';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@/types/domain';
 import { post, setSession } from './client';
+import { qk } from './keys';
 
 export type OtpPurpose = 'login' | 'signup' | 'reset';
 
@@ -26,8 +27,19 @@ export const useResetPassword = () =>
 export const useLogout = () =>
   useMutation({ mutationFn: () => post('/auth/logout'), onSettled: () => setSession(null, 'employee') });
 
-export const useOrgLogin = () =>
-  useMutation({ mutationFn: (v: { email: string; password: string }) => post<Session>('/org/auth/login', v), onSuccess: (s) => setSession(s, 'org_admin') });
+// Panel sign-ins drop the cached data of the previous person (role, name and what they may see differ per account).
+export const useOrgLogin = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { email: string; password: string }) => post<Session>('/org/auth/login', v),
+    onSuccess: (s) => { setSession(s, 'org_admin'); qc.removeQueries({ queryKey: qk.org.all }); },
+  });
+};
 
-export const useOpLogin = () =>
-  useMutation({ mutationFn: (v: { email: string; password: string; otp?: string }) => post<Session>('/op/auth/login', v), onSuccess: (s) => setSession(s, 'operator') });
+export const useOpLogin = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { email: string; password: string; otp?: string }) => post<Session>('/op/auth/login', v),
+    onSuccess: (s) => { setSession(s, 'operator'); qc.removeQueries({ queryKey: qk.op.all }); },
+  });
+};

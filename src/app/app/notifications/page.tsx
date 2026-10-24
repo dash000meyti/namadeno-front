@@ -12,6 +12,7 @@ import { P, TONE, type Tone } from '@/components/app/core/meta';
 import { EmptyCard, errMsg } from '@/components/app/core/ui';
 import { faDigits, jDate, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import type { AppNotification } from '@/types/domain';
 
@@ -117,7 +118,8 @@ export default function NotificationsPage() {
 
 function NotificationCard({ n, onOpen }: { n: AppNotification; onOpen: () => void }) {
   const [bg, fg] = TONE[(n.tone in TONE ? n.tone : 'default') as Tone];
-  const d = n.icon in ICONS ? ICONS[n.icon as IconName] : P.info;
+  // released reserves read as a check, not an open padlock (padlock stays for legal holds)
+  const d = n.icon === 'unlock' ? LOCK_META.none.d : n.icon in ICONS ? ICONS[n.icon as IconName] : P.info;
   const unread = !n.read;
   return (
     <button onClick={onOpen} className="card" style={{ width: '100%', minHeight: 76, boxSizing: 'border-box', padding: 14, display: 'flex', alignItems: 'flex-start', gap: 12, color: 'var(--text-primary)', textDecoration: 'none', fontFamily: 'inherit', textAlign: 'right', cursor: 'pointer' }}>

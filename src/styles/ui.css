@@ -16,6 +16,7 @@
 .nm-btn.block{width:100%}
 .nm-btn.ghost{background:var(--action-hover);color:var(--text-primary);box-shadow:none}
 .nm-btn.ghost:hover{color:var(--text-primary);background:var(--action-selected);filter:none}
+.nm-btn.ghost[aria-pressed="true"]{background:rgb(var(--primary-main-rgb) / .14);color:var(--primary-text)}
 .nm-btn.line{background:transparent;color:var(--text-primary);box-shadow:inset 0 0 0 1px var(--line-strong)}
 .nm-btn.line:hover{color:var(--text-primary);background:var(--action-hover);filter:none}
 .nm-btn .ico{width:18px;height:18px}
@@ -78,3 +79,38 @@
 .nm-auth-card h1{margin:0;font-size:22px;font-weight:700;line-height:1.35}
 .nm-auth-card .sub{margin:-10px 0 0;font-size:13.5px;line-height:1.7;color:var(--text-secondary)}
 .nm-auth-foot{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;font-size:12px;color:var(--text-secondary);text-align:center}
+
+/* ── Date field + Jalali calendar (src/components/ui/DateInput.tsx) ── */
+.nm-dp-btn{flex:none;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-secondary);cursor:pointer;transition:background-color .12s,color .12s}
+.nm-dp-btn:hover:not(:disabled){background:var(--action-hover);color:var(--text-primary)}
+.nm-dp-btn[aria-expanded="true"]{background:rgb(var(--primary-main-rgb) / .12);color:var(--primary-text)}
+.nm-dp-btn:disabled{opacity:.4;cursor:default}
+.nm-in.nm-date{padding-left:2px}
+.nm-in.nm-date .nm-dp-btn{width:28px;height:28px}
+.nm-ctl.nm-date{padding-left:8px}
+.nm-dp{position:fixed;z-index:3000;width:292px;box-sizing:border-box;padding:12px;border-radius:16px;background:var(--bg-paper);color:var(--text-primary);box-shadow:0 0 0 .5px rgb(0 0 0 / .1),0 18px 48px -12px rgb(0 0 0 / .35);font-family:inherit;animation:nmDpIn .14s ease-out}
+.th-dark .nm-dp{box-shadow:inset 0 0 0 .5px rgb(255 255 255 / .12),0 18px 48px -12px rgb(0 0 0 / .8)}
+@keyframes nmDpIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.nm-dp-in{display:flex;flex-direction:column;gap:6px}
+.nm-dp-h{display:flex;align-items:center;gap:6px}
+.nm-dp-sel{flex:1;display:flex;justify-content:center;gap:4px}
+.nm-dp-sel select{height:32px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;-webkit-appearance:none;appearance:none;text-align:center}
+.nm-dp-sel select:hover,.nm-dp-sel select:focus-visible{background:var(--action-hover);outline:none}
+.nm-dp-nav{display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--text-secondary);cursor:pointer}
+.nm-dp-nav:hover:not(:disabled){background:var(--action-hover);color:var(--text-primary)}
+.nm-dp-nav:disabled{opacity:.3;cursor:default}
+.nm-dp-wk,.nm-dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.nm-dp-wk span{height:26px;display:grid;place-items:center;font-size:11.5px;font-weight:600;color:var(--text-secondary)}
+.nm-dp-grid button{height:36px;padding:0;border:0;border-radius:10px;background:transparent;color:var(--text-primary);font-family:inherit;font-size:13.5px;cursor:pointer;transition:background-color .1s}
+.nm-dp-grid button.fri{color:var(--error-text)}
+.nm-dp-grid button:hover:not(:disabled){background:var(--action-hover)}
+.nm-dp-grid button:focus-visible{outline:2px solid var(--primary-main);outline-offset:-2px}
+.nm-dp-grid button.today{box-shadow:inset 0 0 0 1.5px rgb(var(--primary-main-rgb) / .5);font-weight:700}
+.nm-dp-grid button.on,.nm-dp-grid button.on:hover{background:var(--primary-main);color:#FFFFFF;font-weight:700;box-shadow:none}
+.nm-dp-grid button:disabled{color:var(--text-disabled);cursor:default}
+.nm-dp-f{display:flex;justify-content:space-between;padding-top:6px;border-top:1px solid var(--divider)}
+.nm-dp-link{height:30px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--primary-text);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.nm-dp-link:hover:not(:disabled){background:var(--action-hover)}
+.nm-dp-link.mute{color:var(--text-secondary)}
+.nm-dp-link:disabled{opacity:.4;cursor:default}
+

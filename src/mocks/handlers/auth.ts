@@ -67,7 +67,10 @@ export const authHandlers = [
     await latency();
     const b = await body<{ email: string; password: string }>(request);
     if (!b.email || !b.password) return fail(401, 'bad_credentials', 'ایمیل یا رمز عبور اشتباه است.');
-    return ok(session('org_admin', DEMO_ORG_ADMIN_ID, DEMO_ORG_ID));
+    // Demo: a known panel e-mail signs in as that person (admin / HR / finance); any other e-mail as the default HR manager.
+    const email = b.email.trim().toLowerCase();
+    const admin = db().organizations.find((o) => o.id === DEMO_ORG_ID)?.admins.find((a) => a.email.toLowerCase() === email);
+    return ok(session('org_admin', admin?.id ?? DEMO_ORG_ADMIN_ID, DEMO_ORG_ID));
   }),
 
   // Operator console ─────────

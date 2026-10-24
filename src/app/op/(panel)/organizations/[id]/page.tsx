@@ -30,7 +30,7 @@ const ORG_TONE: Record<Organization['status'], Tone> = { active: 'success', onbo
 const FAC_LABEL: Record<FacilityKind, string> = { loan: 'وام', bnpl: 'خرید اقساطی', card: 'اعتبار کارت' };
 const FAC_SHORT: Record<FacilityKind, string> = { loan: 'وام', bnpl: 'اقساطی', card: 'کارت' };
 const FAC_TONE: Record<FacilityKind, Tone> = { loan: 'info', bnpl: 'success', card: 'primary' };
-const FAC_STATUS: Record<OrgCreditRow['status'], [string, Tone]> = { current: ['جاری', 'success'], late: ['معوق', 'error'], blocked: ['مسدود', 'error'], settled: ['تسویه‌شده', 'neutral'] };
+const FAC_STATUS: Record<OrgCreditRow['status'], [string, Tone]> = { current: ['جاری', 'success'], late: ['معوق', 'error'], blocked: ['متوقف', 'neutral'], settled: ['تسویه‌شده', 'neutral'] };
 const EMP_STATUS: Record<Employee['status'], [string, Tone]> = { active: ['فعال', 'success'], invited: ['در انتظار فعال‌سازی', 'warning'], inactive: ['غیرفعال', 'neutral'] };
 const ASSET_SHORT: Record<string, string> = { rial: 'ریال', gold: 'طلا', fixed: 'درآمد ثابت', mixed: 'مختلط', equity: 'سهامی', silver: 'نقره' };
 const HR_ROLES = ['مدیر منابع انسانی', 'مدیر مالی (تأییدکننده)', 'کارشناس HR'];
@@ -38,10 +38,10 @@ const bn = (n: number) => `${fb(n)} میلیارد`;
 const b1 = (v: number) => faDigits(String(Math.round(v * 10) / 10), true);
 
 function pkgKind(p: OrgPackage): string {
-  if (p.lockPolicy.type === 'vesting') return 'قفل زمانی تا ' + jDate(p.lockPolicy.releaseAt);
+  if (p.lockPolicy.type === 'vesting') return 'پس‌انداز تا ' + jDate(p.lockPolicy.releaseAt);
   if (p.lockPolicy.type === 'milestone') {
     const steps = p.milestoneProgress ?? [];
-    return `آزادسازی مرحله‌ای · ${faDigits(steps.filter((s) => s.status === 'released').length)} از ${faDigits(steps.length || p.lockPolicy.steps.length)} مرحله`;
+    return `دریافت مرحله‌ای · ${faDigits(steps.filter((s) => s.status === 'released').length)} از ${faDigits(steps.length || p.lockPolicy.steps.length)} مرحله`;
   }
   if (p.allocationMode === 'fixed' && p.fixedSplit) {
     const parts = [[p.fixedSplit.gold, 'طلا'], [p.fixedSplit.fixed, 'درآمد ثابت'], [p.fixedSplit.rial ?? 0, 'ریال']].filter(([v]) => (v as number) > 0);
@@ -153,11 +153,11 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
     { key: 'emp', label: 'کارمند', width: 'minmax(0, 1.4fr)', render: (e) => <Ident lead={<Ava letter={e.avatarLetter} id={e.id} />} title={e.fullName} sub={faDigits(e.employeeCode)} subLtr /> },
     { key: 'dept', label: 'واحد', width: '96px', render: (e) => <span className="el mute">{e.department}</span> },
     {
-      key: 'assets', label: 'دارایی / قفل', width: '150px', col: true, render: (e) => {
+      key: 'assets', label: 'دارایی / رزرو', width: '150px', col: true, render: (e) => {
         const { total, locked } = assetsOf(e);
         return (
           <>
-            <span className="num">{fm(total)} م <span className="sm">{locked ? `· قفل ${fm(locked)} م` : '· همه آزاد'}</span></span>
+            <span className="num">{fm(total)} م <span className="sm">{locked ? `· رزرو ${fm(locked)} م` : '· همه آزاد'}</span></span>
             <span style={{ width: 110 }}><LockBar free={Math.max(0, total - locked)} locked={locked} height={4} /></span>
           </>
         );
@@ -193,7 +193,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
     { key: 'kind', label: 'نوع', width: '104px', render: (r) => <Pill tone={FAC_TONE[r.kind]}>{FAC_LABEL[r.kind]}</Pill> },
     { key: 'amount', label: 'مبلغ', width: '112px', render: (r) => <span className="num">{money(r.amount)}</span> },
     { key: 'remain', label: 'مانده', width: '112px', render: (r) => <span className="num mute">{money(r.remain)}</span> },
-    { key: 'coll', label: 'وثیقه', width: 'minmax(0, 1fr)', render: (r) => <span className="sm el">{r.collateral ? `قفل ${ASSET_SHORT[r.collateral.holdingKind] ?? r.collateral.holdingKind} · ${fm(r.collateral.amount)} م` : '—'}</span> },
+    { key: 'coll', label: 'پشتوانه', width: 'minmax(0, 1fr)', render: (r) => <span className="sm el">{r.collateral ? `${ASSET_SHORT[r.collateral.holdingKind] ?? r.collateral.holdingKind} · ${fm(r.collateral.amount)} م` : '—'}</span> },
     { key: 'st', label: 'وضعیت', width: '88px', render: (r) => <Pill tone={FAC_STATUS[r.status][1]} dot>{FAC_STATUS[r.status][0]}</Pill> },
   ];
   const hrCols: Column<HrUser>[] = [
@@ -223,7 +223,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
         { label: 'کارکنان', value: faDigits(org.employees), unit: 'نفر', note: ext.newEmployeesMonth ? `+${faDigits(ext.newEmployeesMonth)} در این ماه` : 'بدون تغییر در این ماه', trend: ext.newEmployeesMonth ? 'up' : undefined },
         { label: 'AUM سازمان', value: fb(ext.aum), unit: 'میلیارد تومان', note: `${signedPct(ext.growthPct)} نسبت به ماه قبل`, trend: ext.growthPct > 0 ? 'up' : undefined },
         { label: 'وام‌های فعال', value: faDigits(ext.credit.activeLoans), unit: 'وام', note: `مانده ${bn(ext.credit.outstanding)} · ${faDigits(ext.credit.overdue)} معوق` },
-        { label: 'دارایی قفل‌شده کارکنان', value: fb(ext.locked), unit: 'میلیارد', note: `${faDigits(typeCount)} نوع قفل · ${pctFa(sp.lockedPct)} از AUM` },
+        { label: 'دارایی رزروشده کارکنان', value: fb(ext.locked), unit: 'میلیارد', note: `${faDigits(typeCount)} نوع رزرو · ${pctFa(sp.lockedPct)} از AUM` },
       ]} />
 
       <Tabs label="بخش‌های سازمان" size="lg" value={tab} onChange={pick} items={[

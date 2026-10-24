@@ -20,7 +20,6 @@ type Values = Record<Field, string>;
 export const CONTACT_TOPICS = [
   { v: 'support', label: 'پشتیبانی کاربران اپ' },
   { v: 'business', label: 'همکاری سازمانی' },
-  { v: 'careers', label: 'فرصت‌های شغلی' },
   { v: 'media', label: 'رسانه و روابط عمومی' },
   { v: 'other', label: 'سایر' },
 ];
@@ -200,7 +199,7 @@ export function ContactForm({ variant = 'contact', initialTopic = '' }: { varian
   );
 }
 
-/** Contact form preset from ?topic= (e.g. /contact?topic=careers). Render inside <Suspense>. */
+/** Contact form preset from ?topic= (e.g. /contact?topic=support). Render inside <Suspense>. */
 export function ContactFormFromQuery() {
   const sp = useSearchParams();
   const topic = sp.get('topic') ?? '';

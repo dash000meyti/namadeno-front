@@ -9,6 +9,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { useLoanQuote, useMe, usePortfolio } from '@/api/app';
 import { useCreateLoanSplit } from '@/api/app-credit-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDate, jDayMonth, jMonthYear, money, percent, units } from '@/lib/format';
 import { now } from '@/lib/clock';
@@ -73,10 +74,10 @@ function LoanConfirm() {
   return (
     <>
       <Scr gap={8}>
-        <Stepper steps={['مبلغ و مدت', 'وثیقه', 'تأیید']} current={2} />
-        {me.data && me.data.kycLevel < 2 && <KycBanner text="ثبت درخواست وام پس از تکمیل احراز هویت پایه (ثبت احوال) ممکن است." />}
+        <Stepper steps={['مبلغ و مدت', 'پشتوانه', 'تأیید']} current={2} />
+        {me.data && me.data.kycLevel < 2 && <KycBanner text="برای ثبت درخواست وام، احراز هویت پایه (ثبت احوال) را تکمیل کنید." />}
 
-        {!valid && <ErrorState message="اطلاعات درخواست ناقص است؛ دوباره مبلغ و وثیقه را انتخاب کنید." onRetry={() => router.push(routes.app.loan)} />}
+        {!valid && <ErrorState message="اطلاعات درخواست کامل نیست؛ مبلغ و پشتوانه را دوباره انتخاب کنید." onRetry={() => router.push(routes.app.loan)} />}
         {valid && pf.isLoading && <><Skeleton h={230} /><Skeleton h={190} /></>}
 
         {valid && pf.data && (
@@ -106,10 +107,10 @@ function LoanConfirm() {
               </div>
             </div>
 
-            {/* collateral: exactly what becomes locked */}
+            {/* collateral: exactly what becomes reserved */}
             <div className="card" style={{ boxSizing: 'border-box', padding: '10px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none' }}>
               <div className="row" style={{ height: 24, gap: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 700 }}>وثیقه‌ای که قفل می‌شود</span>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>پشتوانه‌ای که رزرو می‌شود</span>
                 {alloc.length === 1 && <span className="num" style={{ marginRight: 'auto', fontSize: 11, fontWeight: 400, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{percent((alloc[0].take / alloc[0].h.free) * 100, 1)} از بخش آزاد صندوق</span>}
                 {alloc.length > 1 && <span className="num" style={{ marginRight: 'auto', fontSize: 11, fontWeight: 400, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>از {faDigits(alloc.length)} صندوق</span>}
               </div>
@@ -124,29 +125,29 @@ function LoanConfirm() {
                         <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>{h.name}</span>
                         <span className="num" style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{money(take)} تومان{nav ? ` · ${units(take / nav)} واحد` : ''}</span>
                       </span>
-                      <span className="lktype" style={{ background: 'var(--soft-info)', color: 'var(--info-text)' }}><Icon d={CI.lock} size={12} />وثیقه اعتبار و وام</span>
+                      <span className="lktype" style={{ background: LOCK_META.collateral.bg, color: LOCK_META.collateral.fg }}><Icon d={LOCK_META.collateral.d} size={12} />{LOCK_META.collateral.label}</span>
                     </div>
-                    <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap' }}>پیش از تأیید: آزاد {money(h.free)} · قفل {money(h.locked)} از {money(h.value)}</span>
+                    <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap' }}>پیش از تأیید: آزاد {money(h.free)} · رزرو {money(h.locked)} از {money(h.value)}</span>
                     <LockSplit free={h.free - take} locked={h.locked + take} freeLabel="آزاد پس از تأیید" />
                   </div>
                 );
               })}
-              {short && <span className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--error-text)', lineHeight: 1.5 }}>بخش آزاد وثیقه‌های انتخاب‌شده تغییر کرده و {money(left)} تومان کم است؛ وثیقه را ویرایش کنید.</span>}
+              {short && <span className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--error-text)', lineHeight: 1.5 }}>بخش آزاد دارایی‌های انتخاب‌شده تغییر کرده و {money(left)} تومان کم است؛ پشتوانه را ویرایش کنید.</span>}
               <div className="row" style={{ minHeight: 32, gap: 8, boxSizing: 'border-box', padding: '6px 10px', borderRadius: 8, background: 'var(--soft-info)', color: 'var(--info-text)' }}>
                 <Icon d={CI.refresh} size={16} />
-                <span style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.5 }}>آزاد با تسویه کامل وام (پس از قسط {faDigits(months)} · {jDayMonth(last, true)})؛ تا آن زمان بازده می‌گیرد ولی قابل فروش نیست</span>
+                <span style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.5 }}>رزرو تا تسویه‌ی کامل وام (پس از قسط {faDigits(months)} · {jDayMonth(last, true)})؛ در این مدت بازده می‌گیرد و پس از آزاد شدن قابل فروش است</span>
               </div>
             </div>
 
             {/* agreement */}
             <label style={{ height: 44, boxSizing: 'border-box', padding: '0 4px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 'none' }}>
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ width: 20, height: 20, margin: 0, accentColor: 'var(--primary-main)', flex: 'none' }} />
-              <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}><span style={{ fontWeight: 700, color: 'var(--primary-text)' }}>قرارداد تسهیلات</span> و قفل وثیقه را می‌پذیرم</span>
+              <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}><span style={{ fontWeight: 700, color: 'var(--primary-text)' }}>قرارداد تسهیلات</span> و رزرو پشتوانه را می‌پذیرم</span>
             </label>
 
             <div role="status" style={{ minHeight: 48, boxSizing: 'border-box', padding: '6px 12px', borderRadius: 12, background: 'var(--soft-warning)', color: 'var(--warning-text)', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
               <Icon d={CI.warn} size={20} />
-              <span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>در صورت عدم پرداخت ۲ قسط متوالی، وثیقه به میزان بدهی نقد می‌شود.</span>
+              <span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>اگر ۲ قسط پشت سر هم پرداخت نشود، به اندازه‌ی بدهی از پشتوانه فروخته و بدهی تسویه می‌شود.</span>
             </div>
 
             <ApiErrorNotice error={create.error} />

@@ -7,7 +7,7 @@ import { AppHeader } from '@/components/app/AppHeader';
 import { BottomNav } from '@/components/app/BottomNav';
 import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
 import { Icon } from '@/components/ui/Icon';
-import { LOCK_META } from '@/lib/locks';
+import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { faDigits, jDateTime, jDayMonth, money, pct, signedMoney, time, units as fmtUnits } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { Lock } from '@/types/domain';
@@ -43,11 +43,11 @@ export default function TransactionPage() {
   const headColor = isLockEvent ? v.amountColor : tx.amount > 0 ? 'var(--success-text)' : 'var(--text-primary)';
   const place = tx.holdingKind ? assetMeta(tx.holdingKind).name : tx.subtitle;
   const lm = tx.lockType ? LOCK_META[tx.lockType] : undefined;
-  const statusLabel = isLockEvent ? (released ? 'آزاد شد' : 'قفل شد') : STATUS_LABEL[tx.status].label;
+  const statusLabel = isLockEvent ? (released ? 'آزاد شد' : 'رزرو شد') : STATUS_LABEL[tx.status].label;
   const statusTone = isLockEvent ? (released ? TONE.success : TONE.info) : TONE[STATUS_LABEL[tx.status].tone];
 
   const when = `${jDayMonth(tx.at)} · ${time(tx.at)}`;
-  const labels = isLockEvent ? (released ? ['تأیید سازمان', 'آزادسازی', 'قابل استفاده'] : ['ثبت', 'قفل', 'فعال']) : ['ثبت', 'تأیید', 'تسویه'];
+  const labels = isLockEvent ? (released ? ['تأیید سازمان', 'آزادسازی', 'قابل استفاده'] : ['ثبت', 'رزرو', 'فعال']) : ['ثبت', 'تأیید', 'تسویه'];
   const steps = labels.map((label, i) => {
     const last = i === labels.length - 1;
     const state: 'done' | 'pending' | 'failed' = last && tx.status === 'pending' ? 'pending' : last && tx.status === 'failed' ? 'failed' : 'done';
@@ -56,11 +56,11 @@ export default function TransactionPage() {
 
   const rows: { k: string; v: string; ltr?: boolean; chip?: boolean; ico?: string }[] = isLockEvent
     ? [
-        ...(lm ? [{ k: 'نوع قفل', v: lm.label, chip: true, ico: lm.d }] : []),
+        ...(lm ? [{ k: 'نوع رزرو', v: lm.label, chip: true, ico: lm.d }] : []),
         { k: 'دارایی', v: place + (tx.units ? '، ' + fmtUnits(Math.abs(tx.units)) + ' واحد' : '') },
-        { k: released ? 'مبلغ آزادشده' : 'مبلغ قفل‌شده', v: money(Math.abs(tx.amount)) + ' تومان' },
+        { k: released ? 'مبلغ آزادشده' : 'مبلغ رزروشده', v: money(Math.abs(tx.amount)) + ' تومان' },
         { k: released ? 'شرح' : 'شرط آزادسازی', v: tx.subtitle },
-        ...(msLock ? [{ k: 'باقی‌مانده قفل', v: money(msLock.amount) + ' تومان' }] : []),
+        ...(msLock ? [{ k: 'رزرو باقی‌مانده', v: money(msLock.amount) + ' تومان' }] : []),
         { k: 'کد پیگیری', v: tx.trackingCode, ltr: true },
       ]
     : [
@@ -70,7 +70,7 @@ export default function TransactionPage() {
         ...(tx.units ? [{ k: 'واحد', v: fmtUnits(tx.units) }] : []),
         { k: 'شرح', v: tx.subtitle },
         ...(tx.details ?? []).map((d) => ({ k: d.label, v: d.value, ltr: /^IR/.test(d.value) || /^T\+/.test(d.value) })),
-        ...(lm ? [{ k: 'قفل', v: lm.label, chip: true, ico: lm.d }] : []),
+        ...(lm ? [{ k: 'رزرو', v: lm.label, chip: true, ico: lm.d }] : []),
       ];
 
   return (
@@ -148,7 +148,7 @@ function MilestoneCard({ lock }: { lock: Lock }) {
   const m = milestoneProgress(lock);
   const text = `${faDigits(m.releasedCount)} از ${faDigits(m.count)} مرحله · ${pct(m.releasedPct)} آزاد شده`;
   const steps = lock.steps ?? [];
-  const nextIdx = steps.findIndex((s) => s.status !== 'released');
+  const nextIdx = steps.findIndex((s) => s.status === 'pending_approval' || s.status === 'future');
   const next = nextIdx >= 0 ? steps[nextIdx] : undefined;
   return (
     <div className="card" style={{ boxSizing: 'border-box', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none' }}>
@@ -165,7 +165,7 @@ function MilestoneCard({ lock }: { lock: Lock }) {
       </div>
       <div className="lkleg">
         <span><span className="lkdot" />آزاد <b>{money(m.released)}</b></span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="lock" size={12} />قفل <b>{money(lock.amount)}</b></span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={HOURGLASS} size={12} />رزرو <b>{money(lock.amount)}</b></span>
         <span className="num" style={{ marginRight: 'auto', fontWeight: 400 }}>از {money(m.total)}</span>
       </div>
       {next && (

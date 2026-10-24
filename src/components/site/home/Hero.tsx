@@ -17,7 +17,7 @@ import { routes } from '@/lib/routes';
 import { AssetsScreen, NamadnoCard, OrgWindow } from './ProductScreens';
 
 const CARDS: { cls: string; c: string; icon: IconName; k: string; v: string }[] = [
-  { cls: 'b', c: 'c-warning', icon: 'gold', k: 'صندوق طلا · امروز', v: '+۱٫۲۰٪ رشد ارزش' },
+  { cls: 'b', c: 'c-warning', icon: 'gold', k: 'طلا · امروز', v: '+۱٫۲۰٪ رشد ارزش' },
   { cls: 'c', c: 'c-success', icon: 'credit', k: 'اعتبار آماده‌ی شما', v: `${money(52_360_000)} تومان` },
 ];
 
@@ -76,8 +76,7 @@ export function Hero() {
             <br /><span className="ln s-grad" style={{ '--i': 1 } as React.CSSProperties}>آینده‌ای که می‌سازید.</span>
           </h1>
           <p className="s-lead s-rise" style={{ maxWidth: 640, '--i': 2 } as React.CSSProperties}>
-            نمادنو پس‌انداز شما را به دارایی ماندگار تبدیل می‌کند: صندوق‌های معتبر طلا و درآمد ثابت، به نام خودتان و در برابر تورم.
-            هر وقت هم لازم شد، بی‌آنکه دارایی‌تان را بفروشید، با پشتوانه‌اش اعتبار بگیرید.
+            با نمادنو پس‌انداز کن، دارایی بساز و از دارایی‌ات اعتبار بگیر.
           </p>
           <div className="s-actions s-rise" style={{ justifyContent: 'center', '--i': 3 } as React.CSSProperties}>
             <Link href={routes.app.signup} className="btn lg contained c-primary">افتتاح حساب نمادنو</Link>

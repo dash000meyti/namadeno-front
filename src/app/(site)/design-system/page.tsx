@@ -4,7 +4,7 @@ import { PageHero } from '@/components/site/Section';
 
 export const metadata: Metadata = {
   title: 'سیستم طراحی',
-  description: 'مرجع زنده توکن‌ها و کامپوننت‌های Namadno UI: رنگ، تایپوگرافی، شعاع، سایه، دکمه، برچسب و اجزای آزاد/قفل‌شده.',
+  description: 'مرجع زنده توکن‌ها و کامپوننت‌های Namadno UI: رنگ، تایپوگرافی، شعاع، سایه، دکمه، برچسب و اجزای آزاد/رزروشده.',
 };
 
 export default function DesignSystemPage() {

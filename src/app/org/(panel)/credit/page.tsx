@@ -14,6 +14,7 @@ import { LockTypeChip } from '@/components/ui/LockBar';
 import { useOrgCredit } from '@/api/org';
 import { useOrgPeopleCredit, type CreditLoanRow } from '@/api/org-people-extra';
 import { routes } from '@/lib/routes';
+import { FEATURES } from '@/lib/features';
 import { ASSET_META } from '@/lib/locks';
 import { compactMoney, faDigits, jDate, jDayMonth, money, pct, time } from '@/lib/format';
 import { I, compactParts, errMsg } from '@/components/org/people/shared';
@@ -27,7 +28,21 @@ const mil = (n: number) => faDigits(String(Math.round(n / 1e5) / 10), true);
 const loanKey = (l: CreditLoanRow) => `${l.employeeId}-${l.startedAt}`;
 const assetName = (k: string) => ASSET_META[k]?.name ?? k;
 
-export default function OrgCreditPage() {
+/** While `FEATURES.orgCredit` is off the section shows a coming-soon notice (the page below stays as is). */
+export default function OrgCreditRoute() {
+  if (!FEATURES.orgCredit) {
+    return (
+      <>
+        <PageHeading title="تسهیلات و اعتبار" crumbs={[{ label: 'عملیات' }]} />
+        <Card><Empty icon={SOON_ICON} title="به‌زودی" sub="بخش تسهیلات و اعتبار در حال آماده شدن است." /></Card>
+      </>
+    );
+  }
+  return <OrgCreditPage />;
+}
+const SOON_ICON = 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3 2';
+
+function OrgCreditPage() {
   const credit = useOrgCredit();
   const people = useOrgPeopleCredit();
   const [ltab, setLtab] = useState<LTab>('all');
@@ -73,7 +88,7 @@ export default function OrgCreditPage() {
         </>
       ),
     },
-    { key: 'coll', label: 'قفل وثیقه', width: '128px', col: true, render: (l) => <><span className="num">{money(l.collateralAmount)}</span><span className="sm">{ASSET_META[l.collateralKind]?.short ?? ''}</span></> },
+    { key: 'coll', label: 'رزرو پشتوانه', width: '128px', col: true, render: (l) => <><span className="num">{money(l.collateralAmount)}</span><span className="sm">{ASSET_META[l.collateralKind]?.short ?? ''}</span></> },
     { key: 'st', label: 'وضعیت', width: '112px', render: (l) => <Pill tone={STATUS[l.status].tone} dot>{STATUS[l.status].label}</Pill> },
   ];
 
@@ -114,7 +129,7 @@ export default function OrgCreditPage() {
         </Card>
       </div>
 
-      <Card flush title="وام‌های فعال" sub={`${faDigits(loans.length)} وام · مانده ${compactMoney(remaining)} · قفل وثیقه ${compactMoney(collateral)} تومان`} more={{ label: 'گزارش تسهیلات', href: routes.org.reports }}>
+      <Card flush title="وام‌های فعال" sub={`${faDigits(loans.length)} وام · مانده ${compactMoney(remaining)} · رزرو پشتوانه ${compactMoney(collateral)} تومان`} more={{ label: 'گزارش تسهیلات', href: routes.org.reports }}>
         <Toolbar>
           <Tabs label="وضعیت وام" value={ltab} onChange={setLtab} items={[
             { key: 'all', label: 'همه', count: loans.length },
@@ -157,7 +172,7 @@ function LoanInspector({ l, onClose }: { l: CreditLoanRow; onClose: () => void }
         ]} />
       </Section>
 
-      <Section title="وثیقه (قفل)">
+      <Section title="پشتوانه‌ی وام">
         <List>
           <ListRow lead={<LockTypeChip type="collateral" />} title={assetName(l.collateralKind)} sub="آزاد با تسویه‌ی وام" trail={<span className="num">{money(l.collateralAmount)}</span>} />
         </List>

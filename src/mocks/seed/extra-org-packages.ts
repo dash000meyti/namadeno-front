@@ -25,8 +25,6 @@ export interface OrgPkgChainItem { id: string; label: string; desc: string; enab
 export interface OrgPkgStore {
   /** packageId → employee ids that were reminded */
   reminders: Record<string, string[]>;
-  /** packageId → milestone step ids the organization sent back for correction */
-  fixRequests: Record<string, string[]>;
   schedules: OrgPkgSchedule[];
   exports: OrgPkgExport[];
   chain: OrgPkgChainItem[];
@@ -40,7 +38,6 @@ export interface OrgPkgStore {
 export function defaultOrgPkgStore(): OrgPkgStore {
   return {
     reminders: {},
-    fixRequests: {},
     schedules: [
       { id: 's1', title: 'گزارش ماهانه حقوق و مزایا', period: 'ماهانه · اول هر ماه', to: 'مدیر مالی، منابع انسانی', format: 'Excel', lastAt: jalaliToIso(1405, 8, 1), enabled: true, tone: 'primary', icon: 'wallet' },
       { id: 's2', title: 'گزارش تسهیلات و اقساط', period: 'هفتگی · شنبه‌ها', to: 'مدیر مالی', format: 'PDF', lastAt: jalaliToIso(1405, 8, 10), enabled: true, tone: 'info', icon: 'percent' },
@@ -48,8 +45,8 @@ export function defaultOrgPkgStore(): OrgPkgStore {
       { id: 's4', title: 'بسته‌های تأییدنشده و مراحل منتظر تأیید', period: 'روزانه · ۰۹:۰۰', to: 'منابع انسانی', format: 'PDF', lastAt: daysFromNow(0, '09:00'), enabled: true, tone: 'success', icon: 'pkg' },
     ],
     exports: [
-      { id: 'payroll', title: 'گزارش حقوق و مزایا', desc: 'بسته‌ها، قفل‌ها و مراحل', lastAt: jalaliToIso(1405, 8, 1), tone: 'primary', icon: 'wallet' },
-      { id: 'credit', title: 'گزارش تسهیلات', desc: 'اقساط و قفل وثیقه', lastAt: jalaliToIso(1405, 8, 10), tone: 'info', icon: 'percent' },
+      { id: 'payroll', title: 'گزارش حقوق و مزایا', desc: 'بسته‌ها، رزروها و مراحل', lastAt: jalaliToIso(1405, 8, 1), tone: 'primary', icon: 'wallet' },
+      { id: 'credit', title: 'گزارش تسهیلات', desc: 'اقساط و رزرو پشتوانه', lastAt: jalaliToIso(1405, 8, 10), tone: 'info', icon: 'percent' },
       { id: 'tax', title: 'گزارش مالیاتی', desc: 'مزایای غیرنقدی مشمول مالیات · فصل پاییز', lastAt: jalaliToIso(1405, 6, 31), tone: 'warning', icon: 'file' },
     ],
     chain: [

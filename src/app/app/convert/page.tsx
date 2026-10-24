@@ -12,6 +12,7 @@ import { Icon, ICONS } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
 import { money, units as fmtUnits } from '@/lib/format';
+import { HOURGLASS } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import type { Fund, Holding } from '@/types/domain';
 import { D, amountText, assetIcon, assetMeta, feeLabel, floorK, fundMono, parseAmount } from '@/components/app/money/lib';
@@ -220,9 +221,9 @@ function ConvertScreen() {
           {showInvalid && <span role="alert" style={{ fontSize: 12, color: 'var(--error-text)' }}>{invalid}</span>}
           {lockedAmt > 0 && (
             <div style={{ minHeight: 28, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', margin: '-4px 0 -6px' }}>
-              <Icon name="lock" size={12} />
-              <span style={{ minWidth: 0 }}>قفل‌شده: <span className="num" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{money(lockedAmt)}</span> — قابل استفاده نیست ·</span>
-              <Link href={lockHref} style={{ height: 28, display: 'inline-flex', alignItems: 'center', padding: '0 4px', margin: '0 -4px', fontWeight: 600 }}>چرا؟</Link>
+              <Icon d={HOURGLASS} size={12} />
+              <span style={{ minWidth: 0 }}>رزروشده: <span className="num" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{money(lockedAmt)}</span> · پس از آزاد شدن قابل استفاده است ·</span>
+              <Link href={lockHref} style={{ height: 28, display: 'inline-flex', alignItems: 'center', padding: '0 4px', margin: '0 -4px', fontWeight: 600 }}>جزئیات</Link>
             </div>
           )}
         </div>
@@ -304,7 +305,7 @@ function ConvertScreen() {
                 <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.name}</span>
                 <span className="num" style={{ fontSize: 11.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{owned && h ? `آزاد ${money(h.free)} از ${money(h.value)} تومان` : 'NAV ' + money(x.nav)}</span>
               </span>
-              <span className="num" style={{ fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', color: none ? 'var(--text-disabled)' : 'var(--primary-text)' }}>{none ? 'همه قفل' : on ? 'انتخاب شده' : ''}</span>
+              <span className="num" style={{ fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', color: none ? 'var(--text-disabled)' : 'var(--primary-text)' }}>{none ? 'همه رزروشده' : on ? 'انتخاب شده' : ''}</span>
             </button>
           ))}
         </div>
