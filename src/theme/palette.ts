@@ -14,6 +14,8 @@ export const palette = {
   success: { lighter: '#DAF3E7', light: '#9BD9BF', main: '#55B08C', dark: '#2F7D5C', darker: '#1B5540', contrastText: '#0B2A1C' },
   warning: { lighter: '#FBEFD3', light: '#F0CB7C', main: '#D99A2B', dark: '#9E6A14', contrastText: '#1F2433' },
   error: { lighter: '#FBDCDC', light: '#F09A9A', main: '#D94A4A', dark: '#A32C2C', contrastText: '#FFFFFF' },
+  /** Dark surfaces (tokens.css .th-dark --bg-default / --bg-paper). */
+  ink: { default: '#000000', paper: '#1C1C1E' },
 } as const;
 
 /** Asset accent colors used by bands, charts and chips. */

@@ -22,8 +22,8 @@ export default function ContactPage() {
     <>
       <PageHero
         crumbs={[{ label: 'تماس با ما' }]}
-        title="با ما در تماس باشید"
-        lead="سوال، پیشنهاد یا درخواست همکاری دارید؟ فرم زیر را پر کنید؛ پیام شما مستقیم به تیم مربوط می‌رسد."
+        title="در خدمت شما هستیم."
+        lead="پرسش، پیشنهاد یا درخواست همکاری دارید؟ فرم زیر را تکمیل کنید؛ پیام شما مستقیم به تیم مربوط می‌رسد و تا یک روز کاری پاسخ می‌گیرید."
       />
       <section className="s-sec" style={{ paddingTop: 24 }} aria-label="فرم تماس و راه‌های ارتباطی">
         <div className="s-wrap">
@@ -50,7 +50,7 @@ export default function ContactPage() {
                   <h2 className="s-h3" style={{ fontSize: 16 }}>میان‌بُرها</h2>
                   <div className="s-col" style={{ gap: 4 }}>
                     <Link href={routes.app.support} className="s-link">پشتیبانی داخل اپ (برای کاربران)<Icon name="forward" /></Link>
-                    <Link href={`${routes.site.business}#demo`} className="s-link">درخواست دمو برای سازمان‌ها<Icon name="forward" /></Link>
+                    <Link href={`${routes.site.business}#demo`} className="s-link">رزرو جلسه‌ی معرفی برای سازمان‌ها<Icon name="forward" /></Link>
                     <Link href={routes.site.faq} className="s-link">سوالات متداول<Icon name="forward" /></Link>
                   </div>
                 </div>

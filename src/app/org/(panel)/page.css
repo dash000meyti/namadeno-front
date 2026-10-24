@@ -1,5 +1,0 @@
-/* Organization dashboard — scoped under .pg-odash */
-.pg-odash .od-kpi{transition:transform .15s ease, box-shadow .15s ease}
-.pg-odash .od-kpi:hover{transform:translateY(-1px)}
-.pg-odash .od-tile:hover{background:var(--action-selected) !important}
-.pg-odash .ibtn:disabled{cursor:default;opacity:.5}

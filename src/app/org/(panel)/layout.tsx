@@ -22,16 +22,16 @@ export default function OrgPanelLayout({ children }: { children: React.ReactNode
   const count = pending?.length ?? 0;
   const org = me?.organization;
   const groups: NavGroup[] = [
-    { title: 'کلی', items: [
-      { label: 'داشبورد', href: routes.org.dashboard, d: I.dashboard },
-      { label: 'کارکنان', href: routes.org.employees, d: I.users },
-      { label: 'بسته‌های دارایی', href: routes.org.packages, d: I.pkg },
-      { label: 'تسهیلات و اعتبار', href: routes.org.credit, d: I.credit },
-      { label: 'درخواست‌ها', href: routes.org.requests, d: I.inbox, badge: count },
+    { title: 'عملیات', items: [
+      { label: 'داشبورد', href: routes.org.dashboard, tone: 'primary', d: I.dashboard },
+      { label: 'کارکنان', href: routes.org.employees, tone: 'secondary', d: I.users },
+      { label: 'بسته‌های دارایی', short: 'بسته‌ها', href: routes.org.packages, tone: 'warning', d: I.pkg },
+      { label: 'تسهیلات و اعتبار', short: 'اعتبار', href: routes.org.credit, tone: 'success', d: I.credit },
+      { label: 'درخواست‌ها', href: routes.org.requests, tone: 'info', d: I.inbox, badge: count },
     ] },
     { title: 'مدیریت', items: [
-      { label: 'گزارش‌ها', href: routes.org.reports, d: I.reports },
-      { label: 'تنظیمات قرارداد', href: routes.org.contract, d: I.contract },
+      { label: 'گزارش‌ها', href: routes.org.reports, tone: 'secondary', d: I.reports },
+      { label: 'تنظیمات قرارداد', short: 'قرارداد', href: routes.org.contract, tone: 'ink', d: I.contract },
     ] },
   ];
   const search: SearchItem[] = [
@@ -46,7 +46,7 @@ export default function OrgPanelLayout({ children }: { children: React.ReactNode
   return (
     <PanelShell
       surface="org"
-      brandSub="· سازمان"
+      brandSub="سازمان"
       homeHref={routes.org.dashboard}
       groups={groups}
       user={{ name: me?.admin.name ?? 'نیما رضایی', role: me?.admin.role ?? 'مدیر منابع انسانی', letter: (me?.admin.name ?? 'ن')[0] }}
@@ -55,7 +55,7 @@ export default function OrgPanelLayout({ children }: { children: React.ReactNode
       orgSwitcher={{ name: org?.name ?? 'هلدینگ آرمان', sub: `سازمان فعال · ${faDigits(org?.employees ?? 384)} کارمند`, contract: org?.contractNo ?? 'AR-1042', settingsHref: routes.org.contract }}
       searchPlaceholder="جستجو…"
       searchItems={search}
-      primaryAction={{ label: 'ارسال بسته دارایی', href: routes.org.newRecipients(), d: I.pkg }}
+      primaryAction={{ label: 'ارسال بسته', href: routes.org.newRecipients(), d: I.pkg }}
       bell={{ href: routes.org.requests, count, label: 'اعلان‌ها و درخواست‌ها' }}
       settingsHref={routes.org.contract}
     >

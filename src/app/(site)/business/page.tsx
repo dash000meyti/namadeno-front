@@ -10,55 +10,74 @@ import { faDigits } from '@/lib/format';
 import { routes } from '@/lib/routes';
 
 export const metadata: Metadata = {
-  title: 'برای سازمان‌ها',
-  description: 'پاداش، رفاهی و پرداخت قراردادهای پروژه‌ای را به‌صورت واحد صندوق‌های بورسی بپردازید؛ با قفل زمانی یا مرحله‌ای و گزارش لحظه‌ای. درخواست دمو.',
+  title: 'نمادنو برای سازمان‌ها',
+  description: 'پاداش، عیدی و مزایای همکاران را به‌صورت دارایی ماندگار بپردازید؛ رضایت بیشتر، ماندگاری نیروهای کلیدی و کنترل کامل بودجه. رزرو جلسه‌ی معرفی.',
 };
 
+const OUTCOMES = [
+  { big: '۸۹٪', t: 'پذیرش پاداش‌ها', d: 'همکاران سازمان‌های همراه، پاداش‌های دارایی را تأیید و نگه می‌دارند؛ نه اینکه فوراً خرجش کنند.' },
+  { big: '۷ روز', t: 'تا اولین پرداخت', d: 'از امضای قرارداد تا ارسال اولین پاداش، کمتر از یک هفته؛ بدون یکپارچه‌سازی پیچیده.' },
+  { big: 'صفر', t: 'ضمانت سازمان', d: 'همکاران با پشتوانه‌ی دارایی خودشان اعتبار می‌گیرند؛ بدون ضمانت سازمان و بدون کسر از حقوق.' },
+];
+
 const BENEFITS: { icon: IconName; c: string; title: string; text: string }[] = [
-  { icon: 'shield', c: 'c-warning', title: 'حفظ ارزش مزایا', text: 'پاداش در صندوق طلا یا درآمد ثابت می‌نشیند؛ قدرت خرید کارکنان در برابر تورم حفظ می‌شود.' },
-  { icon: 'clock', c: 'c-primary', title: 'ماندگاری با قفل زمانی', text: 'بسته‌ها را با تاریخ آزادسازی بفرستید؛ ارزش بسته در این مدت برای کارمند رشد می‌کند.' },
-  { icon: 'flag', c: 'c-info', title: 'پرداخت مرحله‌ای قراردادها', text: 'مبلغ قرارداد پروژه‌ای از ابتدا تخصیص می‌یابد و با تأیید هر مرحله آزاد می‌شود.' },
-  { icon: 'credit', c: 'c-success', title: 'رفاه اعتباری بدون ضمانت', text: 'کارکنان با پشتوانه دارایی خودشان وام و اعتبار می‌گیرند؛ بدون ضمانت سازمان و کسر از حقوق.' },
-  { icon: 'users', c: 'c-secondary', title: 'ارسال گروهی در چند دقیقه', text: 'انتخاب گیرندگان، تعیین مبلغ و صندوق، بررسی و ارسال؛ برای یک نفر یا هزار نفر.' },
-  { icon: 'chart', c: 'c-default', title: 'گزارش شفاف و قابل حسابرسی', text: 'پذیرش بسته‌ها، مصرف بودجه، قفل‌ها و درخواست‌ها؛ لحظه‌ای و قابل خروجی گرفتن.' },
+  { icon: 'shield', c: 'c-warning', title: 'قدرت خرید همکاران، محفوظ', text: 'پاداش در صندوق طلا یا درآمد ثابت می‌نشیند و در برابر تورم ارزشش را نگه می‌دارد.' },
+  { icon: 'clock', c: 'c-primary', title: 'ماندگاری با قفل زمانی', text: 'پاداش را با تاریخ آزادسازی بفرستید؛ ارزشش در این مدت برای همکار رشد می‌کند و انگیزه‌ی ماندن می‌سازد.' },
+  { icon: 'flag', c: 'c-info', title: 'پرداخت مرحله‌ای قراردادها', text: 'مبلغ قرارداد پروژه‌ای از ابتدا کنار گذاشته می‌شود و با تأیید هر مرحله آزاد می‌شود.' },
+  { icon: 'credit', c: 'c-success', title: 'رفاه اعتباری، بی‌دردسر', text: 'همکاران با پشتوانه‌ی دارایی خودشان وام و اعتبار می‌گیرند؛ بدون ضمانت سازمان و بدون کسر از حقوق.' },
+  { icon: 'users', c: 'c-secondary', title: 'پرداخت گروهی در چند دقیقه', text: 'برای یک نفر یا هزار نفر؛ گیرندگان، مبلغ، صندوق و سیاست قفل در یک مسیر کوتاه.' },
+  { icon: 'chart', c: 'c-default', title: 'گزارش شفاف و قابل حسابرسی', text: 'پذیرش هر پاداش، مصرف بودجه و دارایی قفل‌شده‌ی همکاران؛ لحظه‌ای و قابل خروجی.' },
 ];
 
 const PROCESS: { title: string; text: string }[] = [
-  { title: 'قرارداد و تنظیمات', text: 'صندوق‌های مجاز، امکان برداشت نقدی، سیاست قفل و خدمات اعتباری کارکنان در قرارداد تعیین می‌شود.' },
-  { title: 'افزودن کارکنان', text: 'کارکنان را تکی یا گروهی اضافه کنید؛ دعوت‌نامه ورود به اپ برایشان پیامک می‌شود.' },
-  { title: 'ارسال بسته', text: 'مبلغ، صندوق یا تخصیص آزاد و نوع قفل را انتخاب کنید؛ پیش از ارسال، خلاصه را بررسی می‌کنید.' },
-  { title: 'پیگیری و گزارش', text: 'وضعیت تأیید هر کارمند، مراحل قراردادها و مصرف بودجه را در داشبورد ببینید.' },
+  { title: 'جلسه‌ی معرفی و قرارداد', text: 'سیاست مزایای شما را با هم مرور می‌کنیم؛ صندوق‌های مجاز، امکان برداشت نقدی و سیاست قفل در قرارداد تعیین می‌شود.' },
+  { title: 'افزودن همکاران', text: 'همکاران را تکی یا با یک فایل اکسل اضافه کنید؛ دعوت‌نامه‌ی افتتاح حساب نمادنو برایشان پیامک می‌شود.' },
+  { title: 'ارسال پاداش', text: 'مبلغ، صندوق یا تخصیص آزاد و نوع قفل را انتخاب کنید و پیش از ارسال، خلاصه را ببینید.' },
+  { title: 'پیگیری و گزارش', text: 'پذیرش هر همکار، مراحل قراردادها و مصرف بودجه را در داشبورد سازمانی ببینید.' },
 ];
 
 const POLICIES: { type: LockType | 'none'; title: string; text: string }[] = [
-  { type: 'none', title: 'بدون قفل', text: 'بسته بلافاصله پس از تأیید کارمند آزاد است؛ مناسب پاداش‌های مناسبتی و رفاهی.' },
+  { type: 'none', title: 'بدون قفل', text: 'پاداش بلافاصله پس از تأیید همکار آزاد است؛ مناسب پاداش‌های مناسبتی و رفاهی.' },
   { type: 'vesting', title: 'قفل زمانی', text: 'تا تاریخ تعیین‌شده قابل فروش نیست و سپس خودکار آزاد می‌شود؛ مناسب پاداش ماندگاری.' },
   { type: 'milestone', title: 'آزادسازی مرحله‌ای', text: 'مبلغ به مراحل تقسیم و هر مرحله با تأیید شما آزاد می‌شود؛ مناسب قراردادهای پروژه‌ای.' },
 ];
 
 const DEMO_POINTS = [
-  'نمایش زنده پنل سازمانی و اپ کارکنان',
-  'بررسی سیاست مزایا و پیشنهاد صندوق‌ها و قفل‌های مناسب',
-  'برآورد زمان راه‌اندازی و تعرفه متناسب با تعداد کارکنان',
-  'پاسخ به سوالات مالی، حقوقی و فنی تیم شما',
+  'نمایش زنده‌ی پنل سازمانی و اپ نمادنو',
+  'بررسی سیاست پاداش شما و پیشنهاد صندوق‌ها و قفل‌های مناسب',
+  'برآورد زمان راه‌اندازی و تعرفه، متناسب با اندازه‌ی سازمان',
+  'پاسخ به پرسش‌های مالی، حقوقی و فنی تیم شما',
 ];
 
 export default function BusinessPage() {
   return (
     <>
       <PageHero
-        crumbs={[{ label: 'برای سازمان‌ها' }]}
-        eyebrow="پنل سازمانی نمادنو"
-        title="مزایای کارکنان، به شکل دارایی ماندگار"
-        lead="به‌جای پرداخت ریالی، پاداش و رفاهی کارکنان را به‌صورت واحد صندوق‌های بورسی بپردازید؛ با سیاست قفل دلخواه، اعتبار بدون ضمانت سازمان و شفافیت کامل برای منابع انسانی."
+        crumbs={[{ label: 'نمادنو برای سازمان‌ها' }]}
+        eyebrow="نمادنو برای سازمان‌ها"
+        title="پاداشی که دیده می‌شود."
+        mute="نیرویی که می‌ماند."
+        lead="پاداش ریالی در چند هفته فراموش می‌شود. با نمادنو، هر پاداش به دارایی‌ای تبدیل می‌شود که هر روز رشد می‌کند، پشتوانه‌ی اعتبار همکاران است و ماه‌ها بعد هم یادآور قدردانی شماست."
       >
         <div className="s-actions" style={{ marginTop: 6 }}>
-          <a href="#demo" className="btn lg contained c-primary">درخواست دمو</a>
-          <Link href={routes.org.login} className="btn lg outlined c-primary"><Icon name="building" />ورود به پنل سازمان</Link>
+          <a href="#demo" className="btn lg contained c-primary">رزرو جلسه‌ی معرفی</a>
+          <Link href={routes.org.login} className="btn lg line"><Icon name="building" />ورود سازمان‌ها</Link>
         </div>
       </PageHero>
 
-      <Section eyebrow="چرا نمادنو" title="برای منابع انسانی، مالی و کارکنان">
+      <Section tight>
+        <div className="s-pillars">
+          {OUTCOMES.map((o) => (
+            <div key={o.t} className="s-pillar">
+              <span className="big s-grad">{o.big}</span>
+              <span className="t">{o.t}</span>
+              <p className="d">{o.d}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section eyebrow="چرا نمادنو" title="برای منابع انسانی، برای مالی،" mute="و برای همکاران‌تان.">
         <div className="s-g s-g3">
           {BENEFITS.map((b) => (
             <div key={b.title} className={'card s-card ' + b.c}>
@@ -70,7 +89,7 @@ export default function BusinessPage() {
         </div>
       </Section>
 
-      <Section eyebrow="شروع همکاری" title="از قرارداد تا اولین بسته">
+      <Section eyebrow="شروع همکاری" title="از جلسه‌ی معرفی" mute="تا اولین پاداش.">
         <ol className="s-g s-g4" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {PROCESS.map((p, i) => (
             <li key={p.title} className="card s-card">
@@ -86,8 +105,8 @@ export default function BusinessPage() {
         <div className="s-split">
           <div className="s-col" style={{ gap: 16 }}>
             <span className="s-eyebrow"><span className="dot" />سیاست‌های قفل</span>
-            <h2 className="s-h2">هر بسته، با سیاست مناسب خودش</h2>
-            <p className="s-lead">سیاست قفل را هنگام ارسال بسته انتخاب می‌کنید و کارمند پیش از تأیید، شرط آزادسازی را می‌بیند. در همه حالت‌ها سود و تغییر ارزش برای کارمند است.</p>
+            <h2 className="s-h2">هر پاداش،<br /><span className="s-mute2">با سیاست مناسب خودش.</span></h2>
+            <p className="s-lead">سیاست قفل را هنگام ارسال انتخاب می‌کنید و همکار پیش از تأیید، شرط آزادسازی را می‌بیند. در همه‌ی حالت‌ها، سود و رشد ارزش از روز اول برای همکار است.</p>
             <div className="s-col" style={{ gap: 10 }}>
               {POLICIES.map((p) => (
                 <div key={p.type} className="card" style={{ padding: 14, borderRadius: 14, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -107,14 +126,14 @@ export default function BusinessPage() {
         </div>
       </Section>
 
-      <Section id="demo" eyebrow="درخواست دمو" title="یک جلسه کوتاه، برای شروع" lead="فرم را پر کنید تا کارشناسان فروش سازمانی برای هماهنگی جلسه با شما تماس بگیرند.">
+      <Section id="demo" eyebrow="جلسه‌ی معرفی" title="یک گفت‌وگوی کوتاه،" mute="برای شروعی درست." lead="فرم را تکمیل کنید؛ مشاوران سازمانی نمادنو برای هماهنگی جلسه با شما تماس می‌گیرند.">
         <div className="s-split wide" style={{ alignItems: 'start', gap: 20 }}>
           <div className="card s-card">
             <ContactForm variant="demo" />
           </div>
           <div className="s-col" style={{ gap: 16 }}>
             <div className="card s-card c-primary">
-              <h3 className="s-h3" style={{ fontSize: 16 }}>در جلسه دمو</h3>
+              <h3 className="s-h3" style={{ fontSize: 16 }}>در جلسه‌ی معرفی</h3>
               <ul className="s-check">
                 {DEMO_POINTS.map((d) => <li key={d}><Icon name="check" />{d}</li>)}
               </ul>
@@ -122,7 +141,7 @@ export default function BusinessPage() {
             <div className="card s-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <span className="s-itile c-secondary"><Icon name="phone" /></span>
               <span className="s-col" style={{ gap: 2 }}>
-                <span className="cap" style={{ fontSize: 13 }}>فروش سازمانی</span>
+                <span className="cap" style={{ fontSize: 13 }}>مشاوران سازمانی</span>
                 <span style={{ fontWeight: 600 }} dir="ltr">business@namadno.ir</span>
               </span>
             </div>

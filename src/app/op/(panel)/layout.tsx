@@ -24,20 +24,20 @@ export default function OpPanelLayout({ children }: { children: React.ReactNode 
   const count = pending?.length ?? 0;
   const groups: NavGroup[] = [
     { title: 'عملیات', items: [
-      { label: 'نمای کلی', href: routes.op.overview, d: I.dashboard },
-      { label: 'سازمان‌ها و قراردادها', href: routes.op.organizations, d: I.building },
-      { label: 'کاربران', href: routes.op.users, d: I.users },
-      { label: 'درخواست‌ها', href: routes.op.requests, d: I.inbox, badge: count },
+      { label: 'نمای کلی', href: routes.op.overview, tone: 'primary', d: I.dashboard },
+      { label: 'سازمان‌ها و قراردادها', short: 'سازمان‌ها', href: routes.op.organizations, tone: 'secondary', d: I.building },
+      { label: 'کاربران', href: routes.op.users, tone: 'info', d: I.users },
+      { label: 'درخواست‌ها', href: routes.op.requests, tone: 'warning', d: I.inbox, badge: count },
     ] },
     { title: 'محصول', items: [
-      { label: 'صندوق‌ها', href: routes.op.funds, d: I.funds },
-      { label: 'محصولات اعتباری', href: routes.op.products, d: I.card },
-      { label: 'قوانین و محدودیت‌ها', href: routes.op.rules, d: I.rules },
+      { label: 'صندوق‌ها', href: routes.op.funds, tone: 'success', d: I.funds },
+      { label: 'محصولات اعتباری', short: 'محصولات', href: routes.op.products, tone: 'primary', d: I.card },
+      { label: 'قوانین و محدودیت‌ها', short: 'قوانین', href: routes.op.rules, tone: 'ink', d: I.rules },
     ] },
     { title: 'سیستم', items: [
-      { label: 'ریسک و تقلب', href: routes.op.risk, d: I.risk },
-      { label: 'گزارش‌ها', href: routes.op.reports, d: I.reports },
-      { label: 'تنظیمات', href: routes.op.settings, d: I.settings },
+      { label: 'ریسک و تقلب', short: 'ریسک', href: routes.op.risk, tone: 'error', d: I.risk },
+      { label: 'گزارش‌ها', href: routes.op.reports, tone: 'secondary', d: I.reports },
+      { label: 'تنظیمات', href: routes.op.settings, tone: 'ink', d: I.settings },
     ] },
   ];
   const search: SearchItem[] = [
@@ -50,7 +50,7 @@ export default function OpPanelLayout({ children }: { children: React.ReactNode 
   return (
     <PanelShell
       surface="op"
-      brandSub="پنل بهره‌بردار"
+      brandSub="بهره‌بردار"
       homeHref={routes.op.overview}
       groups={groups}
       user={{ name: 'علی نادری', role: 'مدیر محصول', letter: 'ع' }}

@@ -11,8 +11,6 @@ export function dec(n: number, digits = 1): string {
 }
 /** Billions: 259e9 → «۲۵۹», 72.5e9 → «۷۲٫۵». */
 export const bn = (n: number, digits = 1) => dec(n / 1e9, digits);
-/** Millions: 6.8e6 → «۶٫۸». */
-export const mn = (n: number, digits = 1) => dec(n / 1e6, digits);
 /** «۱۲٫۵٪» (trimmed). */
 export const pctT = (n: number, digits = 1) => dec(n, digits) + '٪';
 /** Signed trimmed percent «+۱٫۲٪» / «−۰٫۶٪». */
@@ -51,18 +49,6 @@ export function errMsg(e: unknown, fallback = 'خطا در ارتباط با س�
   return fallback;
 }
 
-/** Smooth cubic path through points (Catmull-Rom → Bézier), same as the design charts. */
-export function smoothPath(pts: [number, number][]): string {
-  if (!pts.length) return '';
-  const r1 = (v: number) => Math.round(v * 10) / 10;
-  let d = 'M' + pts[0][0] + ' ' + pts[0][1];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-    d += ' C' + r1(p1[0] + (p2[0] - p0[0]) / 6) + ' ' + r1(p1[1] + (p2[1] - p0[1]) / 6) + ' ' + r1(p2[0] - (p3[0] - p1[0]) / 6) + ' ' + r1(p2[1] - (p3[1] - p1[1]) / 6) + ' ' + p2[0] + ' ' + p2[1];
-  }
-  return d;
-}
-export const linePath = (pts: [number, number][]) => pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ');
 
 // ───────────── exports ─────────────
 type Cell = string | number | null | undefined;

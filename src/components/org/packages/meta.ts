@@ -40,7 +40,6 @@ export const I = {
 };
 
 export type Tone = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'default';
-export const soft = (t: Tone) => ({ bg: `var(--soft-${t})`, fg: `var(--${t}-text)` });
 
 export const REASONS: { key: PackageReason; label: string; tone: Tone }[] = [
   { key: 'bonus', label: 'پاداش', tone: 'primary' },

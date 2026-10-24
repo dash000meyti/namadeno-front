@@ -16,7 +16,7 @@ export default function FaqPage() {
       <PageHero
         crumbs={[{ label: 'سوالات متداول' }]}
         title="سوالات متداول"
-        lead="پاسخ رایج‌ترین سوال‌ها درباره دارایی آزاد و قفل‌شده، صندوق‌ها، اعتبار و همکاری سازمانی."
+        lead="پاسخ رایج‌ترین پرسش‌ها درباره‌ی افتتاح حساب، صندوق‌ها، دارایی آزاد و قفل‌شده، اعتبار و همکاری سازمانی."
       />
       <section className="s-sec" style={{ paddingTop: 24 }} aria-label="فهرست سوالات">
         <div className="s-wrap" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

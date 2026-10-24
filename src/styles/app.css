@@ -10,8 +10,8 @@
 .s-app .top{position:absolute;top:0;left:0;right:0;height:60px;box-sizing:border-box;padding:8px 12px 0;border:0;border-radius:0;border-bottom:1px solid var(--glass-edge);display:flex;align-items:center;gap:6px;z-index:2}
 .s-app .bnav{position:absolute;bottom:0;left:0;right:0;height:84px;box-sizing:border-box;padding:0 8px 20px;border:0;border-radius:0;border-top:1px solid var(--glass-edge);display:flex;align-items:stretch;z-index:2}
 .s-app .bnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:600;line-height:1}
-.s-app .chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:var(--soft-default);color:var(--default-text);font-variant-numeric:tabular-nums}
-.s-app .btn{height:44px;border:0;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:0 16px;white-space:nowrap}
+.s-app .chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;background:var(--soft-default);color:var(--default-text);font-variant-numeric:tabular-nums}
+.s-app .btn{height:44px;border:0;border-radius:999px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:0 16px;white-space:nowrap}
 .s-app .qa>span:first-child{transition:transform .18s ease}
 .s-app .qa:hover>span:first-child{transform:translateY(-2px)}
 .s-app .qa:active>span:first-child{transform:scale(.94)}
@@ -30,6 +30,12 @@
 .s-app .stp-back{animation:nm-back .32s cubic-bezier(.2,.8,.2,1)}
 
 /* ── App frame (replaces the 390×844 phone artboard) ── */
-.app-frame{position:relative;width:100%;max-width:440px;height:100dvh;margin:0 auto;overflow:hidden;background:var(--bg-default);background-image:var(--bg-aurora);color:var(--text-primary);font-family:'IRANSansX',Tahoma,sans-serif}
-@media (min-width:600px){.app-frame{height:min(100dvh,920px);margin-top:max(0px,calc((100dvh - 920px)/2));border-radius:32px;box-shadow:var(--shadow-z24),0 0 0 1px var(--divider)}}
+.app-frame{position:relative;width:100%;max-width:440px;height:100dvh;margin:0 auto;overflow:hidden;background:var(--bg-canvas);color:var(--text-primary);font-family:'IRANSansX',Tahoma,sans-serif}
+@media (min-width:600px){.app-frame{height:min(100dvh,920px);margin-top:max(0px,calc((100dvh - 920px)/2));border-radius:44px;box-shadow:0 40px 100px -30px rgb(0 0 0 / .35),0 0 0 1px var(--divider)}}
 .s-app .top{padding-top:calc(8px + env(safe-area-inset-top))}
+
+/* ── iOS-grade surfaces (Namadno Luxe): grouped background, solid cards, no glass-on-glass ── */
+.s-app{--card-bg:var(--surface-1)}
+.th-dark .s-app{--card-bg:var(--bg-paper)}
+.s-app .card{background:var(--card-bg);border:0;box-shadow:0 0 0 .5px rgb(0 0 0 / .06),0 1px 3px rgb(0 0 0 / .05);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:16px}
+.th-dark .s-app .card{box-shadow:inset 0 0 0 .5px rgb(255 255 255 / .08)}

@@ -1,4 +1,4 @@
-/* IRANSansX (text) and Divan (wordmark only). Files live in /public/fonts. IRANSansX is a commercial font — make sure the product's license covers web use. */
+/* IRANSansX for all text (the wordmark is the SVG logotype in src/components/ui/Brand.tsx). Files live in /public/fonts. IRANSansX is a commercial font — make sure the product's license covers web use. */
 @font-face{font-family:'IRANSansX';src:url('/fonts/IRANSansX-Thin.woff2') format('woff2');font-weight:100;font-style:normal;font-display:swap}
 @font-face{font-family:'IRANSansX';src:url('/fonts/IRANSansX-UltraLight.woff2') format('woff2');font-weight:200;font-style:normal;font-display:swap}
 @font-face{font-family:'IRANSansX';src:url('/fonts/IRANSansX-Light.woff2') format('woff2');font-weight:300;font-style:normal;font-display:swap}
@@ -10,4 +10,3 @@
 @font-face{font-family:'IRANSansX';src:url('/fonts/IRANSansX-Black.woff2') format('woff2');font-weight:900;font-style:normal;font-display:swap}
 @font-face{font-family:'IRANSansX';src:url('/fonts/IRANSansX-ExtraBlack.woff2') format('woff2');font-weight:950;font-style:normal;font-display:swap}
 @font-face{font-family:'IRANSansX';src:url('/fonts/IRANSansX-Heavy.woff2') format('woff2');font-weight:1000;font-style:normal;font-display:swap}
-@font-face{font-family:'Divan';src:url('/fonts/Divan-FaNum-Black.woff2') format('woff2');font-weight:100 1000;font-style:normal;font-display:swap}

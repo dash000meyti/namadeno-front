@@ -1,23 +1,33 @@
 'use client';
-/** /op/reports — design: op-reports.dc.html (4 report cards with SVG charts, client-side CSV / print-to-PDF exports, scheduled reports). */
-import { useMemo, useState } from 'react';
-import { PageHeading } from '@/components/panel/PanelShell';
-import { Icon } from '@/components/ui/Icon';
-import { Skeleton, ErrorState } from '@/components/app/Screen';
-import { useToast } from '@/components/ui/Toast';
+/**
+ * /op/reports — kit report page: period tabs and «export all» in the heading → four report cards in one grid
+ * (AUM, credit, organizations, operations & SLA — key number, small kit chart, Excel / PDF) →
+ * scheduled reports (list card with a switch per row, «new schedule» dialog). Exports are built client-side (CSV / print to PDF).
+ */
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useOpReports, type OpReports } from '@/api/op';
-import { useCreateSchedule, useReportsExtra, useUpdateSchedule, type ReportsExtra } from '@/api/op-system-extra';
-import { routes } from '@/lib/routes';
+import { useCreateSchedule, useReportsExtra, useUpdateSchedule, type ReportSchedule, type ReportsExtra } from '@/api/op-system-extra';
+import {
+  Allocation, Bars, BigNum, Card, Chips, Dialog, Empty, ErrorBlock, Field, FreeLocked, Ident, Legend, LineChart, List, ListRow, Note,
+  PageHeading, Pill, Ring, SkeletonCard, Spark, Switch, Table, Tabs, Tile, type Column, type Tone,
+} from '@/components/panel/kit';
+import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
+import { IC } from '@/components/op/system/ui';
+import { bn, dayTime, dec, downloadCsv, errMsg, printReport, raw, spct } from '@/components/op/system/fmt';
 import { faDigits, jDate } from '@/lib/format';
-import { bn, dayTime, dec, downloadCsv, errMsg, printReport, raw, smoothPath, spct } from '@/components/op/system/fmt';
-import { CardHead, Chip, DlgHead, FormError, IC, Lbl, Modal, Sw, TILE_TONES, TONES, type ToneKey } from '@/components/op/system/ui';
 
 type Range = 3 | 6 | 12;
-const RANGES: [Range, string][] = [[3, '۳ ماه'], [6, '۶ ماه'], [12, '۱۲ ماه']];
+const RANGES: { key: Range; label: string }[] = [{ key: 3, label: '۳ ماه' }, { key: 6, label: '۶ ماه' }, { key: 12, label: '۱۲ ماه' }];
 const rangeText = (r: Range) => (r === 3 ? '۳ ماه گذشته' : r === 6 ? '۶ ماه گذشته' : '۱۲ ماه گذشته');
-type Section = { title: string; rows: (string | number)[][] };
+type Kind = 'aum' | 'credit' | 'orgs' | 'sla';
+type Sec = { title: string; rows: (string | number)[][] };
+type Exp = (kind: Kind, title: string) => void;
+const SVC: Record<ReportsExtra['sla']['services'][number]['status'], [string, Tone]> = { ok: ['سالم', 'success'], slow: ['کند', 'warning'], down: ['اختلال', 'error'] };
+const ORG_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-5)'];
 
-function sections(kind: 'aum' | 'credit' | 'orgs' | 'sla', x: ReportsExtra, core: OpReports | undefined, range: Range): Section[] {
+function sections(kind: Kind, x: ReportsExtra, core: OpReports | undefined, range: Range): Sec[] {
   if (kind === 'aum') {
     const m = x.aumMonthly.slice(-range);
     const last = m[m.length - 1]?.aum ?? 0;
@@ -47,13 +57,13 @@ export default function OpReportsPage() {
   const [range, setRange] = useState<Range>(6);
   const x = extra.data;
 
-  const exportCsv = (kind: 'aum' | 'credit' | 'orgs' | 'sla', title: string) => {
+  const exportCsv: Exp = (kind, title) => {
     if (!x) return;
     const secs = sections(kind, x, core.data, range);
     downloadCsv(`namadno-${kind}-${range}m`, secs.flatMap((s, i) => [...(i ? [[]] : []), [s.title], ...s.rows]));
     toast(`دانلود Excel «${title}» — ${rangeText(range)} آغاز شد`);
   };
-  const exportPdf = (kind: 'aum' | 'credit' | 'orgs' | 'sla', title: string) => {
+  const exportPdf: Exp = (kind, title) => {
     if (!x) return;
     const ok = printReport(`${title} — ${rangeText(range)}`, sections(kind, x, core.data, range));
     toast(ok ? `نسخهٔ چاپی «${title}» باز شد؛ «ذخیره به PDF» را انتخاب کنید` : 'پنجرهٔ چاپ مسدود شد؛ اجازهٔ پنجرهٔ بازشو را بدهید', ok ? 'success' : 'error');
@@ -67,20 +77,17 @@ export default function OpReportsPage() {
 
   return (
     <>
-      <PageHeading title="گزارش‌ها" crumbs={[{ label: 'بهره‌بردار', href: routes.op.overview }, { label: 'سیستم', href: routes.op.settings }, { label: 'گزارش‌ها' }]}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 8, border: '1px solid var(--outline-border)', overflow: 'hidden', height: 36 }}>
-          {RANGES.map(([r, l]) => <button key={r} type="button" aria-pressed={range === r} onClick={() => setRange(r)} style={{ height: 36, padding: '0 12px', border: 0, background: range === r ? 'var(--soft-primary)' : 'transparent', color: range === r ? 'var(--primary-text)' : 'var(--text-secondary)', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{l}</button>)}
-        </div>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}><Icon d={IC.calendar} size={16} />{rangeText(range)}</span>
-        <button type="button" className="btnp" onClick={exportAll} disabled={!x}><Icon d={IC.excel} size={18} />خروجی همهٔ گزارش‌ها</button>
+      <PageHeading title="گزارش‌ها" crumbs={[{ label: 'سیستم' }]} sub="دارایی تحت مدیریت، تسهیلات، سازمان‌ها و عملیات؛ خروجی Excel و PDF و ارسال زمان‌بندی‌شده">
+        <Tabs label="بازه زمانی" value={range} onChange={setRange} items={RANGES} />
+        <button type="button" className="nm-btn" onClick={exportAll} disabled={!x}><Icon d={IC.excel} size={17} />خروجی همهٔ گزارش‌ها</button>
       </PageHeading>
 
       {extra.isLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 24 }}>{[0, 1, 2, 3].map((i) => <Skeleton key={i} h={268} />)}</div>
+        <div className="nm-grid c2">{[0, 1, 2, 3].map((i) => <SkeletonCard key={i} h={320} />)}</div>
       ) : extra.isError || !x ? (
-        <ErrorState message={errMsg(extra.error)} onRetry={() => extra.refetch()} />
+        <ErrorBlock error={extra.error} message={errMsg(extra.error)} onRetry={() => extra.refetch()} />
       ) : (
-        <div style={{ flex: 'none', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 24 }}>
+        <div className="nm-grid c2 stretch">
           <AumCard x={x} range={range} onPdf={exportPdf} onCsv={exportCsv} />
           <CreditCard x={x} onPdf={exportPdf} onCsv={exportCsv} />
           <OrgsCard x={x} core={core.data} onPdf={exportPdf} onCsv={exportCsv} />
@@ -88,152 +95,128 @@ export default function OpReportsPage() {
         </div>
       )}
 
-      <Schedules x={x} loading={extra.isLoading} />
+      {!extra.isError && <Schedules x={x} loading={extra.isLoading} />}
     </>
   );
 }
 
-type Exp = (kind: 'aum' | 'credit' | 'orgs' | 'sla', title: string) => void;
-function ReportCard({ kind, title, sub, updated, d, tone, value, unit, delta, deltaTone, onPdf, onCsv, children }: {
-  kind: 'aum' | 'credit' | 'orgs' | 'sla'; title: string; sub: string; updated: string; d: string; tone: ToneKey; value: string; unit: string; delta: string; deltaTone: ToneKey; onPdf: Exp; onCsv: Exp; children: React.ReactNode;
+/** One report: title, freshness and exports in the header → key number + change → a line of context → chart. */
+function ReportCard({ kind, title, updated, value, unit, delta, deltaTone, desc, onPdf, onCsv, children }: {
+  kind: Kind; title: string; updated: string; value: string; unit: string; delta: string; deltaTone: Tone; desc: ReactNode; onPdf: Exp; onCsv: Exp; children: ReactNode;
 }) {
-  const [bg, fg] = TONES[tone];
   return (
-    <div className="card" style={{ boxSizing: 'border-box', minHeight: 268, padding: 16, display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-      <div style={{ height: 36, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ width: 36, height: 36, borderRadius: 10, background: bg, color: fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={d} size={20} /></span>
-        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`${sub} · ${updated}`}>{sub} · {updated}</span>
-        </span>
+    <Card title={title} sub={updated} actions={(
+      <>
+        <button type="button" className="nm-btn sm ghost" onClick={() => onCsv(kind, title)} aria-label={`دانلود Excel ${title}`}><Icon d={IC.download} size={15} />Excel</button>
+        <button type="button" className="nm-btn sm ghost" onClick={() => onPdf(kind, title)} aria-label={`دانلود PDF ${title}`}><Icon d={IC.download} size={15} />PDF</button>
+      </>
+    )}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}><BigNum value={value} unit={unit} /><Pill tone={deltaTone}>{delta}</Pill></span>
+        <span className="mute" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12.5 }}>{desc}</span>
       </div>
-      {children}
-      <div style={{ height: 36, display: 'flex', alignItems: 'baseline', gap: 5, whiteSpace: 'nowrap', overflow: 'hidden' }}>
-        <span className="num" style={{ fontSize: 22, lineHeight: 1.1 }}>{value}</span>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{unit}</span>
-        <Lbl tone={deltaTone} style={{ marginRight: 'auto', height: 20, padding: '0 6px' }}>{delta}</Lbl>
-      </div>
-      <div style={{ marginTop: 'auto', height: 32, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <button type="button" className="btnp" onClick={() => onPdf(kind, title)} style={{ height: 32, padding: '0 10px', fontSize: 12 }}><Icon d={IC.download} size={16} />دانلود PDF</button>
-        <button type="button" className="btno" onClick={() => onCsv(kind, title)} style={{ height: 32, padding: '0 10px', fontSize: 12 }}>Excel</button>
-      </div>
-    </div>
+      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>
+    </Card>
   );
 }
 
 function AumCard({ x, range, onPdf, onCsv }: { x: ReportsExtra; range: Range; onPdf: Exp; onCsv: Exp }) {
   const m = x.aumMonthly.slice(-range);
-  const chart = useMemo(() => {
-    if (m.length < 2) return null;
-    const aums = m.map((r) => r.aum), flows = m.map((r) => r.inflow);
-    const lo = Math.min(...aums) * 0.92, hi = Math.max(...aums) * 1.04;
-    const flo = Math.min(...flows) - (Math.max(...flows) - Math.min(...flows) || 1), fhi = Math.max(...flows) * 1.6;
-    const pts = (arr: number[], a: number, b: number) => arr.map((v, i) => [Math.round(((i * 184) / (arr.length - 1)) * 10) / 10, Math.round((78 - ((v - a) / (b - a || 1)) * 66) * 10) / 10] as [number, number]);
-    const pA = pts(aums, lo, hi), pF = pts(flows, flo, fhi);
-    const dA = smoothPath(pA);
-    const last = pA[pA.length - 1];
-    return { aum: dA, flow: smoothPath(pF), area: `${dA} L${last[0]} 84 L0 84 Z`, last };
-  }, [m]);
-  const last = m[m.length - 1]?.aum ?? 0;
+  const lastRow = m[m.length - 1];
+  const last = lastRow?.aum ?? 0;
   const first = m[0]?.aum ?? 0;
   const growth = first ? (last / first - 1) * 100 : 0;
-  const free = Math.max(0, last - x.lockedValue);
-  const freePct = last ? Math.round((free / last) * 1000) / 10 : 100;
+  const locked = Math.min(x.lockedValue, last);
+  // y axis starts near the lowest month so the trend stays readable; the inflow (a few billions) gets its own sparkline
+  const lo = m.length ? Math.floor((Math.min(...m.map((r) => r.aum)) / 1e9) * 0.09) * 10 : 0;
   return (
-    <ReportCard kind="aum" title="AUM و جریان ورودی" sub="دارایی تحت مدیریت · آزاد و قفل‌شده" updated={dayTime(x.updated.aum)} d={IC.funds} tone="primary" value={bn(last)} unit="میلیارد تومان" delta={spct(growth, 0)} deltaTone={growth >= 0 ? 'success' : 'error'} onPdf={onPdf} onCsv={onCsv}>
-      <div dir="ltr" style={{ height: 84, flex: 'none' }}>
-        {chart && (
-          <svg viewBox="0 0 184 84" width="100%" height="84" preserveAspectRatio="none" role="img" aria-label={`AUM ${m[0].month} تا ${m[m.length - 1].month}`} style={{ display: 'block', overflow: 'visible' }}>
-            <defs><linearGradient id="rp-line" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style={{ stopColor: 'var(--chart-1)', stopOpacity: 0.24 }} /><stop offset="1" style={{ stopColor: 'var(--chart-1)', stopOpacity: 0 }} /></linearGradient></defs>
-            <line x1="0" x2="184" y1="22" y2="22" style={{ stroke: 'var(--chart-grid)' }} strokeWidth="1" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
-            <line x1="0" x2="184" y1="48" y2="48" style={{ stroke: 'var(--chart-grid)' }} strokeWidth="1" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
-            <path d={chart.area} fill="url(#rp-line)" />
-            <path d={chart.flow} fill="none" style={{ stroke: 'var(--chart-2)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
-            <path d={chart.aum} fill="none" style={{ stroke: 'var(--chart-1)' }} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-          </svg>
-        )}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div className="lkbar" role="img" aria-label={`AUM آزاد ${bn(free)} · قفل ${bn(x.lockedValue)} میلیارد`}><span className="f" style={{ width: `${freePct}%` }} /><span className="l" style={{ flex: 1 }} /></div>
-        <div className="lkleg" style={{ fontSize: 11, gap: 10 }}><span><span className="lkdot" />آزاد <b>{bn(free)}</b></span><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={IC.lock} size={11} />قفل <b>{bn(x.lockedValue)}</b></span></div>
-      </div>
+    <ReportCard kind="aum" title="AUM و جریان ورودی" updated={dayTime(x.updated.aum)} value={bn(last)} unit="میلیارد تومان" delta={spct(growth, 0)} deltaTone={growth >= 0 ? 'success' : 'error'} onPdf={onPdf} onCsv={onCsv}
+      desc={lastRow ? (
+        <>
+          جریان ورودی ماهانه
+          <Spark values={m.map((r) => r.inflow)} color="var(--chart-2)" width={64} height={18} label={`روند جریان ورودی ${rangeText(range)}`} />
+          <span><b className="num" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{bn(lastRow.inflow)}</b> میلیارد در {lastRow.month}</span>
+        </>
+      ) : 'دارایی تحت مدیریت · آزاد و قفل‌شده'}>
+      {m.length > 1
+        ? <LineChart labels={m.map((r) => r.month)} series={[{ name: 'AUM', color: 'var(--chart-1)', values: m.map((r) => r.aum / 1e9), area: true }]} min={lo} height={150} fmt={(n) => dec(n, 0)} label={`AUM ${m[0].month} تا ${m[m.length - 1].month} — میلیارد تومان`} />
+        : <Empty title="داده‌ای برای این بازه ثبت نشده است" />}
+      <FreeLocked free={Math.max(0, last - locked)} locked={locked} fmt={(n) => bn(n)} unit="میلیارد" height={6} />
     </ReportCard>
   );
 }
 
 function CreditCard({ x, onPdf, onCsv }: { x: ReportsExtra; onPdf: Exp; onCsv: Exp }) {
-  const max = Math.max(1, ...x.credit.map((c) => c.disbursed + c.collected));
+  const disbursed = x.credit.reduce((s, c) => s + c.disbursed, 0);
+  const collected = x.credit.reduce((s, c) => s + c.collected, 0);
   return (
-    <ReportCard kind="credit" title="تسهیلات" sub="وام پرداختی · اقساط وصول‌شده" updated={dayTime(x.updated.credit)} d={IC.percent} tone="success" value={bn(x.creditOutstanding)} unit="میلیارد مانده" delta={spct(x.creditDeltaPct, 0)} deltaTone={x.creditDeltaPct >= 0 ? 'success' : 'error'} onPdf={onPdf} onCsv={onCsv}>
-      <div dir="ltr" role="img" aria-label="وام پرداختی و اقساط وصول‌شده ۶ ماه اخیر" style={{ height: 84, flex: 'none', display: 'flex', alignItems: 'flex-end', gap: 6, padding: '0 2px' }}>
-        {x.credit.map((c) => (
-          <div key={c.month} title={`${c.month} · پرداختی ${bn(c.disbursed)} · وصول ${bn(c.collected)} میلیارد`} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 2 }}>
-            <span style={{ height: `${Math.round((c.disbursed / max) * 100)}%`, borderRadius: '4px 4px 0 0', background: 'var(--chart-1)' }} />
-            <span style={{ height: `${Math.round((c.collected / max) * 100)}%`, borderRadius: '0 0 3px 3px', background: 'var(--chart-3)' }} />
-          </div>
-        ))}
-      </div>
+    <ReportCard kind="credit" title="تسهیلات" updated={dayTime(x.updated.credit)} value={bn(x.creditOutstanding)} unit="میلیارد تومان مانده" delta={spct(x.creditDeltaPct, 0)} deltaTone={x.creditDeltaPct >= 0 ? 'success' : 'error'} onPdf={onPdf} onCsv={onCsv}
+      desc={<>جمع <span className="num">{faDigits(x.credit.length)}</span> ماه: پرداختی <b className="num" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{bn(disbursed)}</b> · وصول <b className="num" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{bn(collected)}</b> میلیارد</>}>
+      {x.credit.length
+        ? <Bars data={x.credit.map((c) => ({ label: c.month, values: [c.collected / 1e9, c.disbursed / 1e9] }))} series={[{ name: 'اقساط وصول‌شده', color: 'var(--chart-3)' }, { name: 'وام پرداختی', color: 'var(--chart-1)' }]} height={150} label={`وام پرداختی و اقساط وصول‌شده ${faDigits(x.credit.length)} ماه اخیر`} />
+        : <Empty title="داده‌ای ثبت نشده است" />}
+      <Legend items={[{ label: 'وام پرداختی', color: 'var(--chart-1)' }, { label: 'اقساط وصول‌شده', color: 'var(--chart-3)' }]} />
     </ReportCard>
   );
 }
 
 function OrgsCard({ x, core, onPdf, onCsv }: { x: ReportsExtra; core?: OpReports; onPdf: Exp; onCsv: Exp }) {
   const orgs = [...(core?.byOrganization ?? [])].sort((a, b) => b.budgetUsed - a.budgetUsed);
-  const top = orgs.slice(0, 4);
-  const max = top[0]?.budgetUsed || 1;
   const sum = orgs.reduce((s, o) => s + o.budgetUsed, 0);
+  const rest = orgs.slice(4).reduce((s, o) => s + o.budgetUsed, 0);
+  const items = [
+    ...orgs.slice(0, 4).map((o, i) => ({ label: o.name, value: o.budgetUsed, color: ORG_COLORS[i] })),
+    ...(rest > 0 ? [{ label: 'سایر سازمان‌ها', value: rest, color: 'var(--chart-4)' }] : []),
+  ];
   return (
-    <ReportCard kind="orgs" title="سازمان‌ها" sub="بسته‌های ارسالی · میلیارد تومان" updated={dayTime(x.updated.orgs)} d={IC.building} tone="info" value={bn(sum)} unit={`میلیارد · ${faDigits(x.orgCount)} سازمان`} delta={`+${faDigits(x.newOrgs)} سازمان`} deltaTone="success" onPdf={onPdf} onCsv={onCsv}>
-      <div style={{ height: 84, flex: 'none', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '2px 0' }}>
-        {top.map((o) => (
-          <div key={o.id} style={{ height: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
-            <span style={{ width: 64, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-secondary)' }} title={o.name}>{o.name}</span>
-            <span style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--progress-track)', overflow: 'hidden', display: 'flex' }}><span style={{ width: `${Math.round((o.budgetUsed / max) * 100)}%`, background: 'var(--chart-1)', borderRadius: 4 }} /></span>
-            <span className="num" style={{ width: 30, textAlign: 'left' }}>{bn(o.budgetUsed)}</span>
-          </div>
-        ))}
-        {!top.length && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>داده‌ای موجود نیست</span>}
-      </div>
+    <ReportCard kind="orgs" title="سازمان‌ها" updated={dayTime(x.updated.orgs)} value={bn(sum)} unit={`میلیارد تومان · ${faDigits(x.orgCount)} سازمان`} delta={`+${faDigits(x.newOrgs)} سازمان`} deltaTone="success" onPdf={onPdf} onCsv={onCsv}
+      desc="بسته‌های ارسالی به تفکیک سازمان · میلیارد تومان">
+      {items.length ? <Allocation items={items} fmt={(n) => bn(n)} /> : <Empty title="داده‌ای موجود نیست" />}
     </ReportCard>
   );
 }
 
 function SlaCard({ x, onPdf, onCsv }: { x: ReportsExtra; onPdf: Exp; onCsv: Exp }) {
-  const C = 2 * Math.PI * 34;
-  const dash = (x.sla.overall / 100) * C;
   return (
-    <ReportCard kind="sla" title="عملیات و SLA" sub="دسترس‌پذیری سرویس‌ها · ۳۰ روز" updated="لحظه‌ای" d={IC.shield} tone="warning" value={dec(x.sla.overall) + '٪'} unit="دسترس‌پذیری" delta={(x.sla.delta < 0 ? '−' : '+') + dec(Math.abs(x.sla.delta))} deltaTone={x.sla.delta < 0 ? 'error' : 'success'} onPdf={onPdf} onCsv={onCsv}>
-      <div dir="ltr" style={{ height: 84, flex: 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <svg viewBox="0 0 84 84" width="84" height="84" role="img" aria-label={`دسترس‌پذیری ${dec(x.sla.overall)}٪`} style={{ flex: 'none' }}>
-          <circle cx="42" cy="42" r="34" fill="none" style={{ stroke: 'var(--progress-track)' }} strokeWidth="9" />
-          <circle cx="42" cy="42" r="34" fill="none" style={{ stroke: 'var(--chart-2)' }} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${dash.toFixed(1)} ${C.toFixed(1)}`} transform="rotate(-90 42 42)" />
-          <text x="42" y="47" textAnchor="middle" fontSize="15" fontWeight="300" style={{ fill: 'var(--text-primary)', fontFamily: 'inherit' }}>{dec(x.sla.overall)}٪</text>
-        </svg>
-        <div dir="rtl" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
-          {x.sla.services.map((s) => (
-            <span key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.status === 'ok' ? 'var(--success-main)' : s.status === 'slow' ? 'var(--warning-main)' : 'var(--error-main)', flex: 'none' }} />
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
-              <span className="num" dir="ltr" style={{ color: 'var(--text-primary)' }}>{dec(s.uptime)}٪</span>
-            </span>
-          ))}
+    <ReportCard kind="sla" title="عملیات و SLA" updated="لحظه‌ای" value={dec(x.sla.overall) + '٪'} unit="دسترس‌پذیری" delta={(x.sla.delta < 0 ? '−' : '+') + dec(Math.abs(x.sla.delta))} deltaTone={x.sla.delta < 0 ? 'error' : 'success'} onPdf={onPdf} onCsv={onCsv}
+      desc="دسترس‌پذیری سرویس‌ها · ۳۰ روز">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <Ring value={x.sla.overall / 100} size={104} color="var(--success-main)" label={`دسترس‌پذیری ${dec(x.sla.overall)}٪ در ۳۰ روز`}>
+          <span className="num" style={{ fontSize: 18, fontWeight: 600 }}>{dec(x.sla.overall)}٪</span>
+          <span className="mute" style={{ fontSize: 11 }}>۳۰ روز</span>
+        </Ring>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {x.sla.services.length ? (
+            <List>
+              {x.sla.services.map((s) => (
+                <ListRow key={s.name} title={<span style={{ fontWeight: 500 }}>{s.name}</span>}
+                  trail={<><span className="num">{dec(s.uptime)}٪</span><Pill tone={SVC[s.status][1]} dot>{SVC[s.status][0]}</Pill></>} />
+              ))}
+            </List>
+          ) : <span className="mute" style={{ fontSize: 12.5 }}>سرویسی پایش نمی‌شود</span>}
         </div>
       </div>
     </ReportCard>
   );
 }
 
-const SCOLS = 'minmax(0, 1fr) 96px 120px 72px 104px 56px';
+// ───────────────────────── scheduled reports ─────────────────────────
+
 const PERIODS = ['روزانه · ۰۸:۰۰', 'هفتگی · شنبه', 'ماهانه · اول ماه'];
+type Form = { name: string; period: string; recipients: string; format: 'PDF' | 'XLSX' };
+const EMPTY: Form = { name: '', period: PERIODS[1], recipients: '', format: 'PDF' };
+
 function Schedules({ x, loading }: { x?: ReportsExtra; loading: boolean }) {
   const toast = useToast();
   const update = useUpdateSchedule();
   const create = useCreateSchedule();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', period: PERIODS[1], recipients: '', format: 'PDF' as 'PDF' | 'XLSX' });
+  const [form, setForm] = useState<Form>(EMPTY);
   const [err, setErr] = useState('');
   const list = x?.schedules ?? [];
   const active = list.filter((s) => s.enabled).length;
+  const startNew = () => { setForm(EMPTY); setErr(''); setOpen(true); };
+  const put = (p: Partial<Form>) => { setForm((f) => ({ ...f, ...p })); setErr(''); };
   const submit = () => {
     if (form.name.trim().length < 3) return setErr('عنوان گزارش را وارد کنید.');
     if (!form.recipients.trim()) return setErr('گیرندگان گزارش را مشخص کنید.');
@@ -242,47 +225,50 @@ function Schedules({ x, loading }: { x?: ReportsExtra; loading: boolean }) {
       onError: (e) => setErr(errMsg(e)),
     });
   };
+  const toggle = (r: ReportSchedule) => update.mutate({ id: r.id, enabled: !r.enabled }, {
+    onSuccess: () => toast(`«${r.name}» ${r.enabled ? 'متوقف' : 'فعال'} شد`),
+    onError: (e) => toast(errMsg(e), 'error'),
+  });
+
+  const columns: Column<ReportSchedule>[] = [
+    { key: 'name', label: 'گزارش', width: 'minmax(0, 1.4fr)', render: (r) => <Ident lead={<Tile d={IC.file} tone="primary" />} title={r.name} /> },
+    { key: 'period', label: 'دوره', width: '132px', render: (r) => <span className="el mute">{r.period}</span> },
+    { key: 'to', label: 'گیرندگان', width: 'minmax(0, 1fr)', render: (r) => <span className="el mute" title={r.recipients}>{r.recipients}</span> },
+    { key: 'format', label: 'قالب', width: '72px', render: (r) => <Pill>{r.format}</Pill> },
+    { key: 'next', label: 'ارسال بعدی', width: '104px', render: (r) => <span className="num sm">{r.enabled ? jDate(r.nextAt) : '—'}</span> },
+    { key: 'on', label: 'فعال', width: '56px', align: 'end', render: (r) => <Switch on={r.enabled} label={`فعال‌سازی ${r.name}`} disabled={update.isPending && update.variables?.id === r.id} onChange={() => toggle(r)} /> },
+  ];
+
   return (
-    <div className="card" style={{ flex: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <CardHead title="گزارش‌های زمان‌بندی‌شده" badge={<Lbl>{faDigits(active)} فعال</Lbl>}>
-        <button type="button" className="btnt" onClick={() => { setForm({ name: '', period: PERIODS[1], recipients: '', format: 'PDF' }); setErr(''); setOpen(true); }} style={{ marginRight: 'auto', height: 28, padding: '0 8px', fontSize: 12 }}><Icon d={IC.plus} size={16} strokeWidth={2} />زمان‌بندی جدید</button>
-      </CardHead>
-      <div style={{ overflowX: 'auto' }}>
-        <div style={{ minWidth: 700 }}>
-          <div style={{ height: 32, display: 'grid', gridTemplateColumns: SCOLS, alignItems: 'center', padding: '0 20px', background: 'var(--table-head)', color: 'var(--grey-600)', fontSize: 12, fontWeight: 700 }}>
-            <span>گزارش</span><span>دوره</span><span>گیرندگان</span><span>قالب</span><span>ارسال بعدی</span><span>فعال</span>
-          </div>
-          {loading && <div style={{ padding: 20 }}><Skeleton h={160} /></div>}
-          {list.map((r, i) => {
-            const [bg, fg] = TONES[TILE_TONES[i % 6]];
-            return (
-              <div key={r.id} style={{ minHeight: 40, display: 'grid', gridTemplateColumns: SCOLS, alignItems: 'center', padding: '0 20px', borderBottom: '1px dashed var(--divider)', fontSize: 13, opacity: r.enabled ? 1 : 0.7 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}><span style={{ width: 28, height: 28, borderRadius: 8, background: bg, color: fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={IC.file} size={16} /></span><span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span></span>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{r.period}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingLeft: 8 }}>{r.recipients}</span>
-                <span><Lbl dir="ltr" style={{ height: 20, padding: '0 6px', fontSize: 11 }}>{r.format}</Lbl></span>
-                <span className="num" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{r.enabled ? jDate(r.nextAt) : '—'}</span>
-                <span><Sw on={r.enabled} label={`فعال‌سازی ${r.name}`} disabled={update.isPending && update.variables?.id === r.id}
-                  onClick={() => update.mutate({ id: r.id, enabled: !r.enabled }, { onSuccess: () => toast(`«${r.name}» ${r.enabled ? 'متوقف' : 'فعال'} شد`), onError: (e) => toast(errMsg(e), 'error') })} /></span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <Modal open={open} onClose={() => setOpen(false)} width={520} label="زمان‌بندی گزارش جدید">
-        <DlgHead title="زمان‌بندی گزارش جدید" onClose={() => setOpen(false)} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="fg"><label className="fl" htmlFor="sc-name">عنوان گزارش</label><input id="sc-name" className="fi" value={form.name} placeholder="مثلاً گزارش هفتگی قفل‌های وثیقه" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setForm({ ...form, name: e.target.value }); setErr(''); }} /></div>
-          <div className="fg"><span className="fl">دوره ارسال</span><div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{PERIODS.map((p) => <Chip key={p} on={form.period === p} onClick={() => setForm({ ...form, period: p })} style={{ height: 30, padding: '0 12px' }}>{p}</Chip>)}</div></div>
-          <div className="fg"><label className="fl" htmlFor="sc-to">گیرندگان</label><input id="sc-to" className="fi" value={form.recipients} placeholder="مثلاً مالی، ریسک" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setForm({ ...form, recipients: e.target.value }); setErr(''); }} /></div>
-          <div className="fg"><span className="fl">قالب</span><div style={{ display: 'flex', gap: 6 }}>{(['PDF', 'XLSX'] as const).map((f) => <Chip key={f} dir="ltr" on={form.format === f} onClick={() => setForm({ ...form, format: f })} style={{ height: 30, minWidth: 56 }}>{f}</Chip>)}</div></div>
-        </div>
-        <FormError>{err}</FormError>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button type="button" className="btnp" onClick={submit} disabled={create.isPending} style={{ opacity: create.isPending ? 0.7 : 1 }}><Icon d={IC.calendar} size={16} />{create.isPending ? 'در حال ثبت…' : 'ایجاد زمان‌بندی'}</button>
-          <button type="button" className="btno" onClick={() => setOpen(false)}>انصراف</button>
-        </div>
-      </Modal>
-    </div>
+    <>
+      <Card flush title="گزارش‌های زمان‌بندی‌شده" count={list.length || undefined} sub={list.length ? `${faDigits(active)} فعال` : undefined}
+        actions={<button type="button" className="nm-btn sm ghost" onClick={startNew}><Icon d={IC.plus} size={15} strokeWidth={2} />زمان‌بندی جدید</button>}>
+        <Table columns={columns} rows={list} rowKey={(r) => r.id} rowLabel={(r) => r.name} dimRow={(r) => !r.enabled} loading={loading} minWidth={720}
+          empty={<Empty icon={IC.calendar} title="گزارش زمان‌بندی‌شده‌ای ثبت نشده است" action={<button type="button" className="nm-btn sm ghost" onClick={startNew}>زمان‌بندی جدید</button>} />} />
+      </Card>
+
+      <Dialog open={open} onClose={() => setOpen(false)} width={520} label="زمان‌بندی گزارش جدید" title="زمان‌بندی گزارش جدید"
+        footer={(
+          <>
+            <button type="button" className="nm-btn ghost" onClick={() => setOpen(false)}>انصراف</button>
+            <button type="button" className="nm-btn" onClick={submit} disabled={create.isPending}><Icon d={IC.calendar} size={16} />{create.isPending ? 'در حال ثبت…' : 'ایجاد زمان‌بندی'}</button>
+          </>
+        )}
+      >
+        <Field label="عنوان گزارش" htmlFor="sc-name">
+          <span className="nm-in" style={{ width: '100%' }}><input id="sc-name" value={form.name} placeholder="مثلاً گزارش هفتگی قفل‌های وثیقه" onChange={(e) => put({ name: e.target.value })} /></span>
+        </Field>
+        <Field label="دوره ارسال">
+          <Chips label="دوره ارسال" value={form.period} onChange={(p) => put({ period: p })} options={PERIODS.map((p) => ({ key: p, label: p }))} />
+        </Field>
+        <Field label="گیرندگان" htmlFor="sc-to">
+          <span className="nm-in" style={{ width: '100%' }}><input id="sc-to" value={form.recipients} placeholder="مثلاً مالی، ریسک" onChange={(e) => put({ recipients: e.target.value })} /></span>
+        </Field>
+        <Field label="قالب">
+          <Chips label="قالب" value={form.format} onChange={(f) => put({ format: f })} options={[{ key: 'PDF', label: 'PDF' }, { key: 'XLSX', label: 'XLSX' }]} />
+        </Field>
+        {err && <Note tone="err">{err}</Note>}
+      </Dialog>
+    </>
   );
 }

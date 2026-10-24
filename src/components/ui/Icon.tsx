@@ -96,13 +96,5 @@ export function Icon({ name, d, size = 24, strokeWidth, className, style, title 
   );
 }
 
-/** The Namadno logo mark (used in panels and the site). */
-export function LogoMark({ size = 40, radius = 10 }: { size?: number; radius?: number }) {
-  return (
-    <span style={{ width: size, height: size, borderRadius: radius, background: 'var(--brand-gradient)', display: 'grid', placeItems: 'center', color: '#FFFFFF', flex: 'none' }}>
-      <svg viewBox="0 0 64 40" width={size * 0.65} height={size * 0.4} aria-hidden="true">
-        <path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
-      </svg>
-    </span>
-  );
-}
+/** The Namadno logo mark — re-exported from Brand.tsx (exact brand geometry, currentColor). */
+export { LogoMark } from './Brand';

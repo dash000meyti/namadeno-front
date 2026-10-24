@@ -36,8 +36,9 @@ export default function SecurityPage() {
       <PageHero
         crumbs={[{ label: 'امنیت' }]}
         eyebrow="امنیت در نمادنو"
-        title="از دارایی شما در هر لایه محافظت می‌کنیم"
-        lead="امنیت در نمادنو از احراز هویت شروع می‌شود، با تأیید هر تراکنش ادامه پیدا می‌کند و با پایش مداوم ریسک کامل می‌شود."
+        title="اعتماد، از روز اول."
+        mute="دارایی شما، همیشه به نام شما."
+        lead="دارایی شما مستقیماً به نام خودتان و در صندوق‌های تحت نظارت سازمان بورس نگهداری می‌شود. امنیت در نمادنو از احراز هویت شروع می‌شود، با تأیید هر عملیات حساس ادامه پیدا می‌کند و با پایش لحظه‌ای ریسک کامل می‌شود."
       />
 
       <Section tight>
@@ -52,7 +53,7 @@ export default function SecurityPage() {
         </div>
       </Section>
 
-      <Section eyebrow="احراز هویت" title="سه سطح، متناسب با هر خدمت" lead="هر خدمت فقط پس از سطح احراز لازم فعال می‌شود و همه مراحل آنلاین و داخل اپ انجام می‌شود.">
+      <Section eyebrow="احراز هویت" title="سه سطح،" mute="متناسب با هر خدمت." lead="هر خدمت فقط پس از سطح احراز لازم فعال می‌شود و همه مراحل آنلاین و داخل اپ انجام می‌شود.">
         <ol className="s-g s-g3" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {KYC.map((k) => (
             <li key={k.level} className="card s-card">
@@ -66,7 +67,7 @@ export default function SecurityPage() {
         </ol>
       </Section>
 
-      <Section eyebrow="لایه‌های حفاظت" title="از ورود تا برداشت">
+      <Section eyebrow="لایه‌های حفاظت" title="از ورود" mute="تا برداشت.">
         <div className="s-g s-g3">
           {LAYERS.map((l) => (
             <div key={l.title} className="card s-card c-primary">

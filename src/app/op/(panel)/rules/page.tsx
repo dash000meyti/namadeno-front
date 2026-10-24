@@ -1,59 +1,59 @@
 'use client';
-/** /op/rules — design: op-rules.dc.html (general rules, lock types, change history; save with confirmation). */
+/** /op/rules — kit settings page: general rules and lock types as settings groups, change history, sticky save bar. */
 import { useEffect, useMemo, useState } from 'react';
-import { PageHeading } from '@/components/panel/PanelShell';
-import { Icon } from '@/components/ui/Icon';
-import { Skeleton, ErrorState } from '@/components/app/Screen';
 import { useToast } from '@/components/ui/Toast';
 import { useOpRules } from '@/api/op';
 import { useRulesMeta, useSaveRules, type RuleChange } from '@/api/op-system-extra';
 import type { LockType, PlatformRule } from '@/types/domain';
-import { routes } from '@/lib/routes';
 import { faDigits, jDate, money } from '@/lib/format';
 import { LOCK_META } from '@/lib/locks';
 import { errMsg } from '@/components/op/system/fmt';
-import { Chip, Confirm, IC, Lbl, NumField, Seg, Sw, TONES, type ToneKey } from '@/components/op/system/ui';
+import { IC } from '@/components/op/system/ui';
+import {
+  ActionBar, Card, Chips, Confirm, ErrorBlock, KV, List, ListRow, NumberInput, PageHeading, Pill, SettingRow, SettingsGroup,
+  SkeletonCard, Switch, Tabs, Tile, type Tone,
+} from '@/components/panel/kit';
+import { LockTypeChip } from '@/components/ui/LockBar';
+import { Icon } from '@/components/ui/Icon';
 
 type Val = { enabled: boolean; value?: number | string };
 type RowDef =
   | { kind: 'field'; id: string; label: string; sub: string; suffix: string; w: number; min?: number; max?: number; decimals?: boolean }
   | { kind: 'switch'; id: string; label: string; sub: string }
   | { kind: 'chips'; id: string; label: string; sub: string; options: string[] };
-interface GroupDef { title: string; badge: string; d: string; tone: ToneKey; rows: RowDef[] }
+interface GroupDef { title: string; d: string; tone: Tone; rows: RowDef[] }
 
 const DOCS = ['کارت ملی', 'سلفی', 'ویدیو'];
-const COL_A: GroupDef[] = [
-  { title: 'بسته‌های دارایی', badge: '۳ قانون', d: IC.inbox, tone: 'primary', rows: [
-    { kind: 'field', id: 'r-pkg-min-amount', label: 'حداقل مبلغ بسته', sub: 'کمتر از این مبلغ ارسال نمی‌شود', suffix: 'تومان', w: 84, min: 0 },
-    { kind: 'field', id: 'r-pkg-max-vesting', label: 'حداکثر قفل زمانی بسته', sub: 'همچنین سقف کلی در «انواع قفل دارایی»', suffix: 'ماه', w: 44, min: 1, max: 120 },
+const GROUPS: GroupDef[] = [
+  { title: 'بسته‌های دارایی', d: IC.inbox, tone: 'primary', rows: [
+    { kind: 'field', id: 'r-pkg-min-amount', label: 'حداقل مبلغ بسته', sub: 'کمتر از این مبلغ ارسال نمی‌شود', suffix: 'تومان', w: 100, min: 0 },
+    { kind: 'field', id: 'r-pkg-max-vesting', label: 'حداکثر قفل زمانی بسته', sub: 'همچنین سقف کلی در «انواع قفل دارایی»', suffix: 'ماه', w: 52, min: 1, max: 120 },
     { kind: 'switch', id: 'r-pkg-cfo-approval', label: 'نیاز به تأیید مدیر مالی', sub: 'برای بسته‌های بالای ۵۰۰ میلیون' },
   ] },
-  { title: 'برداشت نقدی', badge: '۲ قانون', d: IC.wallet, tone: 'info', rows: [
-    { kind: 'field', id: 'r-limit-withdraw-daily', label: 'سقف برداشت روزانه', sub: 'به ازای هر کاربر', suffix: 'تومان', w: 92, min: 0 },
-    { kind: 'switch', id: 'r-withdraw-manual', label: 'نیاز به تأیید دستی', sub: 'برداشت‌های بالای ۲۰۰ میلیون تومان' },
-  ] },
-];
-const COL_B: GroupDef[] = [
-  { title: 'تسهیلات', badge: '۴ قانون', d: IC.percent, tone: 'success', rows: [
-    { kind: 'field', id: 'r-credit-min-score', label: 'حداقل امتیاز اعتباری', sub: 'برای وام و خرید اقساطی · بازه ۳۰۰ تا ۹۰۰', suffix: 'امتیاز', w: 52, min: 300, max: 900 },
-    { kind: 'field', id: 'r-credit-max-ltv', label: 'حداکثر نسبت وثیقه', sub: 'سهم قابل قفل از بخش آزاد هر صندوق', suffix: '٪', w: 44, min: 0, max: 100 },
-    { kind: 'field', id: 'r-credit-overdue', label: 'اقساط معوق مجاز', sub: 'پس از آن وثیقه نقد می‌شود', suffix: 'قسط', w: 40, min: 0, max: 24 },
+  { title: 'تسهیلات', d: IC.percent, tone: 'success', rows: [
+    { kind: 'field', id: 'r-credit-min-score', label: 'حداقل امتیاز اعتباری', sub: 'برای وام و خرید اقساطی · بازه ۳۰۰ تا ۹۰۰', suffix: 'امتیاز', w: 60, min: 300, max: 900 },
+    { kind: 'field', id: 'r-credit-max-ltv', label: 'حداکثر نسبت وثیقه', sub: 'سهم قابل قفل از بخش آزاد هر صندوق', suffix: '٪', w: 52, min: 0, max: 100 },
+    { kind: 'field', id: 'r-credit-overdue', label: 'اقساط معوق مجاز', sub: 'پس از آن وثیقه نقد می‌شود', suffix: 'قسط', w: 52, min: 0, max: 24 },
     { kind: 'switch', id: 'r-credit-auto-lock', label: 'قفل خودکار وثیقه', sub: 'هم‌زمان با تأیید وام یا خرید اقساطی' },
   ] },
-  { title: 'احراز هویت (KYC)', badge: '۳ سطح', d: IC.id, tone: 'warning', rows: [
+  { title: 'برداشت نقدی', d: IC.wallet, tone: 'info', rows: [
+    { kind: 'field', id: 'r-limit-withdraw-daily', label: 'سقف برداشت روزانه', sub: 'به ازای هر کاربر', suffix: 'تومان', w: 100, min: 0 },
+    { kind: 'switch', id: 'r-withdraw-manual', label: 'نیاز به تأیید دستی', sub: 'برداشت‌های بالای ۲۰۰ میلیون تومان' },
+  ] },
+  { title: 'احراز هویت (KYC)', d: IC.id, tone: 'warning', rows: [
     { kind: 'chips', id: 'r-kyc-l1-docs', label: 'سطح ۱ — مشاهده', sub: 'مدارک لازم', options: DOCS },
     { kind: 'chips', id: 'r-kyc-l2-docs', label: 'سطح ۲ — برداشت', sub: 'مدارک لازم', options: DOCS },
-    { kind: 'field', id: 'r-kyc-l2-withdraw-cap', label: 'سقف برداشت بدون تأیید دستی', sub: 'سطح ۲ · در هر روز', suffix: 'تومان', w: 84, min: 0 },
+    { kind: 'field', id: 'r-kyc-l2-withdraw-cap', label: 'سقف برداشت بدون تأیید دستی', sub: 'سطح ۲ · در هر روز', suffix: 'تومان', w: 100, min: 0 },
   ] },
 ];
 
 const CREATORS: [string, string][] = [['system', 'سیستم'], ['org', 'سازمان'], ['operator', 'بهره‌بردار']];
 type LimitDef = { kind: 'field'; id: string; label: string; suffix: string; w: number; min: number; max: number } | { kind: 'switch'; id: string; label: string };
 const LOCK_TYPES: { type: LockType; cond: string; limits: LimitDef[] }[] = [
-  { type: 'collateral', cond: 'آزاد با تسویه وام یا تسویه اعتبار کارت · LTV بالای سقف = فراخوان وثیقه', limits: [{ kind: 'field', id: 'r-lock-collateral-ltv', label: 'حداکثر نسبت وثیقه', suffix: '٪ آزاد', w: 36, min: 1, max: 100 }] },
-  { type: 'vesting', cond: 'آزاد در تاریخ تعیین‌شده توسط سازمان؛ مثال: آزاد در ۱۴۰۵/۱۰/۱۵', limits: [{ kind: 'field', id: 'r-lock-vesting', label: 'حداکثر مدت قفل', suffix: 'ماه', w: 36, min: 1, max: 120 }] },
-  { type: 'installment', cond: 'با پرداخت هر قسط، بخشی متناسب آزاد می‌شود', limits: [{ kind: 'field', id: 'r-lock-installment-share', label: 'حداکثر سهم از آزاد', suffix: '٪', w: 36, min: 1, max: 100 }] },
-  { type: 'milestone', cond: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود · جمع درصد مراحل باید ۱۰۰٪ باشد', limits: [{ kind: 'field', id: 'r-lock-milestone', label: 'حداکثر تعداد مراحل', suffix: 'مرحله', w: 32, min: 1, max: 20 }, { kind: 'field', id: 'r-lock-milestone-months', label: 'حداکثر مدت قرارداد', suffix: 'ماه', w: 32, min: 1, max: 120 }] },
+  { type: 'collateral', cond: 'آزاد با تسویه وام یا تسویه اعتبار کارت · LTV بالای سقف = فراخوان وثیقه', limits: [{ kind: 'field', id: 'r-lock-collateral-ltv', label: 'حداکثر نسبت وثیقه', suffix: '٪ آزاد', w: 48, min: 1, max: 100 }] },
+  { type: 'vesting', cond: 'آزاد در تاریخ تعیین‌شده توسط سازمان؛ مثال: آزاد در ۱۴۰۵/۱۰/۱۵', limits: [{ kind: 'field', id: 'r-lock-vesting', label: 'حداکثر مدت قفل', suffix: 'ماه', w: 48, min: 1, max: 120 }] },
+  { type: 'installment', cond: 'با پرداخت هر قسط، بخشی متناسب آزاد می‌شود', limits: [{ kind: 'field', id: 'r-lock-installment-share', label: 'حداکثر سهم از آزاد', suffix: '٪', w: 48, min: 1, max: 100 }] },
+  { type: 'milestone', cond: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود · جمع درصد مراحل باید ۱۰۰٪ باشد', limits: [{ kind: 'field', id: 'r-lock-milestone', label: 'حداکثر تعداد مراحل', suffix: 'مرحله', w: 48, min: 1, max: 20 }, { kind: 'field', id: 'r-lock-milestone-months', label: 'حداکثر مدت قرارداد', suffix: 'ماه', w: 48, min: 1, max: 120 }] },
   { type: 'legal', cond: 'تا رفع دستور مرجع / پایان بررسی ریسک · فقط در پنل بهره‌بردار', limits: [{ kind: 'switch', id: 'r-lock-legal-ref', label: 'شماره مرجع الزامی' }, { kind: 'switch', id: 'r-lock-legal-2nd', label: 'رفع با تأیید نفر دوم' }] },
 ];
 
@@ -85,7 +85,7 @@ export default function OpRulesPage() {
   }), [edits, byId]);
 
   const fieldDefs = useMemo(() => [
-    ...[...COL_A, ...COL_B].flatMap((g) => g.rows).filter((r): r is Extract<RowDef, { kind: 'field' }> => r.kind === 'field'),
+    ...GROUPS.flatMap((g) => g.rows).filter((r): r is Extract<RowDef, { kind: 'field' }> => r.kind === 'field'),
     ...LOCK_TYPES.flatMap((t) => t.limits).filter((l): l is Extract<LimitDef, { kind: 'field' }> => l.kind === 'field'),
     { id: 'r-lock-total-cap', label: 'سقف مجموع قفل هر کاربر', min: 1, max: 100 },
   ], []);
@@ -116,175 +116,118 @@ export default function OpRulesPage() {
     toast('مقادیر پیش‌فرض بارگذاری شد؛ برای اعمال، ذخیره کنید', 'info');
   };
 
-  const sw = (id: string, label: string) => <Sw on={get(id).enabled} onClick={() => put(id, { enabled: !get(id).enabled })} label={label} />;
-  const numField = (id: string, label: string, suffix: string, w: number, h = 32, decimals?: boolean) => (
-    <NumField value={Number(get(id).value ?? NaN)} onChange={(n) => put(id, { value: n })} w={w} h={h} suffix={suffix} label={label} decimals={decimals} invalid={invalidId(id)} />
+  const sw = (id: string, label: string, disabled?: boolean) => <Switch on={get(id).enabled} onChange={(on) => put(id, { enabled: on })} label={label} disabled={disabled} />;
+  const num = (id: string, label: string, suffix: string, w: number, disabled?: boolean) => (
+    <NumberInput value={Number(get(id).value ?? NaN)} onChange={(n) => put(id, { value: n })} width={w} suffix={suffix} label={label} invalid={invalidId(id)} disabled={disabled} />
   );
-
-  const renderRow = (r: RowDef) => {
-    if (!byId[r.id]) return null;
-    return (
-      <div key={r.id} style={{ minHeight: 52, display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px dashed var(--divider)' }}>
-        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}</span>
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.sub}</span>
-        </span>
-        {r.kind === 'field' && numField(r.id, r.label, r.suffix, r.w)}
-        {r.kind === 'switch' && sw(r.id, r.label)}
-        {r.kind === 'chips' && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {r.options.map((o, i) => {
-              const arr = String(get(r.id).value ?? '').split(',').map((x) => x === '1');
-              const on = !!arr[i];
-              return <Chip key={o} on={on} onClick={() => { const n = r.options.map((_, j) => (j === i ? !on : !!arr[j])); put(r.id, { value: n.map((b) => (b ? '1' : '0')).join(',') }); }} style={{ height: 26, padding: '0 8px' }}>{o}</Chip>;
-            })}
-          </span>
-        )}
-      </div>
-    );
-  };
-  const group = (g: GroupDef) => {
-    const [bg, fg] = TONES[g.tone];
-    return (
-      <div key={g.title} className="card" style={{ boxSizing: 'border-box', padding: '0 16px', display: 'flex', flexDirection: 'column', flex: 'none' }}>
-        <div style={{ height: 48, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 32, height: 32, borderRadius: 8, background: bg, color: fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={g.d} size={18} /></span>
-          <h6 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>{g.title}</h6>
-          <Lbl style={{ marginRight: 'auto', height: 20, padding: '0 6px', fontSize: 11 }}>{g.badge}</Lbl>
-        </div>
-        {g.rows.map(renderRow)}
-      </div>
-    );
+  const chipsOf = (r: Extract<RowDef, { kind: 'chips' }>) => {
+    const arr = String(get(r.id).value ?? '').split(',').map((x) => x === '1');
+    const on = r.options.map((_, i) => i).filter((i) => arr[i]);
+    return <Chips label={r.label} value={on} onChange={(i) => { const n = r.options.map((_, j) => (j === i ? !arr[j] : !!arr[j])); put(r.id, { value: n.map((b) => (b ? '1' : '0')).join(',') }); }} options={r.options.map((o, i) => ({ key: i, label: o }))} />;
   };
 
   const enabledN = LOCK_TYPES.filter((t) => get(`r-lock-${t.type}`).enabled).length;
   const history = meta.data?.history ?? [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: 'none' }}>
-      <div style={{ minHeight: 48, flex: 'none', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        <PageHeading title="قوانین و محدودیت‌ها" crumbs={[{ label: 'بهره‌بردار', href: routes.op.overview }, { label: 'محصول', href: routes.op.funds }, { label: 'قوانین و محدودیت‌ها' }]} />
-        <Seg label="نمای قوانین" value={view} onChange={setView} items={[{ key: 'general', label: 'قوانین عمومی' }, { key: 'locks', label: <>انواع قفل دارایی<Lbl tone="primary" style={{ height: 18, padding: '0 5px', fontSize: 10 }}>جدید</Lbl></> }]} />
-        <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Lbl tone="primary">سراسری — همهٔ سازمان‌ها</Lbl>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>نسخهٔ قوانین <span className="num" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{meta.data ? faDigits(meta.data.version) : '—'}</span></span>
-        </div>
-      </div>
+    <>
+      <PageHeading title="قوانین و محدودیت‌ها" crumbs={[{ label: 'محصول' }]} sub="قوانین سراسری برای همه‌ی سازمان‌ها؛ تغییرات فقط روی درخواست‌ها و قراردادهای جدید اعمال می‌شود">
+        <Pill tone="primary">سراسری — همهٔ سازمان‌ها</Pill>
+        <span className="mute" style={{ fontSize: 12.5 }}>نسخهٔ قوانین <span className="num" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{meta.data ? faDigits(meta.data.version) : '—'}</span></span>
+      </PageHeading>
 
-      {rules.isLoading ? <Skeleton h={420} /> : rules.isError ? <ErrorState message={errMsg(rules.error)} onRetry={() => rules.refetch()} /> : (
-        <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {view === 'general' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>{COL_A.map(group)}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>{COL_B.map(group)}</div>
-              </div>
-            ) : (
-              <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ minHeight: 56, flex: 'none', boxSizing: 'border-box', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--soft-warning)', color: 'var(--warning-text)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={IC.lock} size={18} /></span>
-                  <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}><h6 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>انواع قفل دارایی</h6><span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>قفل مالکیت را تغییر نمی‌دهد؛ سود و NAV ادامه دارد ولی فروش و برداشت تا آزادسازی ممکن نیست</span></span>
-                  <Lbl style={{ marginRight: 'auto', height: 20, padding: '0 6px', fontSize: 11 }}>{faDigits(enabledN)} از ۵ نوع فعال</Lbl>
-                </div>
-                <div style={{ overflowX: 'auto' }}>
-                  <div style={{ minWidth: 760 }}>
-                    <div className="th" style={{ height: 34, columnGap: 12, gridTemplateColumns: 'minmax(0, 1fr) 52px 232px 252px' }}><span>نوع قفل / شرط آزادسازی</span><span>فعال</span><span>چه کسی ایجاد می‌کند</span><span>محدودیت‌ها</span></div>
-                    {LOCK_TYPES.map((t) => {
-                      const m = LOCK_META[t.type];
-                      const on = get(`r-lock-${t.type}`).enabled;
-                      const byKey = `r-lock-${t.type}-by`;
-                      const by = String(get(byKey).value ?? '').split(',').filter(Boolean);
-                      return (
-                        <div key={t.type} className="tr" style={{ minHeight: 64, paddingTop: 8, paddingBottom: 8, boxSizing: 'border-box', columnGap: 12, gridTemplateColumns: 'minmax(0, 1fr) 52px 232px 252px', opacity: on ? 1 : 0.55 }}>
-                          <span style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}><span className="lktype" style={{ background: m.bg, color: m.fg }}><Icon d={m.d} size={12} strokeWidth={2} />{m.short}</span><span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{m.label}</span></span>
-                            <span style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{t.cond}</span>
-                          </span>
-                          <span>{sw(`r-lock-${t.type}`, `فعال بودن ${m.label}`)}</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            {CREATORS.map(([k, l]) => {
-                              const c = by.includes(k);
-                              return (
-                                <Chip key={k} on={c} onClick={() => put(byKey, { value: (c ? by.filter((x) => x !== k) : [...by, k]).join(',') })} style={{ height: 26, padding: '0 8px', minWidth: 0 }}>
-                                  {c && <Icon d={IC.check} size={12} strokeWidth={2.4} />}{l}
-                                </Chip>
-                              );
-                            })}
-                          </span>
-                          <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {t.limits.map((l) => (
-                              <span key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{l.label}</span>
-                                {l.kind === 'field' ? numField(l.id, l.label, l.suffix, l.w, 30) : sw(l.id, l.label)}
-                              </span>
-                            ))}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div style={{ minHeight: 52, flex: 'none', boxSizing: 'border-box', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', borderTop: '1px solid var(--divider)', background: 'var(--table-head)' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>سقف مجموع قفل هر کاربر{numField('r-lock-total-cap', 'سقف مجموع قفل هر کاربر', '٪ کل دارایی', 40, 30)}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>اعلان آزادسازی قفل به کاربر{sw('r-lock-notify-release', 'اعلان آزادسازی')}</span>
-                </div>
-              </div>
-            )}
+      <Tabs label="نمای قوانین" size="lg" value={view} onChange={setView} items={[{ key: 'general', label: 'قوانین عمومی' }, { key: 'locks', label: 'انواع قفل دارایی', count: enabledN }]} />
 
-            <div className="glass" style={{ position: 'sticky', bottom: 0, zIndex: 3, minHeight: 56, flex: 'none', boxSizing: 'border-box', borderRadius: 12, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <button type="button" className="btnp" onClick={onSave} disabled={save.isPending} style={{ boxShadow: 'var(--shadow-primary)', opacity: save.isPending ? 0.7 : 1 }}><Icon d={IC.check} size={16} strokeWidth={2.2} />ذخیره قوانین</button>
-              <button type="button" className="btnt" onClick={resetAll} disabled={!meta.data}>بازنشانی به پیش‌فرض</button>
-              {changes.length > 0 && (
-                <>
-                  <Lbl tone="warning">{faDigits(changes.length)} تغییر ذخیره‌نشده</Lbl>
-                  <button type="button" className="btnt" onClick={() => setEdits({})} style={{ color: 'var(--text-secondary)' }}>لغو تغییرات</button>
-                </>
-              )}
-              <span style={{ marginRight: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}><Icon d={IC.info} size={16} />تغییرات فقط روی درخواست‌ها و قراردادهای جدید اعمال می‌شود</span>
-            </div>
-          </div>
-
-          {view === 'general' && (
-            <div className="card" style={{ width: 300, flex: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ height: 48, flex: 'none', boxSizing: 'border-box', padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <h6 style={{ margin: 0, fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>تاریخچه تغییرات</h6>
-                {history.length > 4 && <button type="button" className="btnt" onClick={() => setHistAll(!histAll)} style={{ marginRight: 'auto', height: 28, padding: '0 8px', fontSize: 12 }}>{histAll ? 'کمتر' : 'همه'}</button>}
-              </div>
-              <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column' }}>
-                {meta.isLoading && <Skeleton h={160} />}
-                {(histAll ? history : history.slice(0, 4)).map((h) => (
-                  <div key={h.id} style={{ display: 'flex', gap: 12, padding: '10px 0', borderTop: '1px dashed var(--divider)' }}>
-                    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 'none', paddingTop: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: `var(${dotOf(h.text, h.group)})` }} /></span>
-                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, lineHeight: 1.35 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Lbl style={{ height: 18, padding: '0 5px', fontSize: 10 }}>{h.group}</Lbl><span className="num" style={{ marginRight: 'auto', fontSize: 11, color: 'var(--text-secondary)' }}>{jDate(h.at)}</span></span>
-                      <span style={{ fontSize: 12, fontWeight: 500 }}>{h.text}</span>
-                      <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{h.by}</span>
-                    </span>
+      {rules.isLoading ? <SkeletonCard h={420} /> : rules.isError ? <ErrorBlock error={rules.error} message={errMsg(rules.error)} onRetry={() => rules.refetch()} /> : (
+        <>
+          {view === 'general' ? (
+            <div className="nm-grid side">
+              <div className="nm-grid c2">
+                {[0, 1].map((col) => (
+                  <div key={col} className="nm-stack">
+                    {GROUPS.filter((_, i) => i % 2 === col).map((g) => (
+                      <SettingsGroup key={g.title} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Tile d={g.d} tone={g.tone} size="sm" />{g.title}</span>}>
+                        {g.rows.filter((r) => byId[r.id]).map((r) => (
+                          <SettingRow key={r.id} label={r.label} desc={r.sub} stack={r.kind === 'chips'}>
+                            {r.kind === 'field' && num(r.id, r.label, r.suffix, r.w)}
+                            {r.kind === 'switch' && sw(r.id, r.label)}
+                            {r.kind === 'chips' && chipsOf(r)}
+                          </SettingRow>
+                        ))}
+                      </SettingsGroup>
+                    ))}
                   </div>
                 ))}
-                {!meta.isLoading && !history.length && <span style={{ padding: '12px 0', fontSize: 12, color: 'var(--text-secondary)' }}>تغییری ثبت نشده است</span>}
+              </div>
+              <Card title="تاریخچه تغییرات" count={history.length || undefined} more={history.length > 4 ? { label: histAll ? 'کمتر' : 'همه', onClick: () => setHistAll(!histAll) } : undefined}>
+                {meta.isLoading ? <SkeletonCard h={160} /> : history.length ? (
+                  <List>
+                    {(histAll ? history : history.slice(0, 4)).map((h) => (
+                      <ListRow key={h.id}
+                        lead={<i style={{ width: 8, height: 8, borderRadius: '50%', background: `var(${dotOf(h.text, h.group)})`, flex: 'none', alignSelf: 'flex-start', marginTop: 8 }} />}
+                        title={<span style={{ fontWeight: 500, whiteSpace: 'normal', fontSize: 13 }}>{h.text}</span>}
+                        sub={<>{h.by} · <span className="num">{jDate(h.at)}</span></>}
+                        trail={<Pill>{h.group}</Pill>} />
+                    ))}
+                  </List>
+                ) : <span className="mute" style={{ fontSize: 12.5 }}>تغییری ثبت نشده است</span>}
+              </Card>
+            </div>
+          ) : (
+            <div className="nm-stack">
+              <div className="nm-grid c2">
+                {LOCK_TYPES.map((t) => {
+                  const m = LOCK_META[t.type];
+                  const on = get(`r-lock-${t.type}`).enabled;
+                  const byKey = `r-lock-${t.type}-by`;
+                  const by = String(get(byKey).value ?? '').split(',').filter(Boolean);
+                  return (
+                    <SettingsGroup key={t.type} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><LockTypeChip type={t.type} />{m.label}</span>} action={sw(`r-lock-${t.type}`, `فعال بودن ${m.label}`)}>
+                      <div style={{ opacity: on ? 1 : 0.5, transition: 'opacity .2s' }}>
+                        <SettingRow label="شرط آزادسازی" desc={t.cond} />
+                        {byId[byKey] && (
+                          <SettingRow label="چه کسی ایجاد می‌کند">
+                            <Chips label={`ایجادکننده ${m.label}`} value={by} disabled={!on} onChange={(k) => put(byKey, { value: (by.includes(k) ? by.filter((x) => x !== k) : [...by, k]).join(',') })} options={CREATORS.map(([k, l]) => ({ key: k, label: l }))} />
+                          </SettingRow>
+                        )}
+                        {t.limits.map((l) => (
+                          <SettingRow key={l.id} label={l.label}>
+                            {l.kind === 'field' ? num(l.id, l.label, l.suffix, l.w, !on) : sw(l.id, l.label, !on)}
+                          </SettingRow>
+                        ))}
+                      </div>
+                    </SettingsGroup>
+                  );
+                })}
+                <SettingsGroup title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Tile d={IC.lock} tone="neutral" size="sm" />همه‌ی قفل‌ها</span>} footer="قفل مالکیت را تغییر نمی‌دهد؛ سود و NAV ادامه دارد ولی فروش و برداشت تا آزادسازی ممکن نیست.">
+                  <SettingRow label="سقف مجموع قفل هر کاربر" desc="سهم کل دارایی که می‌تواند هم‌زمان قفل باشد">{num('r-lock-total-cap', 'سقف مجموع قفل هر کاربر', '٪ کل دارایی', 52)}</SettingRow>
+                  <SettingRow label="اعلان آزادسازی قفل به کاربر">{sw('r-lock-notify-release', 'اعلان آزادسازی')}</SettingRow>
+                </SettingsGroup>
               </div>
             </div>
           )}
-        </div>
+
+          <ActionBar actions={(
+            <>
+              <button type="button" className="nm-btn text" onClick={resetAll} disabled={!meta.data}>بازنشانی به پیش‌فرض</button>
+              {changes.length > 0 && <button type="button" className="nm-btn ghost" onClick={() => setEdits({})}>لغو تغییرات</button>}
+              <button type="button" className="nm-btn" onClick={onSave} disabled={save.isPending}><Icon d={IC.check} size={16} strokeWidth={2.2} />ذخیره قوانین</button>
+            </>
+          )}>
+            {changes.length > 0 ? <Pill tone="warning" dot>{faDigits(changes.length)} تغییر ذخیره‌نشده</Pill> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Icon d={IC.info} size={16} />تغییرات فقط روی درخواست‌ها و قراردادهای جدید اعمال می‌شود</span>}
+          </ActionBar>
+        </>
       )}
 
       <Confirm open={confirm} onClose={() => setConfirm(false)} busy={save.isPending} onConfirm={doSave} title="ذخیره قوانین سراسری" confirmLabel={`ذخیره ${faDigits(changes.length)} تغییر`}
         body={(
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <>
             <span>این تغییرات برای همهٔ سازمان‌ها اعمال می‌شود و نسخهٔ جدید قوانین ثبت خواهد شد:</span>
-            <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 240, overflowY: 'auto' }}>
-              {changes.map((c) => (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 32, borderBottom: '1px dashed var(--divider)', fontSize: 12, color: 'var(--text-primary)' }}>
-                  <span style={{ flex: 1, minWidth: 0 }}>{c.rule.title}</span>
-                  <span className="num" style={{ whiteSpace: 'nowrap' }}>
-                    {c.enabled !== undefined ? (c.enabled ? 'فعال' : 'غیرفعال') : typeof c.value === 'number' ? `${valText(c.rule.value)} → ${valText(c.value)}` : 'به‌روزرسانی'}
-                  </span>
-                </div>
-              ))}
+            <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+              <KV rows={changes.map((c) => [c.rule.title, <span key={c.id} className="num">{c.enabled !== undefined ? (c.enabled ? 'فعال' : 'غیرفعال') : typeof c.value === 'number' ? `${valText(c.rule.value)} ← ${valText(c.value)}` : 'به‌روزرسانی'}</span>])} />
             </div>
-          </div>
+          </>
         )} />
-    </div>
+    </>
   );
 }

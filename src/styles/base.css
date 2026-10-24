@@ -6,15 +6,14 @@ a:hover{color:var(--primary-dark)}
 .card{background:var(--card-bg);border-radius:16px;border:1px solid var(--glass-border);box-shadow:var(--shadow-glass),var(--glass-highlight);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
 .ico{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .num{font-weight:300;font-variant-numeric:tabular-nums}
-.lbl{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
-.wm{font-family:'Divan','IRANSansX',Tahoma,sans-serif}
+.lbl{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
 .lkbar{height:6px;border-radius:6px;display:flex;overflow:hidden;background:rgb(var(--grey-500-rgb) / .16);gap:2px}
 .lkbar>.f{background:var(--primary-main);border-radius:6px}
 .lkbar>.l{border-radius:6px;background:repeating-linear-gradient(135deg,rgb(var(--grey-500-rgb) / .55) 0 3px,rgb(var(--grey-500-rgb) / .22) 3px 6px)}
 .lkleg{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-secondary);white-space:nowrap}
 .lkleg b{font-weight:500;color:var(--text-primary);font-variant-numeric:tabular-nums}
 .lkdot{width:8px;height:8px;border-radius:50%;background:var(--primary-main);display:inline-block;margin-left:4px}
-.lktype{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.lktype{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
 .ibtn:hover{background:var(--action-hover)}
 @keyframes nm-ping{0%{transform:scale(1);opacity:.55}80%,100%{transform:scale(2);opacity:0}}
 @keyframes nmHeroLeave{0%{transform:none;z-index:20;opacity:1}42%{transform:translateX(-38%) rotate(-5deg);z-index:20;opacity:1}43%{z-index:0}100%{transform:translateY(18px) scale(.91);z-index:0;opacity:0}}
@@ -25,3 +24,21 @@ a:hover{color:var(--primary-dark)}
 @keyframes nm-fwd{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
 @keyframes nm-back{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
 @keyframes nm-note{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+/* Logo (src/components/ui/Brand.tsx) */
+.nm-logo{display:block;flex:none}
+
+/* Brand motif (src/components/ui/Motif.tsx) — the logo's construction grid and its stepping quarter circles */
+.nm-motif{--mo-line:rgb(20 24 38 / .10);--mo-a:var(--primary-main);--mo-b:var(--secondary-main);--mo-c:var(--success-main);--mo-cell:rgb(var(--primary-main-rgb) / .06);--mo-q:rgb(var(--secondary-main-rgb) / .10);display:block;overflow:visible;pointer-events:none}
+.th-dark .nm-motif{--mo-line:rgb(255 255 255 / .085);--mo-a:var(--primary-light);--mo-b:var(--secondary-light);--mo-c:var(--success-light);--mo-cell:rgb(var(--primary-main-rgb) / .12);--mo-q:rgb(var(--secondary-main-rgb) / .16)}
+.nm-motif .mo-l,.nm-motif .mo-l *{stroke:var(--mo-line);stroke-width:1;fill:none;vector-effect:non-scaling-stroke}
+.nm-motif .mo-dash{stroke-dasharray:3 5}
+.nm-motif .mo-body{fill:rgb(var(--primary-main-rgb) / .05);stroke:url(#mo-g);stroke-width:1.25;vector-effect:non-scaling-stroke}
+.nm-motif .mo-step{transform-origin:0 0}
+.nm-motif.anim .mo-step{animation:moStep 6s var(--ease-out) infinite}
+.nm-motif.anim .mo-step.b{animation-delay:.35s}
+@keyframes moStep{0%,18%,100%{transform:none}50%,68%{transform:translate(1.6px,1.6px)}}
+.nm-motif.grid{width:100%;height:100%;-webkit-mask-image:radial-gradient(closest-side,#000 15%,transparent);mask-image:radial-gradient(closest-side,#000 15%,transparent)}
+.nm-motif .mo-cell{fill:var(--mo-cell);stroke:none}
+.nm-motif .mo-q{fill:var(--mo-q);stroke:none}
+@media (prefers-reduced-motion:reduce){.nm-motif.anim .mo-step{animation:none}}
+.th-dark .nm-motif.mark .mo-step{filter:drop-shadow(0 0 1.2px rgb(var(--primary-main-rgb) / .9)) drop-shadow(0 0 6px rgb(var(--secondary-main-rgb) / .35))}

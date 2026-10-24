@@ -1,165 +1,167 @@
 'use client';
-/** Facilities & credit of the organization's employees (design: org-credit). */
+/**
+ * Organization — facilities & credit. Kit overview page: key numbers → six-month repayment chart + the contract's
+ * credit rules → active loans (status tabs, search, table, pager); a loan row opens the inspector.
+ */
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { PageHeading } from '@/components/panel/PanelShell';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Ava, Bars, Card, Empty, ErrorBlock, Ident, Inspector, KV, KeyStats, Legend, List, ListRow, Meter, PageHeading, Pill,
+  SearchField, Section, Skel, SkeletonCard, StatStrip, Table, TableFoot, Tabs, Toolbar, Who, usePaging, type Column, type Series, type Stat, type Tone,
+} from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
-import { ErrorState, Skeleton } from '@/components/app/Screen';
-import { useOrgCredit, useOrgMe } from '@/api/org';
+import { LockTypeChip } from '@/components/ui/LockBar';
+import { useOrgCredit } from '@/api/org';
 import { useOrgPeopleCredit, type CreditLoanRow } from '@/api/org-people-extra';
 import { routes } from '@/lib/routes';
 import { ASSET_META } from '@/lib/locks';
-import { compactMoney, faDigits, jDayMonth, money, pct, time } from '@/lib/format';
-import { Chip, I, LockChip, avOf, compactParts, errMsg, tone, type ToneName } from '@/components/org/people/shared';
-import './page.css';
+import { compactMoney, faDigits, jDate, jDayMonth, money, pct, time } from '@/lib/format';
+import { I, compactParts, errMsg } from '@/components/org/people/shared';
 
 type LTab = 'all' | 'ok' | 'late';
-const COLS = '1fr 110px 110px 150px 170px 96px';
-const STATUS: Record<CreditLoanRow['status'], { label: string; t: ToneName }> = { ok: { label: 'جاری', t: 'success' }, late: { label: 'معوق', t: 'error' }, due: { label: 'سررسید نزدیک', t: 'warning' } };
+const PER_PAGE = 8;
+const STATUS: Record<CreditLoanRow['status'], { label: string; tone: Tone }> = { ok: { label: 'جاری', tone: 'success' }, late: { label: 'معوق', tone: 'error' }, due: { label: 'سررسید نزدیک', tone: 'warning' } };
+const SERIES: Series[] = [{ name: 'وام', color: 'var(--chart-1)' }, { name: 'خرید اقساطی', color: 'var(--chart-2)' }];
+/** Toman → million with one decimal («۱۲٫۴»). */
+const mil = (n: number) => faDigits(String(Math.round(n / 1e5) / 10), true);
+const loanKey = (l: CreditLoanRow) => `${l.employeeId}-${l.startedAt}`;
+const assetName = (k: string) => ASSET_META[k]?.name ?? k;
 
 export default function OrgCreditPage() {
-  const me = useOrgMe();
   const credit = useOrgCredit();
   const people = useOrgPeopleCredit();
   const [ltab, setLtab] = useState<LTab>('all');
+  const [search, setSearch] = useState('');
+  const [sel, setSel] = useState<string | null>(null);
   const [updated, setUpdated] = useState<Date | null>(null);
   useEffect(() => { if (people.data) setUpdated(new Date()); }, [people.data]);
 
   const s = credit.data?.settings;
   const d = people.data;
-  const loans = d?.loans ?? [];
-  const shown = ltab === 'all' ? loans : loans.filter((l) => (ltab === 'late' ? l.status !== 'ok' : l.status === 'ok'));
+  const loans = useMemo(() => d?.loans ?? [], [d]);
+  const needle = search.trim();
+  const shown = useMemo(() => loans.filter((l) => {
+    if (ltab === 'ok' && l.status !== 'ok') return false;
+    if (ltab === 'late' && l.status === 'ok') return false;
+    return !needle || l.name.includes(needle) || l.department.includes(needle);
+  }), [loans, ltab, needle]);
+  const pg = usePaging(shown, PER_PAGE, `${ltab}|${needle}`);
   const remaining = loans.reduce((x, l) => x + l.remaining, 0);
   const collateral = loans.reduce((x, l) => x + l.collateralAmount, 0);
+  const okN = loans.filter((l) => l.status === 'ok').length;
+  const selected = sel ? loans.find((l) => loanKey(l) === sel) : undefined;
 
-  const kpis = d ? (() => {
+  const stats: Stat[] = d ? (() => {
     const [rv, ru] = compactParts(remaining);
     return [
-      { title: 'وام‌های فعال', value: faDigits(loans.length), unit: 'وام', note: `+${faDigits(d.newLoansThisMonth)} این ماه`, nc: 'var(--success-text)', d: I.percent, t: tone('primary') },
-      { title: 'مانده تسهیلات', value: rv, unit: ru, note: `از ${compactMoney(d.principalTotal)} پرداخت‌شده`, nc: 'var(--text-secondary)', d: I.coin, t: tone('info') },
-      { title: 'اعتبار کارت فعال', value: faDigits(d.cards.count), unit: 'نفر', note: `سقف تخصیص‌یافته ${compactMoney(d.cards.limitTotal)}`, nc: 'var(--text-secondary)', d: I.credit, t: tone('success') },
-      { title: 'اقساط معوق', value: faDigits(d.overdue.count), unit: 'قسط', note: d.overdue.count ? `${faDigits(d.overdue.employees)} کارمند · ${money(d.overdue.amount)} تومان` : 'بدون قسط معوق', nc: d.overdue.count ? 'var(--error-text)' : 'var(--success-text)', d: I.warn, t: tone(d.overdue.count ? 'error' : 'success') },
+      { label: 'وام‌های فعال', value: faDigits(loans.length), unit: 'وام', note: `+${faDigits(d.newLoansThisMonth)} این ماه`, trend: d.newLoansThisMonth ? 'up' : undefined },
+      { label: 'مانده تسهیلات', value: rv, unit: ru, note: `از ${compactMoney(d.principalTotal)} پرداخت‌شده` },
+      { label: 'اعتبار کارت فعال', value: faDigits(d.cards.count), unit: 'نفر', note: `سقف تخصیص‌یافته ${compactMoney(d.cards.limitTotal)}` },
+      { label: 'اقساط معوق', value: faDigits(d.overdue.count), unit: 'قسط', note: d.overdue.count ? `${faDigits(d.overdue.employees)} کارمند · ${money(d.overdue.amount)} تومان` : 'بدون قسط معوق', trend: d.overdue.count ? 'down' : 'up' },
     ];
   })() : [];
 
-  const maxBar = Math.max(1, ...(d?.schedule ?? []).map((b) => b.loan + b.installment)) * 1.15;
-  const rules = s ? [
-    { label: 'سقف وام', value: s.loanEnabled ? `${pct(s.loanMaxPct)} دارایی` : 'غیرفعال', d: I.percent, t: tone('primary') },
-    { label: 'دوره‌های بازپرداخت', value: s.loanMonthsOptions.map((m) => faDigits(m)).join(' / ') + ' ماه', d: I.calendar, t: tone('info') },
-    { label: 'اعتبار کارت', value: s.cardEnabled ? 'تا ۲۵٪ دارایی' : 'غیرفعال', d: I.credit, t: tone('success') },
-    { label: 'حداقل امتیاز اعتباری', value: '۶۰۰', d: I.shield, t: tone('warning') },
-  ] : [];
+  const columns: Column<CreditLoanRow>[] = [
+    { key: 'who', label: 'کارمند', width: 'minmax(0, 1.4fr)', render: (l) => <Ident lead={<Ava letter={l.name[0]} id={l.employeeId} />} title={l.name} sub={l.department} /> },
+    { key: 'principal', label: 'مبلغ وام', width: '116px', render: (l) => <span className="num">{money(l.principal)}</span> },
+    { key: 'remaining', label: 'مانده', width: '116px', col: true, render: (l) => <><span className="num">{money(l.remaining)}</span><Meter value={l.paidPct / 100} width={72} thin label={`${pct(l.paidPct)} پرداخت شده`} /></> },
+    {
+      key: 'next', label: 'قسط بعدی', width: '148px', col: true, render: (l) => (
+        <>
+          <span className="num">{money(l.nextAmount)}</span>
+          <span className="sm el" style={{ maxWidth: '100%', color: l.status === 'late' ? 'var(--error-text)' : undefined }}>{l.nextDate ? jDayMonth(l.nextDate) : '—'}{l.overdueCount ? ` · ${faDigits(l.overdueCount)} قسط معوق` : ''}</span>
+        </>
+      ),
+    },
+    { key: 'coll', label: 'قفل وثیقه', width: '128px', col: true, render: (l) => <><span className="num">{money(l.collateralAmount)}</span><span className="sm">{ASSET_META[l.collateralKind]?.short ?? ''}</span></> },
+    { key: 'st', label: 'وضعیت', width: '112px', render: (l) => <Pill tone={STATUS[l.status].tone} dot>{STATUS[l.status].label}</Pill> },
+  ];
+
+  const heading = (
+    <PageHeading title="تسهیلات و اعتبار" crumbs={[{ label: 'عملیات' }]} sub="وام‌ها، اعتبار کارت و اقساط کارکنان">
+      <span className="mute" style={{ fontSize: 12 }}>{updated ? `به‌روز شده ${time(updated)}` : 'در حال به‌روزرسانی…'}</span>
+      <Link href={`${routes.org.requests}?type=loan`} className="nm-btn ghost">
+        <Icon d={I.inbox} size={17} />درخواست‌های وام
+        {!!d?.pendingLoanRequests && <span className="nm-count" style={{ height: 18 }}>{faDigits(d.pendingLoanRequests)}</span>}
+      </Link>
+    </PageHeading>
+  );
+
+  if (people.isError) return <>{heading}<ErrorBlock error={people.error} message={errMsg(people.error)} onRetry={() => { people.refetch(); credit.refetch(); }} /></>;
 
   return (
-    <div className="pg-ocredit" style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: '1 0 auto' }}>
-      <PageHeading title="تسهیلات و اعتبار" crumbs={[{ label: me.data?.organization.name ?? 'سازمان', href: routes.org.dashboard }, { label: 'منابع انسانی', href: routes.org.dashboard }, { label: 'تسهیلات و اعتبار' }]}>
-        <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{updated ? `به‌روزرسانی: امروز ${time(updated)}` : 'در حال به‌روزرسانی…'}</span>
-        <Link href={routes.org.requests + '?type=loan'} className="btn" style={{ border: '1px solid var(--outline-border)', background: 'transparent', color: 'var(--text-primary)' }}>
-          <Icon d={I.inbox} size={18} />درخواست‌های وام
-          {!!d?.pendingLoanRequests && <span className="lbl" style={{ height: 20, padding: '0 6px', fontSize: 11, background: 'var(--soft-error)', color: 'var(--error-text)' }}>{faDigits(d.pendingLoanRequests)}</span>}
-        </Link>
-      </PageHeading>
+    <>
+      {heading}
 
-      {(people.isError || credit.isError) && <ErrorState message={errMsg(people.error ?? credit.error)} onRetry={() => { people.refetch(); credit.refetch(); }} />}
+      <StatStrip loading={!d} items={stats} />
 
-      {/* KPI row */}
-      <div style={{ minHeight: 96, flex: 'none', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 20 }}>
-        {!kpis.length && [0, 1, 2, 3].map((i) => <Skeleton key={i} h={96} />)}
-        {kpis.map((k) => (
-          <div key={k.title} className="card" style={{ boxSizing: 'border-box', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-            <span style={{ width: 44, height: 44, borderRadius: 12, background: k.t[0], color: k.t[1], display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={k.d} size={22} /></span>
-            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4, lineHeight: 1.2 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>{k.title}</span>
-              <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, whiteSpace: 'nowrap' }}><span className="num" style={{ fontSize: 24, lineHeight: 1.1 }}>{k.value}</span><span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{k.unit}</span></span>
-              <span className="cell" style={{ fontSize: 11, color: k.nc }}>{k.note}</span>
-            </span>
-          </div>
-        ))}
+      <div className="nm-grid side">
+        {!d ? <SkeletonCard h={276} /> : (
+          <Card title="اقساط ماهانه" sub="۶ ماه آینده · میلیون تومان" actions={<Legend items={SERIES.map((x) => ({ label: x.name, color: x.color }))} />}>
+            <Bars label="نمودار اقساط ماهانه شش ماه آینده" data={d.schedule.map((b) => ({ label: b.month, values: [b.loan, b.installment] }))} series={SERIES} showValues fmt={mil} height={200} />
+          </Card>
+        )}
+        <Card title="قوانین قرارداد شما" sub="فقط‌خواندنی" more={{ label: 'قرارداد', href: routes.org.contract }}>
+          {credit.isError ? <ErrorBlock flat error={credit.error} message={errMsg(credit.error)} onRetry={() => credit.refetch()} />
+            : !s ? <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '6px 0' }}>{[0, 1, 2, 3].map((i) => <Skel key={i} h={14} />)}</div> : (
+              <KV rows={[
+                ['سقف وام', <span key="l" className="num">{s.loanEnabled ? `${pct(s.loanMaxPct)} دارایی` : 'غیرفعال'}</span>],
+                ['دوره‌های بازپرداخت', <span key="m" className="num">{s.loanMonthsOptions.map((m) => faDigits(m)).join(' / ')} ماه</span>],
+                ['اعتبار کارت', s.cardEnabled ? 'تا ۲۵٪ دارایی' : 'غیرفعال'],
+                ['حداقل امتیاز اعتباری', <span key="s" className="num">۶۰۰</span>],
+              ]} />
+            )}
+        </Card>
       </div>
 
-      {/* Row 2: installments chart + contract rules */}
-      <div style={{ minHeight: 190, flex: 'none', display: 'flex', gap: 20 }}>
-        <div className="card" style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ minHeight: 24, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <h6 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>اقساط ماهانه — ۶ ماه آینده</h6>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>جمع بازپرداخت کارکنان · میلیون تومان</span>
-            <span style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, color: 'var(--text-secondary)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--chart-1)' }} />وام</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--chart-2)' }} />خرید اقساطی</span>
-            </span>
-          </div>
-          <div dir="ltr" role="img" aria-label="نمودار اقساط ماهانه شش ماه آینده" style={{ flex: 1, minHeight: 120, position: 'relative', display: 'flex', alignItems: 'stretch', gap: 16, padding: '0 8px' }}>
-            <div style={{ position: 'absolute', inset: '18px 8px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
-              {[0, 1, 2, 3].map((i) => <span key={i} style={{ height: 1, background: 'var(--chart-grid)' }} />)}
-            </div>
-            {(d?.schedule ?? []).map((b) => {
-              const h1 = Math.round((b.loan / maxBar) * 100);
-              const h2 = Math.round((b.installment / maxBar) * 100);
-              return (
-                <div key={b.month} dir="rtl" title={`${b.month}: وام ${money(b.loan)} · اقساطی ${money(b.installment)} تومان`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0, position: 'relative' }}>
-                  <span className="num" style={{ height: 14, fontSize: 11, fontWeight: 500, lineHeight: '14px', whiteSpace: 'nowrap' }}>{faDigits(String(Math.round((b.loan + b.installment) / 1e5) / 10), true)}</span>
-                  <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <span style={{ width: 36, height: `${h2}%`, background: 'var(--chart-2)', borderRadius: '6px 6px 0 0', display: 'block' }} />
-                    <span style={{ width: 36, height: `${h1}%`, background: 'var(--chart-1)', borderRadius: h2 > 0 ? 0 : '6px 6px 0 0', display: 'block' }} />
-                  </div>
-                  <span style={{ height: 16, fontSize: 11, lineHeight: '16px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{b.month}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      <Card flush title="وام‌های فعال" sub={`${faDigits(loans.length)} وام · مانده ${compactMoney(remaining)} · قفل وثیقه ${compactMoney(collateral)} تومان`} more={{ label: 'گزارش تسهیلات', href: routes.org.reports }}>
+        <Toolbar>
+          <Tabs label="وضعیت وام" value={ltab} onChange={setLtab} items={[
+            { key: 'all', label: 'همه', count: loans.length },
+            { key: 'ok', label: 'جاری', count: okN },
+            { key: 'late', label: 'معوق / نزدیک', count: loans.length - okN, hot: true },
+          ]} />
+          <span className="grow" />
+          <SearchField value={search} onChange={setSearch} placeholder="نام یا واحد" label="جستجوی وام" width={200} />
+        </Toolbar>
+        <Table
+          columns={columns} rows={pg.rows} rowKey={loanKey} rowLabel={(l) => `وام ${l.name}`}
+          onRowClick={(l) => setSel((x) => (x === loanKey(l) ? null : loanKey(l)))} selectedKey={sel}
+          loading={people.isLoading}
+          empty={needle
+            ? <Empty icon={I.search} title="وامی با این جستجو پیدا نشد" action={<button type="button" className="nm-btn sm ghost" onClick={() => setSearch('')}>پاک کردن جستجو</button>} />
+            : <Empty icon={I.percent} title={ltab === 'late' ? 'وام معوق یا با سررسید نزدیک وجود ندارد' : 'وام فعالی وجود ندارد'} />}
+          minWidth={820}
+        />
+        <TableFoot shown={pg.rows.length} total={shown.length} unit="وام" page={pg.page} pages={pg.pages} onPage={pg.setPage} />
+      </Card>
 
-        <div className="card" style={{ width: 300, flex: 'none', boxSizing: 'border-box', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ height: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h6 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>قوانین قرارداد شما</h6>
-            <span className="lbl" style={{ height: 20, padding: '0 6px', fontSize: 11, background: 'var(--soft-default)', color: 'var(--default-text)' }}>فقط‌خواندنی</span>
-            <Link href={routes.org.contract} className="ibtn" aria-label="تنظیمات قرارداد" style={{ marginRight: 'auto', width: 28, height: 28 }}><Icon d={I.chevL} size={16} /></Link>
-          </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {!s && [0, 1, 2, 3].map((i) => <Skeleton key={i} h={26} r={6} style={{ marginBottom: 4, boxShadow: 'none' }} />)}
-            {rules.map((u) => (
-              <Link key={u.label} href={routes.org.contract} className="row-a" style={{ height: 30, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px dashed var(--divider)', fontSize: 12, borderRadius: 4 }}>
-                <span style={{ width: 22, height: 22, borderRadius: 6, background: u.t[0], color: u.t[1], display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={u.d} size={13} /></span>
-                <span style={{ flex: 1, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{u.label}</span>
-                <span className="num" style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{u.value}</span>
-              </Link>
-            ))}
-          </div>
-          <Link href={routes.org.contract} style={{ fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>مشاهده تنظیمات قرارداد<Icon d={I.chevL} size={14} /></Link>
-        </div>
-      </div>
+      {selected && <LoanInspector key={loanKey(selected)} l={selected} onClose={() => setSel(null)} />}
+    </>
+  );
+}
 
-      {/* Row 3: active loans */}
-      <div className="card" style={{ flex: '1 0 auto', minHeight: 200, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ minHeight: 44, flex: 'none', boxSizing: 'border-box', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--divider)', flexWrap: 'wrap' }}>
-          <h6 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>وام‌های فعال</h6>
-          <span className="num" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{faDigits(loans.length)} وام · مانده {compactMoney(remaining)} · قفل وثیقه {compactMoney(collateral)} تومان</span>
-          {([['all', 'همه'], ['ok', 'جاری'], ['late', 'معوق / نزدیک']] as const).map(([k, label]) => {
-            const on = ltab === k;
-            return <button key={k} onClick={() => setLtab(k)} aria-pressed={on} style={{ height: 28, padding: '0 10px', borderRadius: 8, border: 0, background: on ? 'var(--action-selected)' : 'transparent', color: on ? 'var(--text-primary)' : 'var(--text-secondary)', fontFamily: 'inherit', fontSize: 12, fontWeight: on ? 700 : 500, cursor: 'pointer' }}>{label}</button>;
-          })}
-          <Link href={routes.org.reports} style={{ marginRight: 'auto', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>گزارش تسهیلات<Icon d={I.chevL} size={14} /></Link>
-        </div>
-        <div className="th" style={{ height: 32, flex: 'none', display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', gap: 8, padding: '0 16px' }}>
-          <span className="cell">کارمند</span><span className="cell">مبلغ وام</span><span className="cell">مانده</span><span className="cell">قسط بعدی</span><span className="cell">قفل وثیقه</span><span className="cell">وضعیت</span>
-        </div>
-        {people.isLoading && [0, 1, 2, 3].map((i) => <div key={i} style={{ height: 34, borderBottom: '1px dashed var(--divider)', opacity: 0.5 }} />)}
-        {!people.isLoading && !shown.length && <div style={{ padding: 32, textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>{ltab === 'late' ? 'وام معوق یا با سررسید نزدیک وجود ندارد.' : 'وام فعالی وجود ندارد.'}</div>}
-        {shown.map((l) => {
-          const [avBg, avFg] = avOf(l.employeeId);
-          const st = STATUS[l.status];
-          return (
-            <Link key={l.employeeId + l.startedAt} href={routes.org.employee(l.employeeId)} className="row-a" style={{ minHeight: 34, flex: 'none', display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', gap: 8, padding: '0 16px', borderBottom: '1px dashed var(--divider)', fontSize: 12 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}><span style={{ width: 24, height: 24, borderRadius: '50%', background: avBg, color: avFg, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, flex: 'none' }}>{l.name[0]}</span><span className="cell" style={{ fontWeight: 600, fontSize: 13 }}>{l.name}</span><span className="cell" style={{ color: 'var(--text-secondary)', fontSize: 11 }}>{l.department}</span></span>
-              <span className="num cell" style={{ fontWeight: 500 }}>{money(l.principal)}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}><span className="num cell" style={{ fontWeight: 500 }}>{money(l.remaining)}</span><span dir="ltr" style={{ width: 28, height: 4, borderRadius: 2, background: 'var(--progress-track)', overflow: 'hidden', flex: 'none' }}><span style={{ display: 'block', width: `${l.paidPct}%`, height: '100%', background: 'var(--primary-main)' }} /></span></span>
-              <span className="cell"><span className="num" style={{ fontWeight: 500 }}>{money(l.nextAmount)}</span><span style={{ color: l.status === 'late' ? 'var(--error-text)' : 'var(--text-secondary)' }}> · {l.nextDate ? jDayMonth(l.nextDate) : '—'}{l.overdueCount ? ` · ${faDigits(l.overdueCount)} قسط معوق` : ''}</span></span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><LockChip type="collateral" style={{ height: 20, padding: '0 6px' }} /><span className="num cell">{money(l.collateralAmount)} {ASSET_META[l.collateralKind]?.short ?? ''}</span></span>
-              <span><Chip t={st.t}>{st.label}</Chip></span>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+function LoanInspector({ l, onClose }: { l: CreditLoanRow; onClose: () => void }) {
+  const st = STATUS[l.status];
+  return (
+    <Inspector open onClose={onClose} title="جزئیات وام" label={`جزئیات وام ${l.name}`} href={routes.org.employee(l.employeeId)} hrefLabel="پروفایل کارمند">
+      <Who lead={<Ava letter={l.name[0]} id={l.employeeId} size="lg" />} title={l.name} sub={`واحد ${l.department}`} pills={<Pill tone={st.tone} dot>{st.label}</Pill>} />
+      <KeyStats items={[['مبلغ وام', money(l.principal)], ['مانده', money(l.remaining)], ['قسط بعدی', money(l.nextAmount)]]} />
+
+      <Section title="بازپرداخت" action={<span className="num">{pct(l.paidPct)} پرداخت شده</span>}>
+        <Meter value={l.paidPct / 100} tone={l.status === 'late' ? 'error' : 'primary'} label={`${pct(l.paidPct)} پرداخت شده`} />
+        <KV rows={[
+          ['شروع وام', <span key="s" className="num">{jDate(l.startedAt)}</span>],
+          ['سررسید قسط بعدی', <span key="n" className="num">{l.nextDate ? jDayMonth(l.nextDate, true) : '—'}</span>],
+          ['اقساط معوق', <span key="o" className="num" style={l.overdueCount ? { color: 'var(--error-text)' } : undefined}>{l.overdueCount ? `${faDigits(l.overdueCount)} قسط` : 'ندارد'}</span>],
+        ]} />
+      </Section>
+
+      <Section title="وثیقه (قفل)">
+        <List>
+          <ListRow lead={<LockTypeChip type="collateral" />} title={assetName(l.collateralKind)} sub="آزاد با تسویه‌ی وام" trail={<span className="num">{money(l.collateralAmount)}</span>} />
+        </List>
+      </Section>
+    </Inspector>
   );
 }

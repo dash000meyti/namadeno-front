@@ -42,6 +42,7 @@ npm run build
 - بازنشانی داده‌های ماک: در اپ «حساب من ← بازنشانی داده‌های نمایشی» یا `POST /api/v1/_mock/reset`.
 - زمان ماک ثابت است: ۱۵ آبان ۱۴۰۵ (`src/lib/clock.ts`).
 - اگر مرورگر Service Worker را ثبت نکند (webview، حالت خصوصی، مسدودی داده‌ی سایت)، MSW خودکار به حالت درون‌صفحه (fallback) می‌رود و هشدار `[mock] Service Worker unavailable` در کنسول می‌آید (`src/mocks/browser.ts`).
+- مرورگر Service Worker بیکار را متوقف می‌کند و MSW فهرست تب‌های متصل را از دست می‌دهد؛ آن‌وقت درخواست‌ها به سرور Next می‌رسند (۴۰۴) و پیام «خطا در ارتباط با سرور» می‌آید. `src/mocks/browser.ts` با برگشتن به تب دوباره وصل می‌شود (`reattach`) و `src/api/client.ts` یک ۴۰۴ غیر JSON را بعد از اتصال دوباره یک بار تکرار می‌کند (`window.__nmMockHeal`، فقط در حالت ماک).
 - dev را با `.claude/launch.json` (پورت ۳۰۰۰) بالا بیاور. `npm run build` پوشه‌ی `.next` را بازنویسی می‌کند و dev یا `next start` در حال اجرا را خراب می‌کند (۵۰۰)؛ بعد از build آن‌ها را ری‌استارت کن.
 
 ## ساختار
@@ -54,19 +55,28 @@ npm run build
 | `src/app/op` | کنسول بهره‌بردار — همان ساختار |
 | `src/api` | `client.ts` (fetch، توکن، خطا)، `keys.ts`، هوک‌های React Query |
 | `src/mocks` | `db.ts`، `seed/`، `handlers/` (بک‌اند ماک) |
-| `src/components` | `ui/` (Icon, LockBar, Sheet, Toast)، `app/`، `panel/`، `org/`، `op/`، `site/` |
+| `src/components` | `ui/` (Icon, Brand, Motif, LockBar, Sheet, Toast)، `app/`، `panel/` (`PanelShell`، **Panel kit**: `kit.tsx`، `charts.tsx`)، `org/`، `op/` (کمکی‌های داده و فرمت)، `site/` |
 | `src/lib` | `format.ts` (اعداد و تاریخ فارسی)، `routes.ts` (همه‌ی URLها)، `locks.ts`، `clock.ts` |
-| `src/styles` | `tokens.css` (توکن‌های Namadno UI)، `base.css`، `app.css`، `org.css`، `op.css`، `site.css` |
+| `src/styles` | `tokens.css` (توکن‌های Namadno UI)، `base.css`، `app.css` (سطح‌های iOS)، `ui.css` (پایه‌های مشترک Namadno One)، `shell.css` (پوسته‌ی پنل‌ها و داک)، `panel.css` (Panel kit)، `site.css` |
 | `src/theme` | تم MUI، RTL، روشن/تیره (`useColorMode`) |
-| `design/screens` | فایل‌های طراحی مرجع (`*.dc.html`) — فقط برای مقایسه؛ در build استفاده نمی‌شوند |
-| `docs` | `API.md` (قرارداد API)، `IMPLEMENTATION-GUIDE.md` (قواعد و نگاشت طراحی → مسیر) |
+| `design/screens` | فایل‌های طراحی مرجع (`*.dc.html`) — فقط برای مقایسه؛ در build استفاده نمی‌شوند. پیش از Namadno Luxe هستند: برای محتوا و رفتار صفحه‌ها مرجع‌اند، ولی پوسته‌ی پنل‌ها، لندینگ و سبک سایت جایگزین شده‌اند |
+| `docs` | `API.md` (قرارداد API)، `IMPLEMENTATION-GUIDE.md` (قواعد و نگاشت طراحی → مسیر)، `PANEL-KIT.md` (قواعد و کامپوننت‌های مشترک پنل‌ها) |
 
 بخش‌ها (area) و فایل‌های extra آن‌ها: `app-core`، `app-money`، `app-credit`، `org-people`، `org-packages`، `op-core`، `op-system`، `site`.
 
 ## قواعد طراحی و کد
 
-- **Design system: Namadno UI** — ساختار Minimals.cc، شیشه‌ای ملایم، پالت محدود: Primary نیلی، Secondary فیروزه‌ای، Success سبز. رنگ‌ها فقط از متغیرهای `tokens.css` (`var(--primary-main)` و …). رنگ hard-code نگذار، مگر جایی که طراحی گذاشته (مثلاً متن سفید روی band رنگی).
-- **فونت:** IRANSansX برای متن، Divan فقط برای wordmark (`.wm`).
+- **Design system: Namadno Luxe** (مرجع حس کلی: سایت اپل و macOS؛ بدون داک و منوبار — ساختار لندینگ: korsi.ai) — خلوت، حرفه‌ای و لوکس با خنثی‌های اپلی: روشن سفید/`#F5F5F7` و متن `#1D1D1F`، تیره مشکی خالص با سطح‌های `#1C1C1E`/`#161617`. رنگ‌های برند (نیلی، فیروزه‌ای، سبز) فقط برای تأکید و داده. تیترهای بزرگ دوتُنی (خط دوم `--text-mute2` یا گرادیان `--text-grad`). رنگ‌ها فقط از متغیرهای `tokens.css`. رنگ hard-code نگذار، مگر جایی که طراحی گذاشته (مثلاً متن سفید روی band رنگی یا رنگ‌های سیستمی چراغ‌های پنجره `--mac-*`).
+  - **لوگو و هویت:** لوگوی تک‌رنگ هندسی (نشان مربعی با دو پله‌ی ربع‌دایره + لوگوتایپ ماژولار «نمادنو»). فقط از `src/components/ui/Brand.tsx` استفاده کن: `LogoFull` (نشان + نوشته)، `LogoMark`، `Logotype` — همه `currentColor` (روشن: جوهری، تیره: سفید). لوگو را رنگی، گرادیانی یا بازطراحی نکن. فایل‌های اصلی برای تیم: `public/brand/*.svg` (سیاه و سفید). فاویکن: `src/app/icon.svg` (با تم سیستم عوض می‌شود). گوشه‌ها کمی مربعی‌تر از قبل (دکمه ۱۰، کارت ۱۶) تا با هندسه‌ی نشان هم‌خوان باشند. کارت بانکی نمادنو مشکی است (`--brand-card`) با لوگوی سفید.
+  - **موتیف برند:** نقشه‌ی ساخت خود نشان با `<Motif />` از `src/components/ui/Motif.tsx`: `variant="mark"` (شبکه‌ی ۴ واحدی، دایره‌های ساخت، بدنه‌ی خطی و دو پله با گرادیان برند که آرام به بیرون پله می‌شوند = رشد) و `variant="grid"` (شبکه‌ی ساخت با چند ماژول مربع/ربع‌دایره، برای پس‌زمینه‌های پهن؛ لبه‌ها محو). فقط تزئینی.
+  - **سایت عمومی** (`site.css`): نوار ناوبری سراسری نازک و مات به سبک اپل، دکمه‌های قرصی (`.btn` گرد کامل)، کاشی‌های بی‌حاشیه (`#F5F5F7` روی سفید، `#161617` روی مشکی)، `Section`/`PageHero` با prop `mute`، `.btn.text` لینک آبی پیکان‌دار، `Reveal`، بخش `.s-island` (تم معکوس). لندینگ: Hero مرکزچین با صحنه‌ی محصول (گوشی + کارت مشکی نمادنو) ← FundStrip ← Statement ← ProductTour ← OrgIsland ← امنیت ← FAQ ← CTA.
+  - **Namadno One (عناصر مشترک اپ، پنل سازمان و پنل بهره‌بردار):** یک زبان شکل برای هر سه: دکمه‌ی کپسولی، فیلد با گوشه‌ی ۱۲، کارت ۱۶، برچسب و چیپ قرصی، آواتار گرد. پایه‌ها در `src/styles/ui.css` (`.nm-btn`، `.nm-field`/`.nm-ctl`، `.nm-note`، `.nm-check`، `.nm-ava`، `.nm-badge`، `.nm-switch`، `.nm-tile` + `.t-<tone>`، `.nm-tag`). ورود پنل‌ها با `AuthLayout`/`AuthField` از `src/components/ui/AuthLayout.tsx` و هم‌شکل با ورود اپ (لوگو، برچسب، یک کارت، فیلد، دکمه‌ی کپسولی). عنصر جدید را اول از این پایه‌ها بساز، نه با استایل inline تازه.
+  - **پنل سازمان و بهره‌بردار = یک محصول** (`PanelShell` + `src/styles/shell.css`، ریشه `.nm-shell`):
+    - **ناوبری:** نوار کناری آرام به سبک System Settings مک (لوگو، سازمان/محیط، جستجو ⌘K، اقدام اصلی، گروه‌ها با کاشی آیکن **کم‌رنگ**: پس‌زمینه‌ی soft + آیکن رنگی، `tone` در `NavItem`؛ پایین: اعلان‌ها، حالت تیره، حساب). با جمع کردن (ذخیره در localStorage) یا عرض زیر ۱۱۰۰px به **داک macOS** تبدیل می‌شود: نوار شیشه‌ای شناور سمت راست، آیکن‌ها زیر نشانگر بزرگ می‌شوند (`useMagnify`)، برچسب کنار آیکن، نقطه‌ی بخش فعال و بج.
+    - **صفحه‌ها فقط از Panel kit** (`src/components/panel/kit.tsx` + `charts.tsx`، استایل `src/styles/panel.css`، راهنما `docs/PANEL-KIT.md`). آناتومی ثابت: `PageHeading` → `StatStrip` → `Card`ها؛ فهرست = `Card flush` + `Toolbar` (Tabs/Select/SearchField) + `Table` + `TableFoot`؛ **کلیک روی ردیف هر فهرست = `Inspector`** (پنل شناور چپ، بدون پرده؛ پنل ثابت کنار صفحه یا کشوی اختصاصی ممنوع)؛ جزئیات = `PageHeading` با `lead`/`pills` + `Tabs size="lg"`؛ تنظیمات = `SettingsGroup`/`SettingRow` + `ActionBar`؛ مودال = `Dialog`/`Confirm`؛ نمودار = `Bars`/`LineChart`/`Spark`/`Ring`/`Allocation` (دونات نه)؛ پیام = `useToast` (پایین چپ). نمونه‌های مرجع: `op/(panel)/users` (فهرست + Inspector)، `op/(panel)/users/[id]` (جزئیات)، `op/(panel)/rules` (تنظیمات)، `org/(panel)/page.tsx` (داشبورد).
+    - `<main>` عمداً `position`، `transform` و `filter` ندارد تا Inspector و دیالوگ‌های `fixed` کل صفحه را بپوشانند.
+- **صدای برند و محتوا (مارکتینگ):** وعده‌ی اصلی «ارزشی که می‌ماند»؛ حفظ ارزش دارایی یعنی آینده‌ی بهتر (برای افراد: حفظ ارزش پس‌انداز؛ برای سازمان‌ها: رضایت و ماندگاری نیروها). نمادنو برای همه است، نه فقط اعضای سازمان‌ها؛ چهار ستون: صندوق‌ها، کیف پول ریالی، اعتبار نمادنو (بدون فروش دارایی)، مزایای سازمانی. لحن: کوتاه، مطمئن، آرام و لوکس؛ بدون اغراق و تعجب. اصطلاحات داخلی را به مخاطب نشان نده: «اپ نمادنو» / «حساب نمادنو» (نه «اپ کارکنان»)، «افتتاح حساب»، «رزرو جلسه‌ی معرفی» (نه «دمو»)، «همکاران» برای کارکنان سازمان‌ها، «نمادنو برای سازمان‌ها»، «ورود سازمان‌ها» (نه «پنل»). لینک‌های نمونه‌سازی (نقشه، سیستم طراحی، کنسول بهره‌بردار) فقط در نوار پایین فوتر.
+- **فونت:** IRANSansX برای همه‌ی متن‌ها. نوشته‌ی «نمادنو» همیشه لوگوتایپ SVG است، نه متن تایپ‌شده (فونت Divan دیگر استفاده نمی‌شود؛ فایلش در `public/fonts` بلااستفاده مانده).
 - **RTL و اعداد:** همه‌ی متن‌ها فارسی و RTL. اعداد با `money`، `faDigits`، `jDate` و … از `src/lib/format.ts` (ارقام فارسی، جداکننده «٬»، اعشار «٫»). اعداد ماسک‌شده یا LTR با `direction: ltr` روی span جدا.
 - **استایل:** استایل‌ها inline هستند (پورت مستقیم از طراحی) با کلاس‌های مشترک (`card`, `glass`, `num`, `lbl`, `chip`, `btn`, `ibtn`, `ico`, `lkbar`, `lktype`).
   - در `sx`/`styled` در MUI جهت‌ها به‌خاطر stylis-plugin-rtl برعکس می‌شوند. برای چیدمان از style inline استفاده کن.

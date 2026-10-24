@@ -44,11 +44,22 @@ export class ApiRequestError extends Error {
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
+declare global {
+  interface Window {
+    /**
+     * Mock mode only (set by src/mocks/browser.ts; absent with the real backend). Re-registers this tab with
+     * the mock Service Worker after the browser stopped an idle worker — otherwise requests fall through to
+     * the dev server and come back as an HTML 404.
+     */
+    __nmMockHeal?: () => Promise<boolean>;
+  }
+}
+
 export async function api<T>(path: string, opts: { method?: Method; body?: unknown; query?: Record<string, string | number | undefined | null> } = {}): Promise<T> {
   const url = new URL(API_BASE + path, typeof window === 'undefined' ? 'http://localhost' : window.location.origin);
   if (opts.query) for (const [k, v] of Object.entries(opts.query)) if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
   const session = getSession(roleForPath(path));
-  const res = await fetch(url.toString(), {
+  const send = () => fetch(url.toString(), {
     method: opts.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -57,8 +68,14 @@ export async function api<T>(path: string, opts: { method?: Method; body?: unkno
     },
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });
+  let res = await send();
+  // mock mode: a non-JSON 404 means the request slipped past the mock worker → re-attach and retry once
+  if (res.status === 404 && typeof window !== 'undefined' && window.__nmMockHeal && !(res.headers.get('content-type') ?? '').includes('json')) {
+    if (await window.__nmMockHeal()) res = await send();
+  }
   const text = await res.text();
-  const data = text ? JSON.parse(text) : undefined;
+  let data: unknown;
+  try { data = text ? JSON.parse(text) : undefined; } catch { data = undefined; }
   if (!res.ok) throw new ApiRequestError(res.status, (data as ApiError) ?? { code: 'http_' + res.status, message: 'خطا در ارتباط با سرور' });
   return data as T;
 }

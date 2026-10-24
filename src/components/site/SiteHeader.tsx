@@ -9,11 +9,11 @@ import { useColorMode } from '@/theme/ColorModeProvider';
 import { SiteLogo } from './Logo';
 
 export const SITE_NAV: { label: string; href: string; icon: IconName }[] = [
-  { label: 'محصول', href: '/#product', icon: 'assets' },
-  { label: 'سازمان‌ها', href: routes.site.business, icon: 'building' },
-  { label: 'وبلاگ', href: routes.site.blog, icon: 'doc' },
-  { label: 'سوالات متداول', href: routes.site.faq, icon: 'help' },
-  { label: 'تماس', href: routes.site.contact, icon: 'chat' },
+  { label: 'نمادنو چیست', href: '/#namadno', icon: 'assets' },
+  { label: 'اپ نمادنو', href: '/#product', icon: 'phone' },
+  { label: 'برای سازمان‌ها', href: routes.site.business, icon: 'building' },
+  { label: 'امنیت', href: routes.site.security, icon: 'shield' },
+  { label: 'سوالات', href: routes.site.faq, icon: 'help' },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -57,9 +57,9 @@ export function SiteHeader() {
   // would otherwise become the containing block of the fixed overlay.
   return (
     <>
-      <header className="glass s-hdr">
-        <div className="s-wrap s-hdr-bar">
-          <SiteLogo size={36} />
+      <header className="s-hdr">
+        <div className="s-hdr-bar">
+          <SiteLogo height={28} />
           <nav className="s-nav" aria-label="منوی اصلی">
             {SITE_NAV.map((n) => (
               <Link key={n.href} href={n.href} aria-current={isActive(pathname, n.href) ? 'page' : undefined}>{n.label}</Link>
@@ -67,11 +67,11 @@ export function SiteHeader() {
           </nav>
           <div className="s-hdr-end">
             <ThemeToggle />
-            <Link href={routes.org.login} className="btn outlined c-primary s-hdr-cta">
-              <Icon name="building" />پنل سازمان
+            <Link href={routes.app.login} className="btn text s-hdr-cta">
+              ورود
             </Link>
-            <Link href={routes.app.login} className="btn contained c-primary s-hdr-cta app">
-              ورود به اپ
+            <Link href={routes.app.signup} className="btn contained c-primary s-hdr-cta app">
+              افتتاح حساب
             </Link>
             <button
               type="button"
@@ -89,15 +89,15 @@ export function SiteHeader() {
 
       {open && (
         <div className="s-mmenu" onClick={() => setOpen(false)}>
-          <nav id="s-mobile-menu" aria-label="منوی موبایل" className="glass s-mmenu-panel" onClick={(e) => e.stopPropagation()}>
+          <nav id="s-mobile-menu" aria-label="منوی موبایل" className="s-mmenu-panel" onClick={(e) => e.stopPropagation()}>
             {SITE_NAV.map((n) => (
               <Link key={n.href} href={n.href} className="s-mlink" aria-current={isActive(pathname, n.href) ? 'page' : undefined} onClick={() => setOpen(false)}>
                 <Icon name={n.icon} />{n.label}
               </Link>
             ))}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
-              <Link href={routes.org.login} className="btn lg outlined c-primary" onClick={() => setOpen(false)}>پنل سازمان</Link>
-              <Link href={routes.app.login} className="btn lg contained c-primary" onClick={() => setOpen(false)}>ورود به اپ</Link>
+              <Link href={routes.app.login} className="btn lg line" onClick={() => setOpen(false)}>ورود</Link>
+              <Link href={routes.app.signup} className="btn lg contained c-primary" onClick={() => setOpen(false)}>افتتاح حساب</Link>
             </div>
           </nav>
         </div>

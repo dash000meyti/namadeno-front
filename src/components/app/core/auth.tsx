@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { enDigits, faDigits } from '@/lib/format';
 import { P } from './meta';
+import { LogoFull } from '@/components/ui/Brand';
 
 export type Anim = '' | 'fwd' | 'back';
 
@@ -43,11 +44,8 @@ export function AuthShell({ flowLabel, stepNum, stepTotal, children, showNote, f
     <>
       <div className="scr" style={{ padding: '4px 20px 28px', gap: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, paddingTop: 4 }}>
-          <span style={{ width: 72, height: 72, borderRadius: 20, background: 'var(--brand-gradient)', boxShadow: 'var(--shadow-primary)', display: 'grid', placeItems: 'center', color: '#FFFFFF' }}>
-            <svg viewBox="0 0 64 40" width="44" height="28" aria-hidden="true"><path d="M3 37 L19 3 H33 L25 20 L31 28 L45 3 H61 L45 37 H31 L39 20 L33 12 L17 37 Z" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" /></svg>
-          </span>
-          <span className="wm" style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}>نمادنو</span>
-          <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>ارزش پول شما، در واحدهای صندوق</span>
+          <LogoFull height={42} style={{ margin: '8px 0 2px' }} />
+          <span className="nm-tag">ارزشی که می‌ماند</span>
         </div>
 
         <div className="card" style={{ boxSizing: 'border-box', padding: '18px 16px 20px', display: 'flex', flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
