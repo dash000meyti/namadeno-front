@@ -18,7 +18,7 @@ src/
     app/                  AppHeader، BottomNav، Scr
     panel/                PanelShell، PageHeading
   lib/                    format.ts (اعداد/تاریخ فارسی)، routes.ts، locks.ts، clock.ts
-  styles/                 tokens.css، base.css، app.css، org.css، op.css، site.css
+  styles/                 tokens.css، base.css، app.css، ui.css، shell.css، panel.css، site.css
   theme/                  تم MUI (RTL) و حالت روشن/تیره
   types/domain.ts         مدل داده و قرارداد API
 ```

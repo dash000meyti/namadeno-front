@@ -9,10 +9,10 @@ export function SiteStats() {
   if (q.isError) return <SiteError message={q.error?.message} onRetry={() => q.refetch()} />;
   const s = q.data;
   const tiles = [
-    { k: 'سازمان فعال', v: s ? faDigits(s.organizations) : null },
-    { k: 'کارمند دارای دارایی', v: s ? money(s.employees) : null },
+    { k: 'سازمان همراه', v: s ? faDigits(s.organizations) : null },
+    { k: 'عضو فعال', v: s ? money(s.employees) : null },
     { k: 'صندوق فعال', v: s ? faDigits(s.funds) : null },
-    { k: 'دارایی تحت مدیریت (تومان)', v: s ? compactMoney(s.aum) : null },
+    { k: 'دارایی امانت‌شده (تومان)', v: s ? compactMoney(s.aum) : null },
   ];
   return (
     <div className="s-g s-g4" aria-busy={q.isLoading}>

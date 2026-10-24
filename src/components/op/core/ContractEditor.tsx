@@ -1,30 +1,37 @@
 'use client';
 /**
- * Contract terms editor of an organization (design: op-organizations drawer).
- * Products follow the limits: loan is enabled when the loan cap > 0, card credit when the card % > 0,
- * BNPL with its switch. Saves through useUpdateOrganization (PATCH /op/organizations/:id, versioned).
+ * Contract terms of an organization — one editor for the organizations inspector and the organization page.
+ *   useContractDraft  draft + validation + save (useUpdateOrganization → PATCH /op/organizations/:id, versioned)
+ *   ContractEditor    the draft as settings groups (render inside the inspector body or a page column)
+ *   VersionList       contract versions, newest first
+ * The host places the save action (Inspector footer or ActionBar) with `c.save`, `c.dirty`, `c.saving`.
+ * Products follow the limits: loan is enabled when the loan cap > 0, card credit when the card % > 0, BNPL with its switch.
  */
 import { useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 import type { Fund, LockType, Organization } from '@/types/domain';
 import { useUpdateOrganization } from '@/api/op';
 import type { OrgContractExt, OrgPatch } from '@/api/op-core-extra';
-import { Icon } from '@/components/ui/Icon';
+import { Chips, List, ListRow, Note, NumberInput, Pill, SettingRow, SettingsGroup, Switch, Tile } from '@/components/panel/kit';
+import { LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
-import { enDigits, faDigits, jDate, money } from '@/lib/format';
+import { enDigits, faDigits, jDate } from '@/lib/format';
 import { LOCK_META } from '@/lib/locks';
-import { Check, ICON, LkType, NumField, Switch, ToggleChip, errMsg } from './ui';
+import { ICON, errMsg } from './ui';
 
 export const CONTRACT_FUND_IDS = ['gold', 'fixed'];
 export const fundDot = (id: string) => (id === 'gold' ? '--warning-main' : id === 'fixed' ? '--secondary-main' : '--grey-500');
 export const fundMeta = (f: Fund) => (f.id === 'gold' ? f.symbol : f.effectiveYield ? `سود مؤثر ${faDigits(f.effectiveYield)}٪` : f.status === 'coming_soon' ? 'پیش‌نویس' : f.symbol);
 /** Funds offered in contracts: gold & fixed income (package allocation) + funds coming soon. */
 export const contractFunds = (funds: Fund[] | undefined) => (funds ?? []).filter((f) => CONTRACT_FUND_IDS.includes(f.id) || f.status === 'coming_soon');
+/** Repayment options of a standard contract; another set is pointed out next to the options. */
+const DEFAULT_MONTHS = [3, 6, 12];
 
 interface Draft {
   loanPct: string; months: number[]; cardPct: string; perCap: string; bnpl: boolean; cash: boolean;
   vesting: boolean; vestMax: string; milestone: boolean; msMax: string; collateral: boolean; instLock: boolean; funds: string[];
 }
+type NumKey = 'loanPct' | 'cardPct' | 'perCap' | 'vestMax' | 'msMax';
+type ErrKey = NumKey | 'months' | 'funds';
 
 function initial(o: Organization, e: OrgContractExt): Draft {
   return {
@@ -39,40 +46,57 @@ const num = (s: string) => {
   const v = Number(enDigits(s));
   return Number.isFinite(v) ? v : NaN;
 };
+/** Draft text → input value (an empty field stays empty). */
+const shown = (s: string) => (s.trim() === '' ? NaN : num(s));
 
-export function ContractEditor({ org, ext, funds, monthsOptions, header, onHistory, onSaved }: {
-  org: Organization; ext: OrgContractExt; funds: Fund[]; monthsOptions: number[];
-  header?: (dirty: boolean) => ReactNode; onHistory?: () => void; onSaved?: () => void;
-}) {
+/** First problem of the draft (same order and messages as before), with the field it belongs to. */
+function check(d: Draft): { key: ErrKey; msg: string } | null {
+  const loan = num(d.loanPct), card = num(d.cardPct), cap = num(d.perCap), vest = num(d.vestMax), ms = num(d.msMax);
+  if (!Number.isInteger(loan) || loan < 0 || loan > 70) return { key: 'loanPct', msg: 'سقف وام باید عددی بین ۰ تا ۷۰ درصد باشد.' };
+  if (!Number.isInteger(card) || card < 0 || card > 50) return { key: 'cardPct', msg: 'اعتبار کارت باید عددی بین ۰ تا ۵۰ درصد باشد.' };
+  if (!(cap > 0)) return { key: 'perCap', msg: 'سقف اعتبار هر نفر را وارد کنید.' };
+  if (loan > 0 && d.months.length === 0) return { key: 'months', msg: 'حداقل یک گزینه بازپرداخت انتخاب کنید.' };
+  if (d.vesting && (!Number.isInteger(vest) || vest < 1 || vest > 24)) return { key: 'vestMax', msg: 'حداکثر قفل زمانی باید بین ۱ تا ۲۴ ماه باشد.' };
+  if (d.milestone && (!Number.isInteger(ms) || ms < 2 || ms > 10)) return { key: 'msMax', msg: 'حداکثر مراحل باید بین ۲ تا ۱۰ باشد.' };
+  if (d.funds.filter((f) => CONTRACT_FUND_IDS.includes(f)).length === 0) return { key: 'funds', msg: 'حداقل یک صندوق مجاز انتخاب کنید.' };
+  return null;
+}
+
+/** Readable list of the changes — the version note of the save and the «unsaved changes» count. */
+function describe(d: Draft, base: Draft): string[] {
+  const loan = num(d.loanPct), card = num(d.cardPct), cap = num(d.perCap);
+  const changes: string[] = [];
+  if (loan !== num(base.loanPct)) changes.push(`سقف وام ${faDigits(num(base.loanPct))} → ${faDigits(loan)}٪`);
+  if (JSON.stringify(d.months) !== JSON.stringify(base.months)) changes.push('گزینه‌های بازپرداخت ' + (d.months.map((m) => faDigits(m)).join(' · ') || '—') + ' ماه');
+  if (card !== num(base.cardPct)) changes.push(`اعتبار کارت ${faDigits(num(base.cardPct))} → ${faDigits(card)}٪`);
+  if (cap !== num(base.perCap)) changes.push(`سقف اعتبار هر نفر ${faDigits(Math.round(num(base.perCap) / 1e6))} → ${faDigits(Math.round(cap / 1e6))} میلیون`);
+  if (d.bnpl !== base.bnpl) changes.push(d.bnpl ? 'فعال‌سازی خرید اقساطی' : 'غیرفعال‌سازی خرید اقساطی');
+  if (d.cash !== base.cash) changes.push(d.cash ? 'مجاز شدن برداشت نقدی' : 'غیرمجاز شدن برداشت نقدی');
+  if (d.vesting !== base.vesting || d.milestone !== base.milestone || d.collateral !== base.collateral || d.instLock !== base.instLock || d.vestMax !== base.vestMax || d.msMax !== base.msMax) changes.push('تغییر سیاست‌های قفل');
+  if (JSON.stringify([...d.funds].sort()) !== JSON.stringify([...base.funds].sort())) changes.push('تغییر صندوق‌های مجاز');
+  return changes;
+}
+
+/**
+ * Draft of the contract terms with validation and the save mutation.
+ * Mount it in a component keyed by the organization id, so switching organizations starts a fresh draft.
+ */
+export function useContractDraft(org: Organization, ext: OrgContractExt, onSaved?: () => void) {
   const toast = useToast();
   const update = useUpdateOrganization();
   const base = useMemo(() => initial(org, ext), [org, ext]);
   const [d, setD] = useState<Draft>(base);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{ key: ErrKey | null; msg: string } | null>(null);
   const dirty = JSON.stringify(d) !== JSON.stringify(base);
-  const set = (p: Partial<Draft>) => { setD((x) => ({ ...x, ...p })); setError(''); };
-  const options = Array.from(new Set([...monthsOptions, ...d.months])).sort((a, b) => a - b);
+  const changes = dirty ? describe(d, base) : [];
+  const set = (p: Partial<Draft>) => { setD((x) => ({ ...x, ...p })); setError(null); };
+  const setNum = (k: NumKey, n: number) => { const p: Partial<Draft> = {}; p[k] = Number.isFinite(n) ? String(n) : ''; set(p); };
+  const reset = () => { setD(base); setError(null); };
 
   const save = () => {
+    const bad = check(d);
+    if (bad) { setError(bad); toast(bad.msg, 'error'); return; }
     const loan = num(d.loanPct), card = num(d.cardPct), cap = num(d.perCap), vest = num(d.vestMax), ms = num(d.msMax);
-    let err = '';
-    if (!Number.isInteger(loan) || loan < 0 || loan > 70) err = 'سقف وام باید عددی بین ۰ تا ۷۰ درصد باشد.';
-    else if (!Number.isInteger(card) || card < 0 || card > 50) err = 'اعتبار کارت باید عددی بین ۰ تا ۵۰ درصد باشد.';
-    else if (!(cap > 0)) err = 'سقف اعتبار هر نفر را وارد کنید.';
-    else if (loan > 0 && d.months.length === 0) err = 'حداقل یک گزینه بازپرداخت انتخاب کنید.';
-    else if (d.vesting && (!Number.isInteger(vest) || vest < 1 || vest > 24)) err = 'حداکثر قفل زمانی باید بین ۱ تا ۲۴ ماه باشد.';
-    else if (d.milestone && (!Number.isInteger(ms) || ms < 2 || ms > 10)) err = 'حداکثر مراحل باید بین ۲ تا ۱۰ باشد.';
-    else if (d.funds.filter((f) => CONTRACT_FUND_IDS.includes(f)).length === 0) err = 'حداقل یک صندوق مجاز انتخاب کنید.';
-    if (err) { setError(err); return; }
-    const changes: string[] = [];
-    if (loan !== num(base.loanPct)) changes.push(`سقف وام ${faDigits(num(base.loanPct))} → ${faDigits(loan)}٪`);
-    if (JSON.stringify(d.months) !== JSON.stringify(base.months)) changes.push('گزینه‌های بازپرداخت ' + (d.months.map((m) => faDigits(m)).join(' · ') || '—') + ' ماه');
-    if (card !== num(base.cardPct)) changes.push(`اعتبار کارت ${faDigits(num(base.cardPct))} → ${faDigits(card)}٪`);
-    if (cap !== num(base.perCap)) changes.push(`سقف اعتبار هر نفر ${faDigits(Math.round(num(base.perCap) / 1e6))} → ${faDigits(Math.round(cap / 1e6))} میلیون`);
-    if (d.bnpl !== base.bnpl) changes.push(d.bnpl ? 'فعال‌سازی خرید اقساطی' : 'غیرفعال‌سازی خرید اقساطی');
-    if (d.cash !== base.cash) changes.push(d.cash ? 'مجاز شدن برداشت نقدی' : 'غیرمجاز شدن برداشت نقدی');
-    if (d.vesting !== base.vesting || d.milestone !== base.milestone || d.collateral !== base.collateral || d.instLock !== base.instLock || d.vestMax !== base.vestMax || d.msMax !== base.msMax) changes.push('تغییر سیاست‌های قفل');
-    if (JSON.stringify([...d.funds].sort()) !== JSON.stringify([...base.funds].sort())) changes.push('تغییر صندوق‌های مجاز');
     const payload: OrgPatch = {
       id: org.id,
       settings: {
@@ -81,131 +105,93 @@ export function ContractEditor({ org, ext, funds, monthsOptions, header, onHisto
         lockPolicies: ['none', ...(d.vesting ? (['vesting'] as const) : []), ...(d.milestone ? (['milestone'] as const) : [])], allowedFunds: d.funds,
       },
       contract: { cardPct: card, perPersonCap: cap, vestingMaxMonths: vest, milestoneMaxSteps: ms, allowCollateral: d.collateral, allowInstallmentLock: d.bnpl && d.instLock },
-      changeNote: changes.join('، ') || undefined,
+      changeNote: describe(d, base).join('، ') || undefined,
     };
     update.mutate(payload, {
       onSuccess: () => { toast(`تغییرات قرارداد ذخیره شد · نسخه ${faDigits(ext.version + 1)}`); onSaved?.(); },
-      onError: (e) => { setError(errMsg(e)); toast(errMsg(e), 'error'); },
+      onError: (e) => { setError({ key: null, msg: errMsg(e) }); toast(errMsg(e), 'error'); },
     });
   };
 
-  const policyRows: { t: LockType; meta: string; on: boolean; toggle?: () => void; field?: { value: string; set: (v: string) => void; suffix: string }; disabled?: boolean }[] = [
-    { t: 'vesting', meta: 'تا تاریخ؛ حداکثر', on: d.vesting, toggle: () => set({ vesting: !d.vesting }), field: { value: faDigits(d.vestMax), set: (v) => set({ vestMax: enDigits(v) }), suffix: 'ماه' } },
-    { t: 'milestone', meta: 'با تأیید مراحل؛ حداکثر', on: d.milestone, toggle: () => set({ milestone: !d.milestone }), field: { value: faDigits(d.msMax), set: (v) => set({ msMax: enDigits(v) }), suffix: 'مرحله' } },
-    { t: 'collateral', meta: 'وثیقه وام و کارت از بخش آزاد', on: d.collateral, toggle: () => set({ collateral: !d.collateral }) },
-    { t: 'installment', meta: d.bnpl ? 'هم‌زمان با خرید اقساطی' : 'نیازمند فعال بودن خرید اقساطی', on: d.bnpl && d.instLock, toggle: () => set({ instLock: !d.instLock }), disabled: !d.bnpl },
-    { t: 'legal', meta: 'همیشه فعال · فقط بهره‌بردار', on: true, disabled: true },
+  return { org, ext, d, set, setNum, dirty, changes, error, save, reset, saving: update.isPending };
+}
+export type ContractDraft = ReturnType<typeof useContractDraft>;
+
+/** The contract terms as settings groups: facility limits, allowed lock policies, allowed funds. */
+export function ContractEditor({ c, funds, monthsOptions }: { c: ContractDraft; funds: Fund[]; monthsOptions: number[] }) {
+  const { d, set, setNum, org } = c;
+  const bad = (k: ErrKey) => c.error?.key === k;
+  const options = Array.from(new Set([...monthsOptions, ...d.months])).sort((a, b) => a - b);
+  const offDefault = d.months.join(',') !== DEFAULT_MONTHS.join(',');
+  const policies: { t: LockType; desc: string; on: boolean; toggle?: () => void; disabled?: boolean; max?: { key: 'vestMax' | 'msMax'; suffix: string; label: string } }[] = [
+    { t: 'vesting', desc: 'تا تاریخ؛ حداکثر مدت قفل', on: d.vesting, toggle: () => set({ vesting: !d.vesting }), max: { key: 'vestMax', suffix: 'ماه', label: 'حداکثر مدت قفل زمانی' } },
+    { t: 'milestone', desc: 'با تأیید مراحل؛ حداکثر تعداد مراحل', on: d.milestone, toggle: () => set({ milestone: !d.milestone }), max: { key: 'msMax', suffix: 'مرحله', label: 'حداکثر مراحل آزادسازی' } },
+    { t: 'collateral', desc: 'وثیقه وام و کارت از بخش آزاد', on: d.collateral, toggle: () => set({ collateral: !d.collateral }) },
+    { t: 'installment', desc: d.bnpl ? 'هم‌زمان با خرید اقساطی' : 'نیازمند فعال بودن خرید اقساطی', on: d.bnpl && d.instLock, toggle: () => set({ instLock: !d.instLock }), disabled: !d.bnpl },
+    { t: 'legal', desc: 'همیشه فعال · فقط بهره‌بردار', on: true, disabled: true },
   ];
 
   return (
     <>
-      {header?.(dirty)}
+      <SettingsGroup title="محدودیت‌های تسهیلات">
+        <SettingRow label="سقف وام" desc="درصد دارایی آزاد کارمند · ۰ یعنی وام غیرفعال" htmlFor={`loan-cap-${org.id}`}>
+          <NumberInput id={`loan-cap-${org.id}`} label="سقف وام (٪ دارایی آزاد)" value={shown(d.loanPct)} onChange={(n) => setNum('loanPct', n)} suffix="٪" width={52} decimals invalid={bad('loanPct')} />
+        </SettingRow>
+        <SettingRow label="گزینه‌های بازپرداخت" desc={offDefault ? `متفاوت با پیش‌فرض (${DEFAULT_MONTHS.map((m) => faDigits(m)).join(' · ')} ماه)` : 'کارمند یکی از این مدت‌ها را انتخاب می‌کند'} stack>
+          <Chips label="گزینه‌های بازپرداخت" value={d.months} onChange={(m) => set({ months: d.months.includes(m) ? d.months.filter((x) => x !== m) : [...d.months, m].sort((a, b) => a - b) })} options={options.map((m) => ({ key: m, label: `${faDigits(m)} ماه` }))} />
+        </SettingRow>
+        <SettingRow label="اعتبار کارت" desc="درصد دارایی آزاد کارمند · ۰ یعنی غیرفعال" htmlFor={`card-cap-${org.id}`}>
+          <NumberInput id={`card-cap-${org.id}`} label="اعتبار کارت (٪ دارایی آزاد)" value={shown(d.cardPct)} onChange={(n) => setNum('cardPct', n)} suffix="٪" width={52} decimals invalid={bad('cardPct')} />
+        </SettingRow>
+        <SettingRow label="سقف اعتبار هر نفر" htmlFor={`per-cap-${org.id}`}>
+          <NumberInput id={`per-cap-${org.id}`} label="سقف اعتبار هر نفر" value={shown(d.perCap)} onChange={(n) => setNum('perCap', Number.isFinite(n) ? Math.round(Math.abs(n)) : NaN)} suffix="تومان" width={112} invalid={bad('perCap')} />
+        </SettingRow>
+        <SettingRow label="خرید اقساطی" desc="فروشگاه‌های طرف قرارداد"><Switch on={d.bnpl} onChange={(v) => set({ bnpl: v })} label="خرید اقساطی" /></SettingRow>
+        <SettingRow label="برداشت نقدی" desc="پیش‌فرض بسته‌های جدید"><Switch on={d.cash} onChange={(v) => set({ cash: v })} label="برداشت نقدی" /></SettingRow>
+      </SettingsGroup>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span className="sec">محدودیت‌های تسهیلات</span>
-        <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <label htmlFor={`loan-cap-${org.id}`} style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>سقف وام (٪ دارایی آزاد)</label>
-          <NumField id={`loan-cap-${org.id}`} value={faDigits(d.loanPct)} onChange={(v) => set({ loanPct: enDigits(v) })} suffix="٪" />
-        </div>
-        <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>گزینه‌های بازپرداخت</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {options.map((m) => {
-              const on = d.months.includes(m);
-              return <ToggleChip key={m} on={on} onClick={() => set({ months: on ? d.months.filter((x) => x !== m) : [...d.months, m].sort((a, b) => a - b) })}>{faDigits(m)} ماه</ToggleChip>;
-            })}
-          </div>
-        </div>
-        <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <label htmlFor={`card-cap-${org.id}`} style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>اعتبار کارت (٪ دارایی آزاد)</label>
-          <NumField id={`card-cap-${org.id}`} value={faDigits(d.cardPct)} onChange={(v) => set({ cardPct: enDigits(v) })} suffix="٪" />
-        </div>
-        <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <label htmlFor={`per-cap-${org.id}`} style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>سقف اعتبار هر نفر</label>
-          <NumField id={`per-cap-${org.id}`} value={d.perCap ? money(num(d.perCap) || 0) : ''} onChange={(v) => set({ perCap: enDigits(v).replace(/\D/g, '') })} suffix="تومان" width={96} />
-        </div>
-        <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}><span style={{ fontSize: 13, fontWeight: 500 }}>خرید اقساطی</span><span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>فروشگاه‌های طرف قرارداد</span></span>
-          <Switch on={d.bnpl} onToggle={() => set({ bnpl: !d.bnpl })} label="خرید اقساطی" />
-        </div>
-        <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}><span style={{ fontSize: 13, fontWeight: 500 }}>برداشت نقدی</span><span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>پیش‌فرض بسته‌های جدید</span></span>
-          <Switch on={d.cash} onToggle={() => set({ cash: !d.cash })} label="برداشت نقدی" />
-        </div>
-      </div>
+      <SettingsGroup title="سیاست‌های قفل مجاز در قرارداد">
+        {policies.map((p) => {
+          const mx = p.max;
+          return (
+            <SettingRow key={p.t} label={<LockTypeChip type={p.t} long />} desc={p.desc}>
+              {mx && p.on && <NumberInput label={mx.label} value={shown(d[mx.key])} onChange={(n) => setNum(mx.key, n)} suffix={mx.suffix} width={40} decimals invalid={bad(mx.key)} />}
+              <Switch on={p.on} onChange={() => p.toggle?.()} label={LOCK_META[p.t].label} disabled={p.disabled} />
+            </SettingRow>
+          );
+        })}
+      </SettingsGroup>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span className="sec">سیاست‌های قفل مجاز در قرارداد</span>
-        {policyRows.map((p) => (
-          <div key={p.t} style={{ minHeight: 40, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Check on={p.on} onToggle={p.toggle} label={LOCK_META[p.t].label} disabled={p.disabled} dim={p.disabled} />
-            <LkType type={p.t} />
-            <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.meta}</span>
-            {p.field && p.on && <NumField value={p.field.value} onChange={p.field.set} suffix={p.field.suffix} width={32} height={30} label={LOCK_META[p.t].label} />}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span className="sec">صندوق‌های مجاز</span>
+      <SettingsGroup title="صندوق‌های مجاز">
         {contractFunds(funds).map((f) => {
           const soon = f.status === 'coming_soon';
           const on = d.funds.includes(f.id);
           return (
-            <div key={f.id} style={{ height: 36, display: 'flex', alignItems: 'center', gap: 12, color: soon ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
-              <Check on={on} label={f.name} disabled={soon} dim={soon} onToggle={() => set({ funds: on ? d.funds.filter((x) => x !== f.id) : [...d.funds, f.id] })} />
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: `var(${fundDot(f.id)})`, flex: 'none' }} />
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{f.name}</span>
-              {!soon && <span className="num" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{fundMeta(f)}</span>}
-              {soon && <span className="lbl" style={{ height: 20, padding: '0 6px', fontSize: 11, background: 'var(--soft-default)', color: 'var(--default-text)' }}>به‌زودی</span>}
-            </div>
+            <SettingRow key={f.id} label={f.name} desc={soon ? undefined : fundMeta(f)}>
+              {soon ? <Pill>به‌زودی</Pill> : <Switch on={on} onChange={() => set({ funds: on ? d.funds.filter((x) => x !== f.id) : [...d.funds, f.id] })} label={f.name} />}
+            </SettingRow>
           );
         })}
-      </div>
+      </SettingsGroup>
 
-      {error && <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'var(--soft-error)', color: 'var(--error-text)', fontSize: 12, fontWeight: 600, lineHeight: 1.6 }}><Icon d={ICON.alert} size={16} />{error}</div>}
-
-      <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingTop: 8 }}>
-        <button type="button" onClick={save} disabled={update.isPending || !dirty} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 40, padding: '0 16px', borderRadius: 8, border: 0, background: 'var(--primary-main)', color: 'var(--primary-contrast)', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: update.isPending || !dirty ? 'default' : 'pointer', boxShadow: 'var(--shadow-primary)', opacity: update.isPending || !dirty ? 0.6 : 1 }}>
-          {update.isPending ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
-        </button>
-        {onHistory && (
-          <button type="button" onClick={onHistory} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 8, border: 0, background: 'transparent', color: 'var(--primary-text)', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            <Icon d={ICON.history} size={18} />تاریخچه نسخه‌ها
-          </button>
-        )}
-      </div>
+      {c.error && <Note tone="err">{c.error.msg}</Note>}
     </>
   );
 }
 
-/** Version history list (design: op-organizations history dialog). */
-export function VersionList({ ext }: { ext: OrgContractExt }) {
+/** Contract versions, newest first (the first one is current). */
+export function VersionList({ ext, limit }: { ext: OrgContractExt; limit?: number }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {ext.versions.map((v, i) => (
-        <div key={v.v + '-' + v.at} style={{ minHeight: 60, display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px dashed var(--divider)', fontSize: 13 }}>
-          <span style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--soft-primary)', color: 'var(--primary-text)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={ICON.file} size={16} /></span>
-          <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.35 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontWeight: 600 }}>نسخه {faDigits(v.v)}</span>{i === 0 && <span className="lbl" style={{ height: 20, padding: '0 6px', fontSize: 11, background: 'var(--soft-success)', color: 'var(--success-text)' }}>جاری</span>}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.note}</span>
-          </span>
-          <VersionMeta at={v.at} by={v.by} />
-        </div>
+    <List>
+      {ext.versions.slice(0, limit).map((v, i) => (
+        <ListRow
+          key={v.v + '-' + v.at}
+          lead={<Tile d={ICON.file} tone={i === 0 ? 'primary' : 'neutral'} />}
+          title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>نسخه {faDigits(v.v)}{i === 0 && <Pill tone="success">جاری</Pill>}</span>}
+          sub={v.note}
+          trail={<span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, fontSize: 12, color: 'var(--text-secondary)' }}><span className="num">{jDate(v.at)}</span><span>{v.by}</span></span>}
+        />
       ))}
-    </div>
+    </List>
   );
-}
-
-function VersionMeta({ at, by }: { at: string; by: string }) {
-  return (
-    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.35, fontSize: 12, color: 'var(--text-secondary)' }}>
-      <JDate iso={at} />
-      <span>{by}</span>
-    </span>
-  );
-}
-
-function JDate({ iso }: { iso: string }) {
-  return <span className="num" dir="ltr">{jDate(iso)}</span>;
 }

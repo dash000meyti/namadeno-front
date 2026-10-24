@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { isMocking } from '@/lib/clock';
+import { LogoFull } from '@/components/ui/Brand';
 
 /**
  * Starts MSW (service worker, or in-page fallback) before rendering the app when mocking is enabled.
@@ -24,7 +25,7 @@ export function MockProvider({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: 'var(--bg-canvas)' }}>
-        <span className="wm" style={{ fontSize: 28, color: 'var(--text-secondary)', opacity: 0.6 }}>نمادنو</span>
+        <LogoFull height={30} style={{ color: 'var(--text-secondary)', opacity: 0.55 }} />
       </div>
     );
   }

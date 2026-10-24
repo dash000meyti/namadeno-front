@@ -4,27 +4,28 @@ import { routes } from '@/lib/routes';
 import { Section } from '../Section';
 
 export const SECURITY_POINTS: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'id', title: 'احراز هویت سه‌سطحی', text: 'شاهکار، استعلام ثبت احوال و سجام؛ هر خدمت فقط با سطح احراز لازم فعال می‌شود.' },
-  { icon: 'phone', title: 'رمز پویا برای عملیات حساس', text: 'برداشت، خرید با کارت و تغییر حساب بانکی با رمز یک‌بارمصرف تأیید می‌شود.' },
-  { icon: 'bank', title: 'دارایی به نام خود شما', text: 'واحدها در صندوق‌های تحت نظارت سازمان بورس و اوراق بهادار به نام شما ثبت می‌شود.' },
-  { icon: 'risk', title: 'پایش ریسک و تقلب', text: 'الگوهای غیرعادی به‌صورت لحظه‌ای رصد و در صورت نیاز تراکنش برای بررسی متوقف می‌شود.' },
+  { icon: 'bank', title: 'دارایی به نام خود شما', text: 'واحدها در صندوق‌های تحت نظارت سازمان بورس و اوراق بهادار، مستقیماً به نام شما ثبت می‌شوند.' },
+  { icon: 'id', title: 'احراز هویت سه‌سطحی', text: 'شاهکار، ثبت احوال و سجام؛ هر خدمت فقط با سطح احراز لازمش فعال می‌شود.' },
+  { icon: 'phone', title: 'تأیید هر عملیات حساس', text: 'برداشت، خرید با کارت و تغییر حساب بانکی تنها با رمز یک‌بارمصرف انجام می‌شود.' },
+  { icon: 'risk', title: 'پایش لحظه‌ای ریسک', text: 'هر الگوی غیرعادی همان لحظه رصد می‌شود و در صورت نیاز، تراکنش تا بررسی متوقف می‌ماند.' },
 ];
 
 export function SecuritySection() {
   return (
     <Section
       id="security"
+      lined
       eyebrow="امنیت"
-      title="امنیت، از ورود تا برداشت"
-      lead="از دارایی شما در هر لایه محافظت می‌کنیم؛ از احراز هویت و تأیید تراکنش تا نگهداری واحدها و پایش ریسک."
-      headExtra={<Link href={routes.site.security} className="s-link">جزئیات امنیت در نمادنو<Icon name="forward" /></Link>}
+      title="اعتماد، از روز اول."
+      mute="دارایی شما، همیشه به نام شما."
+      headExtra={<Link href={routes.site.security} className="s-link">امنیت در نمادنو<Icon name="forward" /></Link>}
     >
-      <div className="s-g s-g4">
+      <div className="s-pillars four">
         {SECURITY_POINTS.map((p) => (
-          <div key={p.title} className="card s-card c-secondary">
+          <div key={p.title} className="s-pillar c-secondary">
             <span className="s-itile"><Icon name={p.icon} /></span>
-            <h3 className="s-h3" style={{ fontSize: 16 }}>{p.title}</h3>
-            <p style={{ fontSize: 13.5, lineHeight: 1.95, color: 'var(--text-secondary)' }}>{p.text}</p>
+            <span className="t" style={{ fontSize: 17 }}>{p.title}</span>
+            <p className="d" style={{ fontSize: 14 }}>{p.text}</p>
           </div>
         ))}
       </div>

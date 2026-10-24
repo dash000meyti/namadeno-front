@@ -1,39 +1,52 @@
 import Link from 'next/link';
 import { routes } from '@/lib/routes';
+import { Logotype } from '@/components/ui/Brand';
 import { SiteLogo } from './Logo';
 
 const COLS: { title: string; links: { label: string; href: string }[] }[] = [
   {
-    title: 'محصول',
+    title: 'نمادنو',
     links: [
-      { label: 'اپلیکیشن کارکنان', href: routes.app.login },
-      { label: 'پنل سازمانی', href: routes.org.login },
-      { label: 'کنسول بهره‌بردار', href: routes.op.login },
-      { label: 'صندوق‌ها', href: '/#funds' },
-      { label: 'اعتبار و وام', href: '/#credit' },
+      { label: 'اپ نمادنو', href: '/#product' },
+      { label: 'صندوق‌ها', href: '/#namadno' },
+      { label: 'اعتبار نمادنو', href: '/#credit' },
+      { label: 'افتتاح حساب', href: routes.app.signup },
+      { label: 'ورود', href: routes.app.login },
     ],
   },
   {
-    title: 'نمادنو',
+    title: 'سازمان‌ها',
+    links: [
+      { label: 'نمادنو برای سازمان‌ها', href: routes.site.business },
+      { label: 'رزرو جلسه‌ی معرفی', href: `${routes.site.business}#demo` },
+      { label: 'ورود سازمان‌ها', href: routes.org.login },
+    ],
+  },
+  {
+    title: 'شرکت',
     links: [
       { label: 'درباره ما', href: routes.site.about },
-      { label: 'برای سازمان‌ها', href: routes.site.business },
       { label: 'فرصت‌های شغلی', href: routes.site.careers },
       { label: 'وبلاگ', href: routes.site.blog },
       { label: 'تماس با ما', href: routes.site.contact },
     ],
   },
   {
-    title: 'اعتماد و قوانین',
+    title: 'اعتماد',
     links: [
       { label: 'امنیت', href: routes.site.security },
+      { label: 'سوالات متداول', href: routes.site.faq },
       { label: 'شرایط استفاده', href: routes.site.terms },
       { label: 'حریم خصوصی', href: routes.site.privacy },
-      { label: 'سوالات متداول', href: routes.site.faq },
-      { label: 'نقشه محصول', href: routes.site.map },
-      { label: 'سیستم طراحی', href: routes.site.designSystem },
     ],
   },
+];
+
+/** Prototype-only shortcuts (not part of the marketing site). */
+const PROTO = [
+  { label: 'نقشه محصول', href: routes.site.map },
+  { label: 'سیستم طراحی', href: routes.site.designSystem },
+  { label: 'کنسول بهره‌بردار', href: routes.op.login },
 ];
 
 export function SiteFooter() {
@@ -42,9 +55,10 @@ export function SiteFooter() {
       <div className="s-wrap">
         <div className="s-ftr-grid">
           <div className="s-ftr-brand">
-            <SiteLogo size={36} />
+            <SiteLogo height={30} />
             <p style={{ fontSize: 14, lineHeight: 2, color: 'var(--text-secondary)' }}>
-              سوپراپ مالی گروه صندوق‌های بورسی. پاداش و مزایای کارکنان به‌شکل واحد صندوق؛ با شفافیت کامل برای منابع انسانی و اعتبار بدون کاغذبازی برای کارکنان.
+              ارزشی که می‌ماند.
+              <br />نمادنو، خانه‌ی دارایی‌های ماندگار؛ از گروه صندوق‌های بورسی.
             </p>
           </div>
           {COLS.map((c) => (
@@ -60,9 +74,11 @@ export function SiteFooter() {
         </div>
         <div className="s-ftr-bottom">
           <span>© ۱۴۰۵ نمادنو. همه حقوق محفوظ است.</span>
+          <span className="s-ftr-proto">نسخه نمایشی: {PROTO.map((l, i) => <span key={l.href}>{i > 0 && ' · '}<Link href={l.href}>{l.label}</Link></span>)}</span>
           <span>سرمایه‌گذاری در صندوق‌ها با ریسک همراه است؛ بازدهی گذشته تضمینی برای آینده نیست.</span>
         </div>
       </div>
+      <div className="s-ftr-mark" aria-hidden="true"><Logotype height={220} /></div>
     </footer>
   );
 }

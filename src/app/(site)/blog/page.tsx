@@ -15,7 +15,7 @@ export default function BlogPage() {
       <PageHero
         crumbs={[{ label: 'وبلاگ' }]}
         title="وبلاگ نمادنو"
-        lead="یادداشت‌هایی درباره صندوق‌ها، اعتبار با پشتوانه دارایی و مزایای سازمانی؛ کوتاه، کاربردی و بدون اصطلاحات پیچیده."
+        lead="یادداشت‌هایی درباره‌ی حفظ ارزش دارایی، صندوق‌ها، اعتبار با پشتوانه‌ی دارایی و مزایای سازمانی؛ کوتاه، کاربردی و بی‌اصطلاحات پیچیده."
       />
       <Suspense fallback={<div className="s-wrap s-g s-g3" style={{ paddingBlock: 24 }}>{[0, 1, 2].map((i) => <SkeletonCard key={i} h={320} />)}</div>}>
         <BlogIndex />

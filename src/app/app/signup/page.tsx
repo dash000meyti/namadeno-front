@@ -17,7 +17,7 @@ const FLOW: StepKey[] = ['nid', 'phone', 'otp', 'setpass'];
 const PREV: Partial<Record<StepKey, StepKey>> = { phone: 'nid', otp: 'phone', setpass: 'otp' };
 
 const TERMS = [
-  'حساب نمادنو فقط با شماره‌ای فعال می‌شود که سازمان شما ثبت کرده است.',
+  'حساب نمادنو با شماره موبایلی که به نام خودتان است افتتاح می‌شود؛ اگر سازمان شما همراه نمادنو باشد، مزایای سازمانی هم به همین حساب می‌رسد.',
   'دارایی‌ها به‌صورت واحد صندوق‌های سرمایه‌گذاری نگهداری می‌شوند و ارزش آن‌ها ممکن است تغییر کند.',
   'بسته‌های سازمانی تا تأیید شما به دارایی‌تان اضافه نمی‌شوند.',
   'اطلاعات شما محرمانه و مطابق مقررات سازمان بورس نگهداری می‌شود.',
@@ -102,7 +102,7 @@ export default function SignupPage() {
 
         {step === 'phone' && (
           <Step anim={anim} key="phone">
-            <StepTitle title="شماره موبایل" sub="با شماره‌ای که در سازمان ثبت شده ثبت‌نام کنید" />
+            <StepTitle title="شماره موبایل" sub="شماره‌ای که به نام خودتان است" />
             <PhoneField
               value={mobile} onChange={(v) => { setMobile(v); setPhoneErr(''); }} onEnter={() => sendCode()}
               help={agreeErr ? '' : 'کد تأیید به این شماره پیامک می‌شود'}

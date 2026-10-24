@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import type { LockType } from '@/types/domain';
 import { Icon } from '@/components/ui/Icon';
+import { LogoFull, LogoMark, Logotype } from '@/components/ui/Brand';
+import { Motif } from '@/components/ui/Motif';
 import { LockBar, LockLegend, LockTypeChip } from '@/components/ui/LockBar';
 import { money } from '@/lib/format';
 import { useColorMode } from '@/theme/ColorModeProvider';
@@ -19,9 +21,8 @@ const RAMPS: { name: string; fa: string; steps: string[] }[] = [
   { name: 'error', fa: 'قرمز', steps: ['lighter', 'light', 'main', 'dark'] },
 ];
 const THEME_TOKENS = ['bg-default', 'bg-paper', 'bg-neutral', 'bg-canvas', 'card-bg', 'glass-bg', 'text-primary', 'text-secondary', 'text-disabled', 'divider', 'action-hover', 'action-selected', 'primary-text', 'success-text'];
-const TYPE: { name: string; sample: string; size: number; weight: number; lh: number; ls?: string; display?: boolean; color?: string }[] = [
+const TYPE: { name: string; sample: string; size: number; weight: number; lh: number; ls?: string; color?: string }[] = [
   { name: 'h1', sample: 'مدیریت ثروت، ساده و شفاف', size: 40, weight: 700, lh: 1.25 },
-  { name: 'wordmark · Divan', sample: 'نمادنو', size: 40, weight: 700, lh: 1.25, display: true },
   { name: 'h2', sample: 'داشبورد سازمان', size: 32, weight: 700, lh: 1.3 },
   { name: 'h3', sample: 'پرداخت حقوق مهر ۱۴۰۵', size: 24, weight: 700, lh: 1.4 },
   { name: 'h4', sample: 'تراکنش‌های اخیر', size: 20, weight: 700, lh: 1.5 },
@@ -42,7 +43,7 @@ const COLOR_FA: Record<string, string> = { primary: 'اصلی', secondary: 'ثا
 const LOCKS: (LockType | 'none')[] = ['none', 'collateral', 'vesting', 'installment', 'milestone', 'legal'];
 
 const NAV = [
-  { id: 'ds-colors', label: 'رنگ‌ها' }, { id: 'ds-theme', label: 'توکن‌های تم' }, { id: 'ds-type', label: 'تایپوگرافی' },
+  { id: 'ds-logo', label: 'لوگو و موتیف' }, { id: 'ds-colors', label: 'رنگ‌ها' }, { id: 'ds-theme', label: 'توکن‌های تم' }, { id: 'ds-type', label: 'تایپوگرافی' },
   { id: 'ds-shape', label: 'شعاع و فاصله' }, { id: 'ds-shadow', label: 'سایه‌ها' }, { id: 'ds-buttons', label: 'دکمه‌ها' },
   { id: 'ds-labels', label: 'برچسب و چیپ' }, { id: 'ds-fields', label: 'فیلدها و هشدار' }, { id: 'ds-locks', label: 'آزاد و قفل‌شده' }, { id: 'ds-cards', label: 'کارت‌ها' },
 ];
@@ -103,6 +104,31 @@ export function DesignSystem() {
           <button type="button" className="btn soft c-primary" onClick={toggle}><Icon name={mode === 'dark' ? 'sun' : 'moon'} />{mode === 'dark' ? 'مشاهده در تم روشن' : 'مشاهده در تم تیره'}</button>
         </div>
 
+        <Block id="ds-logo" title="لوگو و موتیف" en="Brand.tsx · LogoFull / LogoMark / Logotype · currentColor · /public/brand">
+          <div className="s-g s-g2">
+            <div style={{ borderRadius: 16, padding: '40px 24px', background: '#FFFFFF', color: '#070B14', display: 'grid', placeItems: 'center', border: '1px solid var(--line)' }}><LogoFull height={48} /></div>
+            <div style={{ borderRadius: 16, padding: '40px 24px', background: 'var(--ink)', color: '#FFFFFF', display: 'grid', placeItems: 'center', border: '1px solid var(--line)' }}><LogoFull height={48} /></div>
+          </div>
+          <div className="s-row" style={{ flexWrap: 'wrap', gap: 32, alignItems: 'flex-end' }}>
+            <div className="s-col" style={{ gap: 8, alignItems: 'center' }}><LogoMark size={64} /><span className="s-code">LogoMark</span></div>
+            <div className="s-col" style={{ gap: 8, alignItems: 'center' }}><Logotype height={40} /><span className="s-code">Logotype</span></div>
+            <div className="s-col" style={{ gap: 8, alignItems: 'center' }}><LogoMark size={16} /><span className="s-code">min 16px</span></div>
+            <div className="s-col" style={{ gap: 8, alignItems: 'center' }}><LogoFull height={20} /><span className="s-code">min 20px</span></div>
+          </div>
+          <ul className="s-check" style={{ fontSize: 13.5 }}>
+            <li><Icon name="check" />لوگو تک‌رنگ است: روی زمینه روشن جوهری، روی زمینه تیره سفید (<span className="s-code">currentColor</span>). رنگ، گرادیان یا سایه به لوگو اضافه نشود.</li>
+            <li><Icon name="check" />فضای خالی دور لوگو حداقل به اندازه یک چهارم ارتفاع نشان (۸ واحد از ۳۲).</li>
+            <li><Icon name="check" />موتیف برند از هندسه خود نشان می‌آید: شبکه ساخت ۴ واحدی، دایره‌های دو پله و پله‌هایی که به بیرون می‌روند (رشد).</li>
+          </ul>
+          <div className="s-g s-g2">
+            <div style={{ position: 'relative', height: 260, borderRadius: 16, border: '1px solid var(--line)', overflow: 'hidden', display: 'grid', placeItems: 'center' }}><Motif variant="mark" style={{ width: 240, height: 240 }} /></div>
+            <div style={{ position: 'relative', height: 260, borderRadius: 16, border: '1px solid var(--line)', overflow: 'hidden' }}><Motif variant="grid" /></div>
+          </div>
+          <div className="s-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+            {['logo', 'logotype', 'logofull', 'logo-white', 'logotype-white', 'logofull-white'].map((f) => <a key={f} href={`/brand/${f}.svg`} download className="lnk"><Icon name="download" size={14} />{f}.svg</a>)}
+          </div>
+        </Block>
+
         <Block id="ds-colors" title="پالت رنگ" en="grey + 6 semantic ramps · tokens.css">
           <div className="s-col" style={{ gap: 6 }}>
             <span style={{ fontSize: 12.5, fontWeight: 700 }}>Grey — خنثی‌های سرد با ته‌رنگ نیلی</span>
@@ -138,14 +164,14 @@ export function DesignSystem() {
           <span className="cap">Aurora (<span className="s-code">--bg-aurora</span>): radial-gradientهای کم‌رنگ نیلی، فیروزه‌ای و سبز روی پس‌زمینه صفحه؛ در تم تیره کمی پررنگ‌تر.</span>
         </Block>
 
-        <Block id="ds-type" title="مقیاس تایپوگرافی" en="IRANSansX everywhere · Divan only for the wordmark · numerals 300 tabular">
+        <Block id="ds-type" title="مقیاس تایپوگرافی" en="IRANSansX everywhere · the wordmark is the SVG logotype · numerals 300 tabular">
           <div>
             {TYPE.map((t) => (
               <div key={t.name} className="s-ty-row">
-                <div className={'sample' + (t.display ? ' wm' : '')} style={{ fontSize: `clamp(${Math.min(t.size, 18)}px, ${t.size / 12}vw, ${t.size}px)`, fontWeight: t.weight, lineHeight: t.lh, letterSpacing: t.ls, color: t.color, fontVariantNumeric: 'tabular-nums' }}>{t.sample}</div>
+                <div className="sample" style={{ fontSize: `clamp(${Math.min(t.size, 18)}px, ${t.size / 12}vw, ${t.size}px)`, fontWeight: t.weight, lineHeight: t.lh, letterSpacing: t.ls, color: t.color, fontVariantNumeric: 'tabular-nums' }}>{t.sample}</div>
                 <div className="spec">
                   <span style={{ fontSize: 12, fontWeight: 700 }}>{t.name}</span>
-                  <span className="cap" style={{ fontSize: 10.5 }}>{t.size}px · {t.weight} · lh {t.lh}{t.ls ? ` · ls ${t.ls}` : ''} · {t.display ? 'Divan' : 'IRANSansX'}</span>
+                  <span className="cap" style={{ fontSize: 10.5 }}>{t.size}px · {t.weight} · lh {t.lh}{t.ls ? ` · ls ${t.ls}` : ''} · IRANSansX</span>
                 </div>
               </div>
             ))}

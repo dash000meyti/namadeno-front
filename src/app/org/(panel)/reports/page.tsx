@@ -1,19 +1,39 @@
 'use client';
-/** Design: org-reports.dc.html — monthly sent chart, allocation by unit, exports and scheduled reports. */
+/**
+ * Organization — reports. Kit overview page: period tabs in the heading → sent packages (Bars) and allocation by
+ * department → export rows (Excel / PDF) → scheduled reports (table, a switch per row).
+ * «زمان‌بندی گزارش» opens a small dialog (optional title + format) and creates the schedule.
+ */
 import { useState } from 'react';
-import { PageHeading } from '@/components/panel/PanelShell';
+import {
+  Bars, Card, Chips, Dialog, Empty, ErrorBlock, Field, Ident, Legend, List, ListRow, PageHeading, Pill, SkeletonCard,
+  Switch, Table, Tabs, Tile, type Column,
+} from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 import { useOrgReports } from '@/api/org';
-import { useCreateSchedule, useExportReport, useReportsOverview, useToggleSchedule, type ReportExport, type ReportFile, type ReportSchedule } from '@/api/org-packages-extra';
-import { routes } from '@/lib/routes';
+import {
+  useCreateSchedule, useExportReport, useReportsOverview, useToggleSchedule,
+  type ReportExport, type ReportFile, type ReportSchedule, type ReportsOverview,
+} from '@/api/org-packages-extra';
 import { faDigits, jDate, time } from '@/lib/format';
 import { now } from '@/lib/clock';
-import { I, soft } from '@/components/org/packages/meta';
-import { CardError, CardSkeleton, Switch, errMsg, useFlash, useOrgCrumb } from '@/components/org/packages/ui';
+import { I } from '@/components/org/packages/meta';
+import { errMsg } from '@/components/org/packages/ui';
 
 type Range = 'm1' | 'm3' | 'm6' | 'y1';
-const SCH_GRID = '1.4fr 130px 1fr 72px 110px 56px';
+type Format = ReportSchedule['format'];
+type Unit = ReportsOverview['units'][number];
+const RANGES: { key: Range; label: string }[] = [{ key: 'm1', label: '۳۰ روز' }, { key: 'm3', label: '۳ ماه' }, { key: 'm6', label: '۶ ماه' }, { key: 'y1', label: 'یک سال' }];
+const FORMATS: { key: Format; label: string }[] = [{ key: 'Excel', label: 'Excel' }, { key: 'PDF', label: 'PDF' }];
 const ICONS: Record<ReportSchedule['icon'], string> = { wallet: I.wallet, percent: I.percent, file: I.file, pkg: I.pkg, clock: I.clock };
+/** Allocation shares per department (same colors as the dashboard). */
+const MIX: { key: 'gold' | 'fixed' | 'rial'; label: string; color: string }[] = [
+  { key: 'gold', label: 'طلا', color: 'var(--warning-main)' },
+  { key: 'fixed', label: 'درآمد ثابت', color: 'var(--chart-3)' },
+  { key: 'rial', label: 'ریال', color: 'var(--chart-4)' },
+];
+const SENT = [{ name: 'ارسال', color: 'var(--chart-1)' }];
 const bn = (v: number) => faDigits((v / 1e9).toFixed(1), true);
 const lastText = (iso?: string) => (!iso ? '—' : jDate(iso) === jDate(now()) ? 'امروز ' + time(iso) : jDate(iso));
 
@@ -30,172 +50,176 @@ function downloadCsv(f: ReportFile) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Standalone print document for the PDF export (opened in a new window, outside the app theme). */
 function printableHtml(f: ReportFile) {
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
   return `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>${esc(f.title)}</title><style>body{font-family:Tahoma,sans-serif;padding:24px;color:#1F2433}h1{font-size:18px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #DEE2EB;padding:6px 8px;text-align:right}th{background:#F1F3F8}</style></head><body><h1>${esc(f.title)} · نمادنو</h1><table><thead><tr>${f.columns.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${f.rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>`;
 }
 
 export default function OrgReportsPage() {
-  const orgCrumb = useOrgCrumb();
+  const toast = useToast();
   const { data: reports, isError: rErr, refetch: rRefetch } = useOrgReports();
   const { data: ov, isLoading, isError, refetch } = useReportsOverview();
   const toggle = useToggleSchedule();
   const create = useCreateSchedule();
   const exp = useExportReport();
-  const { flash, toast } = useFlash();
   const [range, setRange] = useState<Range>('m6');
+  const [dlg, setDlg] = useState(false);
+  const [title, setTitle] = useState('');
+  const [format, setFormat] = useState<Format>('Excel');
 
   const monthly = (reports?.monthly ?? []).map((m, i, arr) => ({ label: m.month, v: m.sent + (i === arr.length - 1 ? ov?.currentMonthExtra ?? 0 : 0) }));
-  const sets: Record<Range, { note: string; items: { label: string; v: number }[]; w: number }> = {
-    m1: { note: '۴ هفته گذشته · میلیارد تومان', items: (ov?.weekly ?? []).map((w) => ({ label: w.label, v: w.sent })), w: 44 },
-    m3: { note: '۳ ماه گذشته · میلیارد تومان', items: monthly.slice(-3), w: 56 },
-    m6: { note: '۶ ماه گذشته · میلیارد تومان', items: monthly.slice(-6), w: 36 },
-    y1: { note: '۱۲ ماه گذشته · میلیارد تومان', items: [...(ov?.earlierMonths ?? []).map((m) => ({ label: m.month, v: m.sent })), ...monthly].slice(-12), w: 20 },
+  const sets: Record<Range, { note: string; items: { label: string; v: number }[] }> = {
+    m1: { note: '۴ هفته گذشته · میلیارد تومان', items: (ov?.weekly ?? []).map((w) => ({ label: w.label, v: w.sent })) },
+    m3: { note: '۳ ماه گذشته · میلیارد تومان', items: monthly.slice(-3) },
+    m6: { note: '۶ ماه گذشته · میلیارد تومان', items: monthly.slice(-6) },
+    y1: { note: '۱۲ ماه گذشته · میلیارد تومان', items: [...(ov?.earlierMonths ?? []).map((m) => ({ label: m.month, v: m.sent })), ...monthly].slice(-12) },
   };
   const set = sets[range];
-  const mx = Math.max(1, ...set.items.map((x) => x.v)) * 1.12;
   const sum = set.items.reduce((s, x) => s + x.v, 0);
   const schedules = ov?.schedules ?? [];
   const active = schedules.filter((s) => s.enabled).length;
 
-  const doExport = (e: ReportExport, format: 'xlsx' | 'pdf') => {
-    const w = format === 'pdf' ? window.open('', '_blank') : null;
-    exp.mutate({ id: e.id, format }, {
+  const doExport = (e: ReportExport, fmt: 'xlsx' | 'pdf') => {
+    // the print window opens synchronously (inside the click) so pop-up blockers allow it
+    const w = fmt === 'pdf' ? window.open('', '_blank') : null;
+    exp.mutate({ id: e.id, format: fmt }, {
       onSuccess: (f) => {
-        if (format === 'xlsx') downloadCsv(f);
+        if (fmt === 'xlsx') downloadCsv(f);
         else if (w) { w.document.open(); w.document.write(printableHtml(f)); w.document.close(); }
         else {
           const url = URL.createObjectURL(new Blob([printableHtml(f)], { type: 'text/html;charset=utf-8' }));
           window.open(url, '_blank');
         }
-        flash(`${e.title} (${format === 'xlsx' ? 'Excel' : 'PDF'}) آماده دانلود شد`);
+        toast(`${e.title} (${fmt === 'xlsx' ? 'Excel' : 'PDF'}) آماده دانلود شد`);
       },
-      onError: (err) => { w?.close(); flash(errMsg(err), 'error'); },
+      onError: (err) => { w?.close(); toast(errMsg(err), 'error'); },
     });
   };
   const toggleSchedule = (s: ReportSchedule) => toggle.mutate({ id: s.id, enabled: !s.enabled }, {
-    onSuccess: (r) => flash(`«${r.title}» ${r.enabled ? 'فعال' : 'غیرفعال'} شد`),
-    onError: (err) => flash(errMsg(err), 'error'),
+    onSuccess: (r) => toast(`«${r.title}» ${r.enabled ? 'فعال' : 'غیرفعال'} شد`),
+    onError: (err) => toast(errMsg(err), 'error'),
   });
-  const newSchedule = () => create.mutate({}, { onSuccess: () => flash('زمان‌بندی جدید ثبت شد · اولین ارسال شنبه ۰۹:۰۰'), onError: (err) => flash(errMsg(err), 'error') });
+  const openSchedule = () => { setTitle(''); setFormat('Excel'); setDlg(true); };
+  const newSchedule = () => {
+    if (create.isPending) return;
+    create.mutate({ title: title.trim() || undefined, format }, {
+      onSuccess: () => { setDlg(false); toast('زمان‌بندی جدید ثبت شد · اولین ارسال شنبه ۰۹:۰۰'); },
+      onError: (err) => toast(errMsg(err), 'error'),
+    });
+  };
+
+  const schCols: Column<ReportSchedule>[] = [
+    {
+      key: 'title', label: 'گزارش', width: 'minmax(0, 1.5fr)', render: (s) => (
+        <Ident lead={<Tile d={ICONS[s.icon]} tone={s.enabled ? s.tone : 'neutral'} />} title={<span style={s.enabled ? undefined : { color: 'var(--text-secondary)' }}>{s.title}</span>} sub={s.period} />
+      ),
+    },
+    { key: 'to', label: 'گیرندگان', width: 'minmax(0, 1fr)', render: (s) => <span className="el mute">{s.to}</span> },
+    { key: 'fmt', label: 'قالب', width: '64px', render: (s) => <Pill>{s.format}</Pill> },
+    { key: 'last', label: 'آخرین ارسال', width: '108px', render: (s) => <span className="num sm">{lastText(s.lastAt)}</span> },
+    { key: 'on', label: 'فعال', width: '44px', align: 'end', render: (s) => <Switch on={s.enabled} label={`فعال‌سازی ${s.title}`} disabled={toggle.isPending && toggle.variables?.id === s.id} onChange={() => toggleSchedule(s)} /> },
+  ];
+
+  const heading = (
+    <PageHeading title="گزارش‌ها" crumbs={[{ label: 'مدیریت' }]} sub="ارسال بسته‌ها، تخصیص کارکنان، خروجی‌ها و گزارش‌های زمان‌بندی‌شده">
+      <Tabs label="بازه زمانی" value={range} onChange={setRange} items={RANGES} />
+      <button type="button" className="nm-btn" onClick={openSchedule}><Icon d={I.clock} size={17} />زمان‌بندی گزارش</button>
+    </PageHeading>
+  );
+
+  const dialog = (
+    <Dialog
+      open={dlg} onClose={() => setDlg(false)} title="زمان‌بندی گزارش" sub="ارسال خودکار هفتگی، شنبه‌ها ساعت ۰۹:۰۰، به ایمیل گیرندگان."
+      icon={<Tile d={I.clock} tone="primary" size="lg" />}
+      footer={(
+        <>
+          <button type="button" className="nm-btn ghost" onClick={() => setDlg(false)}>انصراف</button>
+          <button type="button" className="nm-btn" disabled={create.isPending} onClick={newSchedule}>{create.isPending ? 'در حال ثبت…' : 'ثبت زمان‌بندی'}</button>
+        </>
+      )}
+    >
+      <Field label="عنوان گزارش (اختیاری)" htmlFor="sch-title">
+        <span className="nm-in" style={{ width: '100%' }}>
+          <input id="sch-title" type="text" value={title} autoFocus placeholder="گزارش هفتگی بسته‌های دارایی"
+            onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') newSchedule(); }} />
+        </span>
+      </Field>
+      <Field label="قالب فایل">
+        <Chips label="قالب فایل" value={format} onChange={setFormat} options={FORMATS} />
+      </Field>
+    </Dialog>
+  );
+
+  if (isError || rErr) return <>{heading}<ErrorBlock message="دریافت گزارش‌ها ممکن نشد" onRetry={() => { refetch(); rRefetch(); }} />{dialog}</>;
 
   return (
     <>
-      <PageHeading title="گزارش‌ها" crumbs={[orgCrumb, { label: 'منابع انسانی', href: routes.org.dashboard }, { label: 'گزارش‌ها' }]}>
-        <div role="group" aria-label="بازه زمانی" style={{ height: 36, display: 'flex', gap: 4, padding: 4, boxSizing: 'border-box', borderRadius: 8, background: 'var(--bg-neutral)' }}>
-          {([['m1', '۳۰ روز'], ['m3', '۳ ماه'], ['m6', '۶ ماه'], ['y1', 'یک سال']] as const).map(([k, label]) => {
-            const on = range === k;
-            return <button key={k} aria-pressed={on} onClick={() => setRange(k)} style={{ height: 28, padding: '0 12px', border: 0, borderRadius: 6, background: on ? 'var(--bg-paper)' : 'transparent', color: on ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-z1)' : 'none', fontFamily: 'inherit', fontSize: 12, fontWeight: on ? 700 : 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>{label}</button>;
-          })}
-        </div>
-        <button className="btn" onClick={newSchedule} disabled={create.isPending} style={{ background: 'var(--primary-main)', color: 'var(--primary-contrast)', boxShadow: 'var(--shadow-primary)' }}><Icon d={I.clock} size={18} strokeWidth={2} />زمان‌بندی گزارش</button>
-      </PageHeading>
+      {heading}
 
-      {(isError || rErr) && <CardError onRetry={() => { refetch(); rRefetch(); }} />}
-
-      {/* Charts row */}
-      <div style={{ minHeight: 224, flex: 'none', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="nm-grid c2 stretch">
         {reports && ov ? (
-          <div className="card" style={{ boxSizing: 'border-box', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0, height: 224 }}>
-            <div style={{ height: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <h6 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.2, whiteSpace: 'nowrap' }}>بسته‌های ارسالی ماهانه</h6>
-              <span className="cell" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{set.note}</span>
-              <span className="num" style={{ marginRight: 'auto', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>جمع {bn(sum)} میلیارد</span>
-            </div>
-            <div dir="ltr" role="img" aria-label={`نمودار ${set.note}`} style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', alignItems: 'stretch', gap: 10, padding: '0 4px' }}>
-              <div style={{ position: 'absolute', inset: '18px 4px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
-                {[0, 1, 2, 3].map((i) => <span key={i} style={{ height: 1, background: 'var(--chart-grid)' }} />)}
-              </div>
-              {set.items.map((m, i) => (
-                <div key={m.label + i} dir="rtl" title={`${m.label}: ${bn(m.v)} میلیارد تومان`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 }}>
-                  <span className="num" style={{ height: 14, fontSize: 11, fontWeight: 500, lineHeight: '14px', whiteSpace: 'nowrap' }}>{bn(m.v)}</span>
-                  <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <span style={{ width: set.w, maxWidth: '100%', height: `${Math.round((m.v / mx) * 100)}%`, background: i === set.items.length - 1 ? 'var(--chart-1)' : 'var(--primary-light)', borderRadius: '6px 6px 0 0', display: 'block' }} />
-                  </div>
-                  <span style={{ height: 16, fontSize: 11, lineHeight: '16px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{m.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : <CardSkeleton h={224} />}
+          <Card title="بسته‌های ارسالی" sub={set.note} actions={<span className="num" style={{ fontSize: 12.5, fontWeight: 600 }}>جمع {bn(sum)} میلیارد</span>}>
+            <Bars label={`نمودار ${set.note}`} data={set.items.map((x) => ({ label: x.label, values: [x.v] }))} series={SENT} showValues fmt={bn} highlight={set.items.length - 1} height={200} />
+          </Card>
+        ) : <SkeletonCard h={276} />}
 
         {ov ? (
-          <div className="card" style={{ boxSizing: 'border-box', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0, minHeight: 224 }}>
-            <div style={{ height: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <h6 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.2, whiteSpace: 'nowrap' }}>ترکیب تخصیص کارکنان</h6>
-              <span className="cell" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>به تفکیک واحد</span>
-              <span style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--text-secondary)' }}>
-                {[['طلا', '--warning-main'], ['درآمد ثابت', '--chart-3'], ['ریال', '--chart-4']].map(([label, color]) => (
-                  <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}><span style={{ width: 8, height: 8, borderRadius: 2, background: `var(${color})` }} />{label}</span>
-                ))}
-              </span>
-            </div>
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6 }}>
-              {ov.units.slice(0, 6).map((u) => (
-                <div key={u.department} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 26 }}>
-                  <span style={{ width: 84, fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.department}</span>
-                  <span dir="ltr" style={{ flex: 1, display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', gap: 2, background: 'var(--bg-neutral)' }}><span style={{ width: `${u.gold}%`, background: 'var(--warning-main)' }} /><span style={{ width: `${u.fixed}%`, background: 'var(--chart-3)' }} /><span style={{ width: `${u.rial}%`, background: 'var(--chart-4)' }} /></span>
-                  <span className="num" style={{ width: 92, fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', textAlign: 'left', flex: 'none' }}>{faDigits(u.gold)}٪ · {faDigits(u.fixed)}٪ · {faDigits(u.rial)}٪</span>
-                </div>
-              ))}
-              {!ov.units.length && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>هنوز بسته‌ای توسط کارکنان تأیید نشده است.</span>}
-            </div>
-          </div>
-        ) : <CardSkeleton h={224} />}
+          <Card title="ترکیب تخصیص کارکنان" sub="به تفکیک واحد" actions={<Legend items={MIX.map((m) => ({ label: m.label, color: m.color }))} />}>
+            {ov.units.length
+              ? <div className="nm-list">{ov.units.slice(0, 6).map((u) => <UnitRow key={u.department} u={u} />)}</div>
+              : <Empty title="هنوز بسته‌ای توسط کارکنان تأیید نشده است" />}
+          </Card>
+        ) : <SkeletonCard h={276} />}
       </div>
 
-      {/* Export cards */}
-      <div style={{ flex: 'none', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20 }}>
-        {(ov?.exports ?? []).map((e) => {
-          const t = soft(e.tone);
-          const busy = exp.isPending && exp.variables?.id === e.id;
-          return (
-            <div key={e.id} className="card" style={{ minHeight: 108, boxSizing: 'border-box', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-              <span style={{ width: 44, height: 44, borderRadius: 12, background: t.bg, color: t.fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={ICONS[e.icon]} size={22} /></span>
-              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, lineHeight: 1.25 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.desc}</span>
-                <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>آخرین خروجی: {lastText(e.lastAt)}</span>
-              </span>
-              <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {(['xlsx', 'pdf'] as const).map((f) => (
-                  <button key={f} onClick={() => doExport(e, f)} disabled={busy} style={{ height: 28, padding: '0 10px', borderRadius: 8, border: '1px solid var(--outline-border)', background: 'transparent', color: 'var(--text-primary)', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: busy ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: busy ? 0.6 : 1 }}>
-                    <Icon d={I.download} size={14} />{f === 'xlsx' ? 'Excel' : 'PDF'}
-                  </button>
-                ))}
-              </span>
-            </div>
-          );
-        })}
-        {isLoading && [0, 1, 2].map((i) => <CardSkeleton key={i} h={108} />)}
-      </div>
+      {!ov ? <SkeletonCard h={240} /> : (
+        <Card title="خروجی گزارش‌ها">
+          <List>
+            {ov.exports.map((e) => {
+              const busy = exp.isPending && exp.variables?.id === e.id;
+              return (
+                <ListRow
+                  key={e.id}
+                  lead={<Tile d={ICONS[e.icon]} tone={e.tone} />}
+                  title={e.title}
+                  sub={<>{e.desc} · آخرین خروجی: <span className="num">{lastText(e.lastAt)}</span></>}
+                  trail={(
+                    <>
+                      <button type="button" className="nm-btn sm ghost" disabled={busy} aria-label={`خروجی Excel ${e.title}`} onClick={() => doExport(e, 'xlsx')}><Icon d={I.download} size={15} />Excel</button>
+                      <button type="button" className="nm-btn sm ghost" disabled={busy} aria-label={`خروجی PDF ${e.title}`} onClick={() => doExport(e, 'pdf')}><Icon d={I.download} size={15} />PDF</button>
+                    </>
+                  )}
+                />
+              );
+            })}
+          </List>
+        </Card>
+      )}
 
-      {/* Scheduled reports */}
-      <div className="card" style={{ flex: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ height: 44, flex: 'none', boxSizing: 'border-box', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--divider)' }}>
-          <h6 style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>گزارش‌های زمان‌بندی‌شده</h6>
-          <span className="num" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{faDigits(active)} فعال از {faDigits(schedules.length)}</span>
-          <span style={{ marginRight: 'auto', fontSize: 11, color: 'var(--text-secondary)' }}>ارسال خودکار به ایمیل گیرندگان</span>
-        </div>
-        <div className="th" style={{ height: 32, flex: 'none', display: 'grid', gridTemplateColumns: SCH_GRID, alignItems: 'center', gap: 8, padding: '0 16px' }}>
-          <span className="cell">گزارش</span><span className="cell">دوره</span><span className="cell">گیرندگان</span><span className="cell">قالب</span><span className="cell">آخرین ارسال</span><span className="cell">فعال</span>
-        </div>
-        {schedules.map((s) => {
-          const t = soft(s.tone);
-          return (
-            <div key={s.id} style={{ height: 38, flex: 'none', display: 'grid', gridTemplateColumns: SCH_GRID, alignItems: 'center', gap: 8, padding: '0 16px', borderBottom: '1px dashed var(--divider)', fontSize: 12, color: s.enabled ? 'var(--text-primary)' : 'var(--text-disabled)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}><span style={{ width: 24, height: 24, borderRadius: 6, background: t.bg, color: t.fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={ICONS[s.icon]} size={13} /></span><span className="cell" style={{ fontWeight: 600, fontSize: 13 }}>{s.title}</span></span>
-              <span className="cell">{s.period}</span>
-              <span className="cell" style={{ color: 'var(--text-secondary)' }}>{s.to}</span>
-              <span><span className="lbl" style={{ height: 20, padding: '0 6px', fontSize: 11, background: 'var(--soft-default)', color: 'var(--default-text)' }}>{s.format}</span></span>
-              <span className="num cell" style={{ color: 'var(--text-secondary)' }}>{lastText(s.lastAt)}</span>
-              <span><Switch on={s.enabled} label={`فعال‌سازی ${s.title}`} disabled={toggle.isPending && toggle.variables?.id === s.id} onToggle={() => toggleSchedule(s)} /></span>
-            </div>
-          );
-        })}
-        {isLoading && [0, 1, 2].map((i) => <div key={i} style={{ height: 38, borderBottom: '1px dashed var(--divider)', opacity: 0.5 }} />)}
-      </div>
-      {toast}
+      <Card flush title="گزارش‌های زمان‌بندی‌شده" sub={ov ? `${faDigits(active)} فعال از ${faDigits(schedules.length)} · ارسال خودکار به ایمیل گیرندگان` : undefined}>
+        <Table
+          columns={schCols} rows={schedules} rowKey={(s) => s.id} rowLabel={(s) => s.title} loading={isLoading}
+          empty={<Empty icon={I.clock} title="گزارش زمان‌بندی‌شده‌ای ندارید" action={<button type="button" className="nm-btn sm" onClick={openSchedule}>زمان‌بندی گزارش</button>} />}
+          minWidth={680}
+        />
+      </Card>
+
+      {dialog}
     </>
+  );
+}
+
+/** One department: name, a stacked share bar (gold / fixed income / rial) and the three percentages. */
+function UnitRow({ u }: { u: Unit }) {
+  const said = MIX.map((m) => `${m.label} ${faDigits(u[m.key])}٪`).join('، ');
+  return (
+    <div className="nm-li" style={{ minHeight: 40, padding: '6px 0' }}>
+      <span className="nm-el" style={{ width: 96, flex: 'none', fontSize: 13 }} title={u.department}>{u.department}</span>
+      <span role="img" aria-label={`${u.department}: ${said}`} style={{ flex: 1, minWidth: 0, display: 'flex', gap: 2, height: 10, borderRadius: 6, overflow: 'hidden', background: 'var(--fill)' }}>
+        {MIX.filter((m) => u[m.key] > 0).map((m) => <i key={m.key} style={{ flex: u[m.key], background: m.color, minWidth: 3 }} />)}
+      </span>
+      <span className="num mute" style={{ width: 112, flex: 'none', textAlign: 'left', fontSize: 12 }}>{MIX.map((m) => `${faDigits(u[m.key])}٪`).join(' · ')}</span>
+    </div>
   );
 }

@@ -51,6 +51,8 @@
   --error-contrast: #FFFFFF;
   --error-main-rgb: 217 74 74;
   --brand-gradient: linear-gradient(180deg,#3A47CD 0%,#3D5EBF 22%,#4276B0 44%,#4686A6 62%,#4E9B99 80%,#55B08C 100%);
+  /* Namadno card (black, same in both themes): ink with a soft sheen; logo in white */
+  --brand-card: radial-gradient(120% 90% at 90% 0%, rgb(58 71 205 / .28), transparent 55%), linear-gradient(140deg, #2A2A2D 0%, #121214 55%, #000000 100%);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -70,26 +72,41 @@
   --switch-off: rgb(var(--grey-500-rgb) / .48);
   --ring-track: rgb(var(--grey-500-rgb) / .24);
   --nav-active: rgb(var(--primary-main-rgb) / .08);
+  /* Namadno Luxe — Apple-grade neutrals: true black ink, #1D1D1F text, #F5F5F7 tiles; brand colors only as accents */
+  --ink: #000000;
+  --ink-2: #0B0B0C;
+  --mac-red: #FF5F57;
+  --mac-yellow: #FEBC2E;
+  --mac-green: #28C840;
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --radius-2xl: 28px;
 }
 
 .th-light {
-  --sheet-bg: rgb(248 249 252 / .9);
+  --sheet-bg: rgb(245 245 247 / .9);
   color-scheme: light;
   --bg-default: #FFFFFF;
   --bg-paper: #FFFFFF;
-  --bg-neutral: var(--grey-200);
-  --bg-canvas: var(--grey-100);
-  --bg-aurora: radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .16), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .12), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .10), transparent 70%);
-  --text-primary: var(--grey-800);
-  --text-secondary: var(--grey-600);
-  --text-disabled: var(--grey-500);
-  --divider: rgb(var(--grey-500-rgb) / .20);
-  --action-hover: rgb(var(--grey-500-rgb) / .08);
-  --action-selected: rgb(var(--grey-500-rgb) / .16);
+  --bg-neutral: #F5F5F7;
+  --bg-canvas: #F5F5F7;
+  --bg-aurora: radial-gradient(1100px 600px at 75% -20%, rgb(var(--primary-main-rgb) / .06), transparent 62%);
+  --line: rgb(0 0 0 / .08);
+  --line-strong: rgb(0 0 0 / .14);
+  --text-mute2: #86868B;
+  --text-grad: linear-gradient(200deg, #3A47CD 0%, #3D6FB8 38%, #2F8AA8 64%, #2F9C74 100%);
+  --surface-1: #FFFFFF;
+  --surface-2: #F5F5F7;
+  --glow-primary: 0 18px 40px -16px rgb(var(--primary-main-rgb) / .45);
+  --text-primary: #1D1D1F;
+  --text-secondary: #6E6E73;
+  --text-disabled: #A1A1A6;
+  --divider: rgb(0 0 0 / .08);
+  --action-hover: rgb(0 0 0 / .04);
+  --action-selected: rgb(0 0 0 / .07);
   --glass-bg: rgb(255 255 255 / .78);
-  --card-bg: rgb(255 255 255 / .72);
-  --glass-border: rgb(255 255 255 / .60);
-  --glass-edge: rgb(var(--grey-500-rgb) / .12);
+  --card-bg: #FFFFFF;
+  --glass-border: rgb(0 0 0 / .06);
+  --glass-edge: rgb(0 0 0 / .08);
   --glass-highlight: inset 0 1px 0 rgb(255 255 255 / .80);
   --shadow-z1: 0 1px 2px 0 rgb(var(--grey-500-rgb) / .16);
   --shadow-z8: 0 8px 16px 0 rgb(var(--grey-500-rgb) / .16);
@@ -97,7 +114,7 @@
   --shadow-card: 0 0 2px 0 rgb(var(--grey-500-rgb) / .20), 0 12px 24px -4px rgb(var(--grey-500-rgb) / .12);
   --shadow-dropdown: 0 0 2px 0 rgb(var(--grey-500-rgb) / .24), -20px 20px 40px -4px rgb(var(--grey-500-rgb) / .24);
   --shadow-primary: 0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);
-  --shadow-glass: 0 0 0 1px var(--glass-edge), 0 12px 32px -8px rgb(var(--grey-500-rgb) / .20);
+  --shadow-glass: 0 0 0 .5px rgb(0 0 0 / .06), 0 2px 8px -2px rgb(0 0 0 / .06);
   --chart-1: var(--primary-main);
   --chart-2: var(--success-main);
   --chart-3: var(--secondary-main);
@@ -110,10 +127,10 @@
   --warning-text: var(--warning-dark);
   --error-text: var(--error-dark);
   --info-text: var(--info-dark);
-  --default-text: var(--grey-700);
+  --default-text: #424245;
   --seg-active: #FFFFFF;
-  --table-head: rgb(var(--grey-500-rgb) / .12);
-  --contained-default: var(--grey-800);
+  --table-head: rgb(0 0 0 / .035);
+  --contained-default: #1D1D1F;
   --contained-default-text: #FFFFFF;
   --step-pending: var(--grey-300);
   --step-pending-text: var(--grey-600);
@@ -121,19 +138,26 @@
 
 .th-dark {
   color-scheme: dark;
-  --bg-default: var(--grey-900);
-  --bg-paper: var(--grey-800);
-  --bg-neutral: rgb(var(--grey-500-rgb) / .12);
-  --bg-canvas: #10131F;
-  --bg-aurora: radial-gradient(900px 520px at 85% -10%, rgb(var(--primary-main-rgb) / .32), transparent 60%),radial-gradient(700px 420px at 0% 100%, rgb(var(--secondary-main-rgb) / .20), transparent 60%),radial-gradient(400px 400px at 60% 104%, rgb(var(--success-main-rgb) / .16), transparent 70%);
-  --text-primary: #FFFFFF;
-  --text-secondary: var(--grey-500);
-  --text-disabled: var(--grey-600);
-  --divider: rgb(var(--grey-500-rgb) / .20);
-  --action-hover: rgb(var(--grey-500-rgb) / .08);
-  --action-selected: rgb(var(--grey-500-rgb) / .16);
-  --glass-bg: rgb(31 36 51 / .72);
-  --card-bg: rgb(31 36 51 / .66);
+  --bg-default: #000000;
+  --bg-paper: #1C1C1E;
+  --bg-neutral: rgb(255 255 255 / .06);
+  --bg-canvas: var(--ink);
+  --bg-aurora: radial-gradient(1100px 600px at 75% -20%, rgb(var(--primary-main-rgb) / .14), transparent 62%);
+  --line: rgb(255 255 255 / .09);
+  --line-strong: rgb(255 255 255 / .15);
+  --text-mute2: #86868B;
+  --text-grad: linear-gradient(200deg, #B8BEFF 0%, #8FA6F0 30%, #7CC4DA 62%, #86DDB6 100%);
+  --surface-1: #161617;
+  --surface-2: #1D1D1F;
+  --glow-primary: 0 18px 48px -14px rgb(var(--primary-main-rgb) / .6);
+  --text-primary: #F5F5F7;
+  --text-secondary: #98989D;
+  --text-disabled: #636366;
+  --divider: rgb(255 255 255 / .1);
+  --action-hover: rgb(255 255 255 / .06);
+  --action-selected: rgb(255 255 255 / .1);
+  --glass-bg: rgb(30 30 32 / .72);
+  --card-bg: #1C1C1E;
   --glass-border: rgb(255 255 255 / .08);
   --glass-edge: rgb(255 255 255 / .06);
   --glass-highlight: inset 0 1px 0 rgb(255 255 255 / .06);
@@ -143,7 +167,7 @@
   --shadow-card: 0 0 2px 0 rgb(0 0 0 / .20), 0 12px 24px -4px rgb(0 0 0 / .12);
   --shadow-dropdown: 0 0 2px 0 rgb(0 0 0 / .24), -20px 20px 40px -4px rgb(0 0 0 / .24);
   --shadow-primary: 0 8px 16px 0 rgb(var(--primary-main-rgb) / .24);
-  --shadow-glass: 0 0 0 1px var(--glass-edge), 0 16px 40px -8px rgb(0 0 0 / .45);
+  --shadow-glass: 0 0 0 1px var(--glass-edge), 0 12px 32px -12px rgb(0 0 0 / .6);
   --chart-1: var(--primary-light);
   --chart-2: #7CCBA8;
   --chart-3: var(--secondary-light);
@@ -156,11 +180,11 @@
   --warning-text: var(--warning-light);
   --error-text: var(--error-light);
   --info-text: var(--info-light);
-  --default-text: var(--grey-400);
-  --seg-active: var(--grey-700);
-  --table-head: rgb(var(--grey-500-rgb) / .12);
-  --contained-default: #FFFFFF;
-  --contained-default-text: var(--grey-800);
+  --default-text: #AEAEB2;
+  --seg-active: #3A3A3C;
+  --table-head: rgb(255 255 255 / .04);
+  --contained-default: #F5F5F7;
+  --contained-default-text: #1D1D1F;
   --step-pending: rgb(var(--grey-500-rgb) / .24);
   --step-pending-text: var(--grey-400);
 }

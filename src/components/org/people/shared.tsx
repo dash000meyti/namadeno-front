@@ -1,10 +1,7 @@
 'use client';
-/** Small presentational helpers shared by the org-people screens (HR panel). */
-import { useEffect, useRef, useState } from 'react';
-import { Icon } from '@/components/ui/Icon';
-import { LOCK_META } from '@/lib/locks';
+/** Data helpers shared by the org panel screens: icon paths, status meta, number/date helpers, CSV, the milestone bar. UI comes from the Panel kit. */
 import { faDigits, money } from '@/lib/format';
-import type { Employee, LockType, MilestoneStep, RequestKind } from '@/types/domain';
+import type { Employee, MilestoneStep, RequestKind } from '@/types/domain';
 import { ApiRequestError } from '@/api/client';
 
 export const I = {
@@ -39,18 +36,7 @@ export const I = {
   wallet: 'M3 7h18v12H3zM3 7l2-3h12l2 3M15 12h3',
 };
 
-/** Avatar tone cycle used by the design tables. */
-export const AV: [string, string][] = [
-  ['var(--soft-primary)', 'var(--primary-text)'], ['var(--soft-success)', 'var(--success-text)'],
-  ['var(--soft-info)', 'var(--info-text)'], ['var(--soft-warning)', 'var(--warning-text)'],
-  ['var(--soft-default)', 'var(--default-text)'], ['var(--soft-primary)', 'var(--primary-text)'],
-  ['var(--soft-info)', 'var(--info-text)'], ['var(--soft-success)', 'var(--success-text)'],
-];
-/** Stable avatar tone for an id (so a person keeps the same color across screens). */
-export const avOf = (id: string) => AV[id.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
-
 export type ToneName = 'success' | 'warning' | 'error' | 'info' | 'primary' | 'default' | 'secondary';
-export const tone = (t: ToneName): [string, string] => [`var(--soft-${t})`, `var(--${t}-text)`];
 
 /** Employee status → design label/tone. */
 export const EMP_STATUS: Record<Employee['status'], { label: string; tone: ToneName }> = {
@@ -68,7 +54,8 @@ export const REQ_KIND: Record<RequestKind, { label: string; title: string; tone:
   profile_change: { label: 'تغییر اطلاعات', title: 'درخواست تغییر اطلاعات', tone: 'default' },
 };
 
-/** Fund/wallet colors used by the design charts. */
+
+/** Fund/wallet colors used by the charts. */
 export const KIND_COLOR: Record<string, string> = {
   rial: 'var(--chart-4)', gold: 'var(--warning-main)', fixed: 'var(--chart-3)', equity: 'var(--primary-main)', mixed: 'var(--success-main)', silver: 'var(--grey-500)',
 };
@@ -122,121 +109,11 @@ export const million = (n: number) => faDigits(String(Math.round(n / 1e5) / 10),
 
 export const errMsg = (e: unknown) => (e instanceof ApiRequestError || e instanceof Error ? e.message : 'خطا در ارتباط با سرور');
 
-export function Chip({ t, children, style }: { t: ToneName | [string, string]; children: React.ReactNode; style?: React.CSSProperties }) {
-  const [bg, fg] = Array.isArray(t) ? t : tone(t);
-  return <span className="lbl" style={{ height: 22, padding: '0 7px', fontSize: 11, background: bg, color: fg, ...style }}>{children}</span>;
-}
-
-export function LockChip({ type, long, style }: { type: LockType | 'none'; long?: boolean; style?: React.CSSProperties }) {
-  const m = LOCK_META[type];
-  const bg = type === 'none' ? 'var(--soft-default)' : m.bg;
-  const fg = type === 'none' ? 'var(--default-text)' : m.fg;
-  return (
-    <span className="lktype" style={{ background: bg, color: fg, ...style }}>
-      <Icon d={m.d} size={12} />{long ? m.label : m.short}
-    </span>
-  );
-}
-
 /** Milestone progress segments (released solid, pending outlined). */
 export function MsSeg({ steps, height = 6, width, label }: { steps: Pick<MilestoneStep, 'sharePct' | 'status' | 'id'>[]; height?: number; width?: number; label?: string }) {
   return (
     <div className="lkseg" role="img" aria-label={label} style={{ height, width, flex: width ? 'none' : undefined }}>
       {steps.map((s) => <span key={s.id} className={s.status === 'released' ? 'r' : s.status === 'pending_approval' ? 'p' : ''} style={{ flex: s.sharePct }} />)}
-    </div>
-  );
-}
-
-/** Free/locked bar with explicit percentage (design markup). */
-export function FreeLockBar({ free, locked, height = 6 }: { free: number; locked: number; height?: number }) {
-  const total = free + locked;
-  const freePct = total ? Math.round((free * 1000) / total) / 10 : 100;
-  return (
-    <div className="lkbar" role="img" aria-label={`آزاد ${money(free)} · قفل ${money(locked)}`} style={{ height }}>
-      {(free > 0 || !total) && <span className="f" style={{ width: locked > 0 ? `${freePct}%` : '100%' }} />}
-      {locked > 0 && <span className="l" style={{ flex: 1 }} />}
-    </div>
-  );
-}
-
-export function FreeLockLegend({ free, locked, size }: { free: number; locked: number; size?: number }) {
-  if (!locked) return <div className="lkleg" style={size ? { fontSize: size } : undefined}><span><span className="lkdot" style={size ? { width: 6, height: 6 } : undefined} />همه آزاد</span></div>;
-  return (
-    <div className="lkleg" style={size ? { fontSize: size, gap: 8 } : undefined}>
-      <span><span className="lkdot" style={size ? { width: 6, height: 6 } : undefined} />آزاد <b>{money(free)}</b></span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{!size && <Icon d={I.lock} size={12} />}قفل <b>{money(locked)}</b></span>
-    </div>
-  );
-}
-
-/** Popover menu anchored to its trigger; closes on outside click / Escape. */
-export function Popover({ trigger, children, open, onOpenChange, width = 200, align = 'start', up = false, style }: {
-  trigger: React.ReactNode; children: React.ReactNode; open: boolean; onOpenChange: (o: boolean) => void; width?: number | string; align?: 'start' | 'end'; up?: boolean; style?: React.CSSProperties;
-}) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onOpenChange(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onOpenChange(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
-  }, [open, onOpenChange]);
-  return (
-    <div ref={ref} style={{ position: 'relative', ...style }}>
-      {trigger}
-      {open && (
-        <div role="menu" className="glass" style={{ position: 'absolute', ...(up ? { bottom: 'calc(100% + 4px)' } : { top: 'calc(100% + 4px)' }), ...(align === 'start' ? { right: 0 } : { left: 0 }), zIndex: 25, width, boxSizing: 'border-box', borderRadius: 12, padding: 6, display: 'flex', flexDirection: 'column', gap: 2, boxShadow: 'var(--shadow-dropdown)', background: 'var(--bg-paper)' }}>
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function MenuItem({ onClick, children, on, danger, disabled }: { onClick: () => void; children: React.ReactNode; on?: boolean; danger?: boolean; disabled?: boolean }) {
-  return (
-    <button role="menuitem" disabled={disabled} onClick={onClick} className="trow" style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36, padding: '0 10px', borderRadius: 8, border: 0, background: on ? 'var(--nav-active)' : 'transparent', color: danger ? 'var(--error-text)' : on ? 'var(--primary-text)' : 'var(--text-primary)', fontFamily: 'inherit', fontSize: 13, fontWeight: on ? 700 : 500, textAlign: 'right', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1 }}>
-      <span style={{ flex: 1 }}>{children}</span>
-      {on && <Icon d={I.check} size={16} strokeWidth={2} />}
-    </button>
-  );
-}
-
-/** Select-like field (design `.fld` button + chevron) with a popover list. */
-export function SelectField<T extends string | number>({ value, options, onChange, label, invalid, width }: {
-  value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string; invalid?: boolean; width?: number | string;
-}) {
-  const [open, setOpen] = useState(false);
-  const cur = options.find((o) => o.value === value);
-  return (
-    <Popover open={open} onOpenChange={setOpen} width={width ?? '100%'} trigger={
-      <button type="button" className="fld" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((x) => !x)} style={{ width: '100%', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'right', borderColor: invalid ? 'var(--error-main)' : undefined }}>
-        <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cur?.label ?? '—'}</span>
-        <Icon d={I.chevD} size={16} style={{ color: 'var(--text-secondary)' }} />
-      </button>
-    }>
-      {options.map((o) => <MenuItem key={String(o.value)} on={o.value === value} onClick={() => { onChange(o.value); setOpen(false); }}>{o.label}</MenuItem>)}
-    </Popover>
-  );
-}
-
-/** Design dialog on the dim overlay (fixed so it covers the whole panel). */
-export function Dialog({ label, title, onClose, children, width }: { label: string; title: React.ReactNode; onClose: () => void; children: React.ReactNode; width?: number }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-  return (
-    <div className="dim" style={{ position: 'fixed', zIndex: 40 }} onClick={onClose}>
-      <div className="glass dlg" role="dialog" aria-modal="true" aria-label={label} onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-paper)', maxWidth: 'calc(100vw - 32px)', width }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <h6 style={{ margin: 0, fontSize: 18, fontWeight: 700, lineHeight: 1.4 }}>{title}</h6>
-          <button className="ibtn" aria-label="بستن" onClick={onClose} style={{ marginRight: 'auto', width: 32, height: 32 }}><Icon d={I.x} size={18} /></button>
-        </div>
-        {children}
-      </div>
     </div>
   );
 }

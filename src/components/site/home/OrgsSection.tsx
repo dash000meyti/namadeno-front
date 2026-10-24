@@ -6,11 +6,11 @@ import { routes } from '@/lib/routes';
 import { Section } from '../Section';
 
 export const ORG_FEATURES = [
-  'ارسال بسته به یک نفر، یک واحد یا همه کارکنان در چند دقیقه',
-  'سیاست قفل زمانی یا آزادسازی مرحله‌ای برای ماندگاری و قراردادهای پروژه‌ای',
-  'تعیین صندوق‌های مجاز، امکان برداشت نقدی و سقف وام کارکنان در قرارداد',
-  'اعتبار و وام کارکنان بدون ضمانت سازمان و بدون کسر از حقوق',
-  'گزارش لحظه‌ای بودجه، پذیرش بسته‌ها و درخواست‌ها',
+  'پرداخت پاداش به یک نفر، یک واحد یا همه‌ی همکاران در چند دقیقه',
+  'قفل زمانی یا آزادسازی مرحله‌ای برای ماندگاری و قراردادهای پروژه‌ای',
+  'صندوق‌های مجاز، امکان برداشت نقدی و سقف اعتبار همکاران، مطابق سیاست شما',
+  'اعتبار و وام همکاران بدون ضمانت سازمان و بدون کسر از حقوق',
+  'گزارش لحظه‌ای بودجه، پذیرش پاداش‌ها و درخواست‌ها',
 ];
 
 const BARS = [38, 52, 44, 70, 58, 86];
@@ -75,7 +75,7 @@ export function OrgsSection() {
             {ORG_FEATURES.map((f) => <li key={f}><Icon name="check" />{f}</li>)}
           </ul>
           <div className="s-actions" style={{ marginTop: 6 }}>
-            <Link href={`${routes.site.business}#demo`} className="btn lg contained c-primary">درخواست دمو</Link>
+            <Link href={`${routes.site.business}#demo`} className="btn lg contained c-primary">رزرو جلسه‌ی معرفی</Link>
             <Link href={routes.org.login} className="btn lg outlined c-primary"><Icon name="building" />ورود به پنل سازمان</Link>
           </div>
         </div>

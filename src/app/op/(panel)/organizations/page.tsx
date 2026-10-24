@@ -1,23 +1,29 @@
 'use client';
-/** Operator console — organizations & contracts (design: op-organizations): status filters, table, contract drawer. */
+/**
+ * Operator console — organizations & contracts. Kit list page: stats (status filters) → list card (status tabs, search,
+ * table, pager) → inspector with the organization's locked assets and the contract editor (save in the inspector footer).
+ */
 import { useMemo, useState } from 'react';
-import type { MouseEvent } from 'react';
 import Link from 'next/link';
-import type { LockType, Organization } from '@/types/domain';
+import type { Fund, LockType, Organization } from '@/types/domain';
 import { useOpFunds, useOpOrganizations, useOpProducts } from '@/api/op';
 import { useOrgContracts, type OrgContractExt } from '@/api/op-core-extra';
-import { PageHeading } from '@/components/panel/PanelShell';
+import {
+  Ava, BigNum, Card, Dialog, Empty, FreeLocked, Ident, Inspector, KeyStats, List, ListRow, PageHeading, Pill, SearchField, Section,
+  SkeletonRows, StatStrip, Table, TableFoot, Tabs, Tile, Toolbar, Who, usePaging, type Column, type Tone,
+} from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
-import { LockBar } from '@/components/ui/LockBar';
-import { ContractEditor, VersionList } from '@/components/op/core/ContractEditor';
-import { ICON, LOCK_COL, Modal, ModalTitle, ORG_STATUS, PRODUCT_META, PanelState, TILES, fb, orgProducts, pctFa, splitPct } from '@/components/op/core/ui';
-import { faDigits, jDate } from '@/lib/format';
-import { LOCK_META } from '@/lib/locks';
+import { LockBar, LockTypeChip } from '@/components/ui/LockBar';
+import { ContractEditor, VersionList, useContractDraft } from '@/components/op/core/ContractEditor';
+import { ICON, ORG_STATUS, PRODUCT_META, fb, orgProducts, pctFa, splitPct, type ProductKey } from '@/components/op/core/ui';
+import { enDigits, faDigits, jDate, money } from '@/lib/format';
 import { routes } from '@/lib/routes';
 
 type Filter = 'all' | Organization['status'];
-const ORDER: Filter[] = ['all', 'active', 'onboarding', 'suspended'];
-const GRID = 'minmax(0, 1fr) 76px 52px 100px 80px 72px 20px';
+const PAGE = 8;
+const ORG_TONE: Record<Organization['status'], Tone> = { active: 'success', onboarding: 'info', suspended: 'error' };
+const PROD_TONE: Record<ProductKey, Tone> = { card: 'primary', loan: 'info', bnpl: 'success' };
+const bn = (n: number) => `${fb(n)} میلیارد`;
 
 export default function OpOrganizationsPage() {
   const orgsQ = useOpOrganizations();
@@ -26,180 +32,155 @@ export default function OpOrganizationsPage() {
   const products = useOpProducts();
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
-  const [more, setMore] = useState(false);
   const [selId, setSelId] = useState<string | null>(null);
-  const [history, setHistory] = useState(false);
 
   const all = useMemo(() => orgsQ.data ?? [], [orgsQ.data]);
   const cx = contracts.data ?? {};
-  const counts = { active: 0, onboarding: 0, suspended: 0 } as Record<Organization['status'], number>;
-  all.forEach((o) => { counts[o.status] += 1; });
-  const filtered = all.filter((o) => (filter === 'all' || o.status === filter) && (!q.trim() || o.name.includes(q.trim()) || o.contractNo.toLowerCase().includes(q.trim().toLowerCase())));
-  const rows = more ? filtered : filtered.slice(0, 6);
-  const sel = all.find((o) => o.id === selId) ?? filtered[0] ?? all[0];
-  const selExt = sel ? cx[sel.id] : undefined;
+  const counts = useMemo(() => {
+    const c: Record<Organization['status'], number> = { active: 0, onboarding: 0, suspended: 0 };
+    all.forEach((o) => { c[o.status] += 1; });
+    return c;
+  }, [all]);
+  const needle = q.trim();
+  const filtered = useMemo(() => all.filter((o) => (filter === 'all' || o.status === filter)
+    && (!needle || o.name.includes(needle) || o.contractNo.toLowerCase().includes(enDigits(needle).toLowerCase()))), [all, filter, needle]);
+  const pg = usePaging(filtered, PAGE, `${filter}|${needle}`);
+  const sel = all.find((o) => o.id === selId);
   const monthsOptions = products.data?.find((p) => p.kind === 'loan')?.monthsOptions ?? [3, 6, 12, 18];
-  const pick = (f: Filter) => { setFilter(f); setMore(false); };
+  const covered = all.filter((o) => o.status === 'active').reduce((s, o) => s + o.employees, 0);
+  const toggle = (f: Organization['status']) => setFilter((cur) => (cur === f ? 'all' : f));
+  const clear = () => { setFilter('all'); setQ(''); };
 
-  const stats: { key: Organization['status']; title: string; d: string; bg: string; fg: string }[] = [
-    { key: 'active', title: 'قرارداد فعال', d: ICON.check, bg: 'var(--soft-success)', fg: 'var(--success-text)' },
-    { key: 'onboarding', title: 'در حال عقد', d: ICON.pen, bg: 'var(--soft-info)', fg: 'var(--info-text)' },
-    { key: 'suspended', title: 'معلق', d: ICON.pause, bg: 'var(--soft-error)', fg: 'var(--error-text)' },
+  const columns: Column<Organization>[] = [
+    { key: 'org', label: 'سازمان', width: 'minmax(0, 1.6fr)', render: (o) => <Ident lead={<Ava letter={o.logoLetter} id={o.id} sq />} title={o.name} sub={o.contractNo} subLtr /> },
+    { key: 'st', label: 'وضعیت', width: '100px', render: (o) => <Pill tone={ORG_TONE[o.status]} dot>{ORG_STATUS[o.status].label}</Pill> },
+    { key: 'emp', label: 'کارکنان', width: '72px', render: (o) => <span className="num">{faDigits(o.employees)}</span> },
+    {
+      key: 'aum', label: 'AUM / قفل', width: '150px', col: true, render: (o) => {
+        const e = cx[o.id];
+        if (!e || e.aum <= 0) return <span style={{ color: 'var(--text-disabled)' }}>—</span>;
+        const sp = splitPct(e.aum, e.locked);
+        return (
+          <>
+            <span className="num">{bn(e.aum)}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+              <span style={{ width: 56, flex: 'none' }}><LockBar free={sp.free} locked={e.locked} height={4} /></span>
+              <span className="sm">{pctFa(sp.lockedPct)} قفل</span>
+            </span>
+          </>
+        );
+      },
+    },
+    {
+      key: 'prod', label: 'محصولات', width: '96px', render: (o) => {
+        const prods = orgProducts(o);
+        if (!prods.length) return <span style={{ color: 'var(--text-disabled)' }}>—</span>;
+        return <span style={{ display: 'flex', gap: 4 }}>{prods.map((k) => <span key={k} role="img" title={PRODUCT_META[k].name} aria-label={PRODUCT_META[k].name}><Tile d={PRODUCT_META[k].d} tone={PROD_TONE[k]} size="sm" /></span>)}</span>;
+      },
+    },
+    { key: 'end', label: 'تمدید', width: '92px', render: (o) => <span className="num sm">{o.status === 'onboarding' ? '—' : jDate(o.contractEnd)}</span> },
   ];
 
   return (
-    <div style={{ flex: 1, minHeight: 0, margin: -24, display: 'flex', flexDirection: 'row' }}>
-      <div style={{ flex: 1, minWidth: 0, minHeight: 0, boxSizing: 'border-box', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto' }}>
-        <PageHeading title="سازمان‌ها و قراردادها" crumbs={[{ label: 'بهره‌بردار', href: routes.op.overview }, { label: 'عملیات' }, { label: 'سازمان‌ها' }]}>
-          <Link href={routes.op.orgNew} className="btnp" style={{ fontSize: 14 }}><Icon d={ICON.plus} size={18} strokeWidth={2} />افزودن سازمان</Link>
-        </PageHeading>
+    <>
+      <PageHeading title="سازمان‌ها و قراردادها" crumbs={[{ label: 'عملیات' }]} sub="قرارداد، محدودیت‌ها و دارایی کارکنان هر سازمان">
+        <Link href={routes.op.orgNew} className="nm-btn"><Icon d={ICON.plus} size={17} strokeWidth={2} />افزودن سازمان</Link>
+      </PageHeading>
 
-        <div style={{ height: 72, flex: 'none', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-          {stats.map((s) => {
-            const on = filter === s.key;
-            return (
-              <button key={s.key} type="button" className="card" aria-pressed={on} onClick={() => pick(on ? 'all' : s.key)} style={{ boxSizing: 'border-box', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'inherit', color: 'inherit', textAlign: 'right', cursor: 'pointer', outline: on ? '2px solid var(--primary-main)' : 'none', outlineOffset: -2 }}>
-                <span style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, color: s.fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={s.d} size={20} /></span>
-                <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, gap: 2 }}>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>{s.title}</span>
-                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}><span className="num" style={{ fontSize: 22 }}>{orgsQ.data ? faDigits(counts[s.key]) : '…'}</span><span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>سازمان</span></span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      <StatStrip loading={orgsQ.isLoading} items={[
+        { label: 'قرارداد فعال', value: faDigits(counts.active), unit: 'سازمان', note: `${money(covered)} کارمند تحت پوشش`, onClick: () => toggle('active'), active: filter === 'active' },
+        { label: 'در حال عقد', value: faDigits(counts.onboarding), unit: 'سازمان', note: 'در انتظار امضای نماینده', onClick: () => toggle('onboarding'), active: filter === 'onboarding' },
+        { label: 'معلق', value: faDigits(counts.suspended), unit: 'سازمان', note: 'ارسال بسته و تسهیلات متوقف است', onClick: () => toggle('suspended'), active: filter === 'suspended' },
+      ]} />
 
-        {orgsQ.isLoading ? <PanelState loading height={380} /> : orgsQ.isError ? <PanelState error={orgsQ.error} onRetry={() => orgsQ.refetch()} /> : (
-          <div className="card" style={{ flex: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ height: 56, flex: 'none', boxSizing: 'border-box', padding: '0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label htmlFor="org-search" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, height: 36, padding: '0 12px', borderRadius: 8, border: '1px solid var(--outline-border)', color: 'var(--text-secondary)', cursor: 'text' }}>
-                <Icon d={ICON.search} size={18} />
-                <input id="org-search" value={q} onChange={(e) => { setQ(e.target.value); setMore(false); }} placeholder="جستجوی نام سازمان یا کد قرارداد" style={{ flex: 1, minWidth: 0, height: 34, border: 0, background: 'transparent', color: 'var(--text-primary)', fontFamily: 'inherit', fontSize: 13, outline: 0 }} />
-                {q && <button type="button" className="ibtn" aria-label="پاک کردن جستجو" onClick={() => setQ('')} style={{ width: 24, height: 24 }}><Icon d={ICON.x} size={14} /></button>}
-              </label>
-              <button type="button" onClick={() => pick(ORDER[(ORDER.indexOf(filter) + 1) % ORDER.length])} aria-label="تغییر فیلتر وضعیت" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 36, padding: '0 10px 0 12px', borderRadius: 8, border: '1px solid var(--outline-border)', background: 'transparent', color: 'var(--text-primary)', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                وضعیت: {filter === 'all' ? 'همه' : ORG_STATUS[filter].label}<Icon d={ICON.chevD} size={16} style={{ color: 'var(--text-secondary)' }} />
-              </button>
-            </div>
-            <div style={{ height: 36, flex: 'none', display: 'grid', gridTemplateColumns: GRID, alignItems: 'center', padding: '0 12px', background: 'var(--table-head)', color: 'var(--grey-600)', fontSize: 12, fontWeight: 700 }}>
-              <span>سازمان</span><span>قرارداد</span><span>کارکنان</span><span>AUM / قفل</span><span>محصولات</span><span>تمدید</span><span />
-            </div>
-            {rows.map((o, i) => {
-              const on = sel?.id === o.id;
-              const st = ORG_STATUS[o.status];
-              const e = cx[o.id];
-              const sp = e ? splitPct(e.aum, e.locked) : null;
-              const prods = orgProducts(o);
-              const tile = TILES[all.indexOf(o) % 6] ?? TILES[i % 6];
-              return (
-                <div key={o.id} role="button" tabIndex={0} aria-pressed={on} onClick={() => setSelId(o.id)} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setSelId(o.id); } }} className="rowbtn" style={{ height: 56, flex: 'none', display: 'grid', gridTemplateColumns: GRID, alignItems: 'center', padding: '0 12px', borderBottom: '1px dashed var(--divider)', fontSize: 13, background: on ? 'var(--nav-active)' : 'transparent', boxShadow: on ? 'inset -3px 0 0 var(--primary-main)' : 'none' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                    <span style={{ width: 32, height: 32, borderRadius: 8, background: tile[0], color: tile[1], display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, flex: 'none' }}>{o.logoLetter}</span>
-                    <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
-                      <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
-                      <span className="num" dir="ltr" style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>{o.contractNo}</span>
-                    </span>
-                  </span>
-                  <span><span className="lbl" style={{ height: 22, padding: '0 6px', fontSize: 11, background: st.bg, color: st.fg }}>{st.label}</span></span>
-                  <span className="num" style={{ fontSize: 13, fontWeight: 400 }}>{faDigits(o.employees)}</span>
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                    <span className="num" style={{ fontSize: 13, fontWeight: 400, whiteSpace: 'nowrap' }}>{e && e.aum > 0 ? fb(e.aum) + ' میلیارد' : '—'}</span>
-                    {e && e.aum > 0 && sp && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 44, flex: 'none' }}><LockBar free={sp.free} locked={e.locked} height={4} /></span>
-                        <span style={{ fontSize: 10, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{pctFa(sp.lockedPct)} قفل</span>
-                      </span>
-                    )}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {prods.map((k) => {
-                      const p = PRODUCT_META[k];
-                      return <span key={k} title={p.name} aria-label={p.name} style={{ width: 24, height: 24, borderRadius: '50%', background: p.bg, color: p.fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={p.d} size={13} strokeWidth={1.8} /></span>;
-                    })}
-                    {!prods.length && <span style={{ fontSize: 12, color: 'var(--text-disabled)' }}>—</span>}
-                  </span>
-                  <span className="num" dir="ltr" style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-secondary)', textAlign: 'right' }}>{o.status === 'onboarding' ? '—' : jDate(o.contractEnd)}</span>
-                  <Link href={routes.op.organization(o.id)} aria-label={`صفحه ${o.name}`} onClick={(ev: MouseEvent) => ev.stopPropagation()} style={{ display: 'grid', placeItems: 'center', color: on ? 'var(--primary-text)' : 'var(--text-disabled)' }}><Icon d={ICON.chevL} size={16} /></Link>
-                </div>
-              );
-            })}
-            {!filtered.length && <div style={{ height: 72, display: 'grid', placeItems: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>{q ? 'سازمانی با این جستجو پیدا نشد' : 'سازمانی با این وضعیت نیست'}</div>}
-            <div style={{ height: 48, flex: 'none', boxSizing: 'border-box', padding: '0 12px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
-              <span>{filter === 'all' && !q ? `نمایش ${faDigits(rows.length)} از ${faDigits(all.length)} سازمان` : filter !== 'all' ? `${faDigits(filtered.length)} سازمان با وضعیت «${ORG_STATUS[filter].label}»` : `${faDigits(filtered.length)} سازمان پیدا شد`}</span>
-              {filtered.length > 6 && <button type="button" className="btnt" onClick={() => setMore((m) => !m)} style={{ marginRight: 'auto', height: 32 }}>{more ? 'نمایش کمتر' : `نمایش ${faDigits(filtered.length - 6)} سازمان دیگر`}</button>}
-            </div>
-          </div>
-        )}
-      </div>
+      <Card flush>
+        <Toolbar>
+          <Tabs label="وضعیت قرارداد" value={filter} onChange={setFilter} items={[
+            { key: 'all', label: 'همه', count: all.length },
+            { key: 'active', label: ORG_STATUS.active.label, count: counts.active },
+            { key: 'onboarding', label: ORG_STATUS.onboarding.label, count: counts.onboarding },
+            { key: 'suspended', label: ORG_STATUS.suspended.label, count: counts.suspended },
+          ]} />
+          <span className="grow" />
+          <SearchField id="org-search" value={q} onChange={setQ} placeholder="نام سازمان یا کد قرارداد" label="جستجوی سازمان" width={240} />
+        </Toolbar>
+        <Table
+          columns={columns} rows={pg.rows} rowKey={(o) => o.id} rowLabel={(o) => o.name}
+          onRowClick={(o) => setSelId((s) => (s === o.id ? null : o.id))} selectedKey={selId}
+          loading={orgsQ.isLoading} error={orgsQ.isError ? orgsQ.error : undefined} onRetry={() => orgsQ.refetch()}
+          empty={<Empty icon={ICON.search} title={needle ? 'سازمانی با این جستجو پیدا نشد' : 'سازمانی با این وضعیت نیست'} action={(needle || filter !== 'all') && <button type="button" className="nm-btn sm ghost" onClick={clear}>پاک کردن فیلترها</button>} />}
+          minWidth={760}
+        />
+        <TableFoot shown={pg.rows.length} total={filtered.length} unit="سازمان" page={pg.page} pages={pg.pages} onPage={pg.setPage} />
+      </Card>
 
-      <aside className="glass" aria-label="قرارداد سازمان انتخاب‌شده" style={{ width: 380, flex: 'none', boxSizing: 'border-box', border: 0, borderRight: '1px solid var(--glass-edge)', boxShadow: 'var(--shadow-dropdown)', padding: 20, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
-        {!sel || !selExt || !fundsQ.data ? (
-          <div aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[40, 90, 220, 180].map((h, i) => <div key={i} style={{ height: h, borderRadius: 12, background: 'var(--bg-neutral)' }} />)}
-          </div>
-        ) : (
-          <ContractEditor
-            key={sel.id}
-            org={sel}
-            ext={selExt}
-            funds={fundsQ.data}
-            monthsOptions={monthsOptions}
-            onHistory={() => setHistory(true)}
-            header={(dirty) => <DrawerHeader org={sel} ext={selExt} dirty={dirty} tile={TILES[all.indexOf(sel) % 6] ?? TILES[0]} />}
-          />
-        )}
-      </aside>
-
-      {sel && selExt && (
-        <Modal open={history} onClose={() => setHistory(false)} label="تاریخچه نسخه‌های قرارداد" width={540} radius={24} padding={24}>
-          <ModalTitle title={`تاریخچه نسخه‌های قرارداد — ${sel.name}`} onClose={() => setHistory(false)} />
-          <VersionList ext={selExt} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><button type="button" className="btno" onClick={() => setHistory(false)}>بستن</button></div>
-        </Modal>
-      )}
-    </div>
+      {sel && <OrgInspector key={sel.id} org={sel} ext={cx[sel.id]} funds={fundsQ.data} monthsOptions={monthsOptions} onClose={() => setSelId(null)} />}
+    </>
   );
 }
 
-function DrawerHeader({ org, ext, dirty, tile }: { org: Organization; ext: OrgContractExt; dirty: boolean; tile: [string, string] }) {
-  const st = ORG_STATUS[org.status];
+/** Waits for the contract data, then shows the contract inspector. */
+function OrgInspector({ org, ext, funds, monthsOptions, onClose }: { org: Organization; ext?: OrgContractExt; funds?: Fund[]; monthsOptions: number[]; onClose: () => void }) {
+  if (!ext || !funds) {
+    return (
+      <Inspector open onClose={onClose} title="قرارداد سازمان" label={`قرارداد ${org.name}`} href={routes.op.organization(org.id)}>
+        <SkeletonRows n={6} />
+      </Inspector>
+    );
+  }
+  return <ContractInspector org={org} ext={ext} funds={funds} monthsOptions={monthsOptions} onClose={onClose} />;
+}
+
+function ContractInspector({ org, ext, funds, monthsOptions, onClose }: { org: Organization; ext: OrgContractExt; funds: Fund[]; monthsOptions: number[]; onClose: () => void }) {
+  const c = useContractDraft(org, ext);
+  const [history, setHistory] = useState(false);
   const sp = splitPct(ext.aum, ext.locked);
   const types = (Object.entries(ext.lockByType) as [LockType, number][]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ minHeight: 28, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 32, height: 32, borderRadius: 8, background: tile[0], color: tile[1], display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, flex: 'none' }}>{org.logoLetter}</span>
-          <h6 style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 16, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            <Link href={routes.op.organization(org.id)} style={{ color: 'inherit' }}>قرارداد — {org.name}</Link>
-          </h6>
-          <span className="num" dir="ltr" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{org.contractNo}</span>
-        </div>
-        <div style={{ minHeight: 24, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 10px', fontSize: 12, color: 'var(--text-secondary)' }}>
-          <span className="lbl" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
-          <span>تمدید: <span className="num" dir="ltr" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{org.status === 'onboarding' ? '—' : jDate(org.contractEnd)}</span></span>
-          <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--text-disabled)' }} />
-          <span>نسخه {faDigits(ext.version)}</span>
-          {dirty && <span className="lbl" style={{ height: 20, padding: '0 6px', fontSize: 11, background: 'var(--soft-warning)', color: 'var(--warning-text)' }}>ذخیره‌نشده</span>}
-        </div>
-      </div>
-      {ext.aum > 0 && (
-        <div style={{ boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, background: 'var(--bg-neutral)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>دارایی قفل‌شده کارکنان</span>
-            <span className="num" style={{ marginRight: 'auto', fontSize: 18 }}>{fb(ext.locked)}</span>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>میلیارد · {pctFa(sp.lockedPct)} از AUM</span>
-          </div>
-          <LockBar free={sp.free} locked={ext.locked} />
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 10px', fontSize: 11, color: 'var(--text-secondary)' }}>
-            {types.map(([k, v]) => (
-              <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                <span style={{ width: 6, height: 6, borderRadius: 2, background: `var(${LOCK_COL[k]})` }} />{LOCK_META[k].short} <span className="num" style={{ color: 'var(--text-primary)' }}>{fb(v)}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      <Inspector
+        open onClose={onClose} title="قرارداد سازمان" label={`قرارداد ${org.name}`} href={routes.op.organization(org.id)}
+        actions={<button type="button" className="nm-ib" aria-label="تاریخچه نسخه‌های قرارداد" title="تاریخچه نسخه‌ها" onClick={() => setHistory(true)}><Icon d={ICON.history} size={18} /></button>}
+        footer={(
+          <>
+            {c.dirty && <button type="button" className="nm-btn ghost" onClick={c.reset} disabled={c.saving}>لغو تغییرات</button>}
+            <button type="button" className="nm-btn" onClick={c.save} disabled={c.saving || !c.dirty}>{c.saving ? 'در حال ذخیره…' : 'ذخیره تغییرات'}</button>
+          </>
+        )}
+      >
+        <Who
+          lead={<Ava letter={org.logoLetter} id={org.id} sq size="lg" />}
+          title={org.name}
+          sub={<><span className="ltr">{org.contractNo}</span> · تمدید <span className="num">{org.status === 'onboarding' ? '—' : jDate(org.contractEnd)}</span></>}
+          pills={<><Pill tone={ORG_TONE[org.status]} dot>{ORG_STATUS[org.status].label}</Pill><Pill>نسخه {faDigits(ext.version)}</Pill>{c.dirty && <Pill tone="warning">ذخیره‌نشده</Pill>}</>}
+        />
+        <KeyStats items={[['کارکنان', faDigits(org.employees)], ['AUM', ext.aum > 0 ? bn(ext.aum) : '—'], ['قفل‌شده', ext.aum > 0 ? pctFa(sp.lockedPct) : '—']]} />
+
+        {ext.aum > 0 && (
+          <Section title="دارایی قفل‌شده کارکنان" action={<BigNum value={fb(ext.locked)} unit="میلیارد" />}>
+            <FreeLocked free={sp.free} locked={ext.locked} fmt={bn} />
+            {types.length > 0 && (
+              <List>
+                {types.map(([k, v]) => (
+                  <ListRow key={k}
+                    lead={<span style={{ width: 84, flex: 'none' }}><LockTypeChip type={k} /></span>}
+                    title={<span className="num" style={{ fontWeight: 500 }}>{bn(v)}</span>}
+                    trail={<span className="num mute" style={{ fontSize: 12.5 }}>{pctFa(ext.locked ? (v / ext.locked) * 100 : 0)}</span>}
+                  />
+                ))}
+              </List>
+            )}
+          </Section>
+        )}
+
+        <ContractEditor c={c} funds={funds} monthsOptions={monthsOptions} />
+      </Inspector>
+
+      <Dialog open={history} onClose={() => setHistory(false)} width={540} title={`تاریخچه نسخه‌های قرارداد — ${org.name}`}
+        footer={<button type="button" className="nm-btn ghost" onClick={() => setHistory(false)}>بستن</button>}>
+        <VersionList ext={ext} />
+      </Dialog>
     </>
   );
 }

@@ -1,24 +1,53 @@
 'use client';
-/** /op/products — design: op-products.dc.html (credit product cards, org overrides, edit drawer). Supports ?edit=<productId>. */
-import Link from 'next/link';
+/**
+ * /op/products — kit page: stats → products table → inspector with the product's default parameters (save in its footer)
+ * → organization overrides table (rows open the organization contract). Supports ?edit=<productId> (opens the inspector).
+ */
+import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import { PageHeading } from '@/components/panel/PanelShell';
-import { Icon } from '@/components/ui/Icon';
-import { LockTypeChip } from '@/components/ui/LockBar';
-import { Skeleton, ErrorState } from '@/components/app/Screen';
-import { useToast } from '@/components/ui/Toast';
 import { useOpOrganizations, useOpProducts } from '@/api/op';
 import { useUpdateProductX, type OpProduct, type ProductMeta } from '@/api/op-system-extra';
 import type { Organization } from '@/types/domain';
-import { routes } from '@/lib/routes';
+import {
+  Ava, Card, Chips, Empty, Ident, Inspector, KeyStats, Note, NumberInput, PageHeading, Pill, SettingRow, SettingsGroup, StatStrip,
+  Switch, Table, TableFoot, Tile, Who, usePaging, type Column, type Tone,
+} from '@/components/panel/kit';
+import { Icon } from '@/components/ui/Icon';
+import { LockTypeChip } from '@/components/ui/LockBar';
+import { useToast } from '@/components/ui/Toast';
+import { bn, errMsg } from '@/components/op/system/fmt';
+import { IC, type ToneKey } from '@/components/op/system/ui';
+import { PRODUCT_STATUS, PRODUCT_UI, orgsWith, paramChips } from '@/components/op/system/products';
 import { faDigits, jDate, money } from '@/lib/format';
-import { errMsg } from '@/components/op/system/fmt';
-import { BoxNum, CardHead, Chip, Drawer, FormError, IC, Lbl, Sw, TILE_TONES, TONES } from '@/components/op/system/ui';
-import { PRODUCT_STATUS, PRODUCT_UI, orgsWith, paramRows } from '@/components/op/system/products';
+import { routes } from '@/lib/routes';
+
+/** Legacy tone key → kit tone. */
+const kt = (t: ToneKey): Tone => (t === 'default' ? 'neutral' : t);
+const HEAD = { title: 'محصولات اعتباری', crumbs: [{ label: 'محصول' }], sub: 'پارامترهای پیش‌فرض برای سازمان‌های جدید اعمال می‌شود؛ هر قرارداد می‌تواند آن‌ها را محدودتر کند' };
 
 export default function OpProductsPage() {
-  return <Suspense fallback={<Skeleton h={48} />}><ProductsInner /></Suspense>;
+  return (
+    <Suspense fallback={<><PageHeading {...HEAD} /><StatStrip loading items={[]} /></>}>
+      <ProductsInner />
+    </Suspense>
+  );
+}
+
+interface OverrideRow { org: Organization; product: OpProduct; param: string; def: string; val: string; date: string }
+
+/** Organization contracts that narrow a product default (loan: LTV cap, longest repayment term). */
+function overrideRows(products: OpProduct[], orgs?: Organization[]): OverrideRow[] {
+  const out: OverrideRow[] = [];
+  const loan = products.find((p) => p.kind === 'loan');
+  if (!loan || !orgs) return out;
+  const maxM = Math.max(...loan.monthsOptions);
+  for (const o of orgs) {
+    if (!o.settings.loanEnabled) continue;
+    if (o.settings.loanMaxPct < loan.maxPctOfAssets) out.push({ org: o, product: loan, param: 'سقف LTV', def: `${faDigits(loan.maxPctOfAssets)}٪`, val: `${faDigits(o.settings.loanMaxPct)}٪`, date: o.contractStart });
+    const om = Math.max(...o.settings.loanMonthsOptions);
+    if (om < maxM) out.push({ org: o, product: loan, param: 'حداکثر مدت بازپرداخت', def: `${faDigits(maxM)} ماه`, val: `${faDigits(om)} ماه`, date: o.contractStart });
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 function ProductsInner() {
@@ -26,161 +55,128 @@ function ProductsInner() {
   const router = useRouter();
   const products = useOpProducts();
   const orgs = useOpOrganizations();
-  const list = (products.data ?? []) as OpProduct[];
+  const list = useMemo(() => (products.data ?? []) as OpProduct[], [products.data]);
+  const overrides = useMemo(() => overrideRows(list, orgs.data), [list, orgs.data]);
+  const ov = usePaging(overrides, 8);
   const editId = sp.get('edit');
-  const editing = list.find((p) => p.id === editId) ?? null;
-  const openEdit = (id: string | null) => router.replace(id ? `${routes.op.products}?edit=${id}` : routes.op.products);
+  const sel = list.find((p) => p.id === editId) ?? null;
+  const open = (id: string | null) => router.replace(id ? `${routes.op.products}?edit=${id}` : routes.op.products, { scroll: false });
+
+  const orgList = orgs.data ?? [];
+  const usingOrgs = new Set(list.flatMap((p) => orgsWith(p.kind, orgList).map((o) => o.id))).size;
+  const contracted = orgList.filter((o) => o.status !== 'suspended').length;
+  const contracts = list.reduce((s, p) => s + p.activeContracts, 0);
+  const ovOrgs = new Set(overrides.map((r) => r.org.id)).size;
+
+  const cols: Column<OpProduct>[] = [
+    { key: 'p', label: 'محصول', width: 'minmax(0, 1.4fr)', render: (p) => <Ident lead={<Tile d={PRODUCT_UI[p.kind].d} tone={kt(PRODUCT_UI[p.kind].tone)} />} title={p.name} sub={PRODUCT_UI[p.kind].type} /> },
+    { key: 'params', label: 'پارامترهای پیش‌فرض', width: 'minmax(0, 1.3fr)', render: (p) => <span className="el mute">{paramChips(p).join(' · ')}</span> },
+    { key: 'lock', label: 'قفل', width: '92px', render: (p) => <LockTypeChip type={PRODUCT_UI[p.kind].lock} /> },
+    { key: 'orgs', label: 'سازمان‌ها', width: '76px', render: (p) => <span className="num">{orgs.data ? faDigits(orgsWith(p.kind, orgs.data).length) : '—'}</span> },
+    { key: 'users', label: 'قرارداد فعال', width: '92px', render: (p) => <span className="num">{money(p.activeContracts)}</span> },
+    { key: 'st', label: 'وضعیت', width: '88px', render: (p) => <Pill tone={kt(PRODUCT_STATUS[p.status].tone)} dot>{PRODUCT_STATUS[p.status].label}</Pill> },
+  ];
+  const ovCols: Column<OverrideRow>[] = [
+    { key: 'org', label: 'سازمان', width: 'minmax(0, 1.4fr)', render: (r) => <Ident lead={<Ava letter={r.org.logoLetter} id={r.org.id} sq />} title={r.org.name} /> },
+    { key: 'prod', label: 'محصول', width: '104px', render: (r) => <Pill tone={kt(PRODUCT_UI[r.product.kind].tone)}>{PRODUCT_UI[r.product.kind].short}</Pill> },
+    { key: 'param', label: 'پارامتر', width: 'minmax(0, 1fr)', render: (r) => <span className="el mute">{r.param}</span> },
+    { key: 'def', label: 'پیش‌فرض', width: '92px', render: (r) => <span className="num mute">{r.def}</span> },
+    { key: 'val', label: 'مقدار اختصاصی', width: '104px', render: (r) => <span className="num" style={{ fontWeight: 600 }}>{r.val}</span> },
+    { key: 'date', label: 'از تاریخ', width: '92px', render: (r) => <span className="num sm">{jDate(r.date)}</span> },
+  ];
 
   return (
     <>
-      <PageHeading title="محصولات اعتباری" crumbs={[{ label: 'بهره‌بردار', href: routes.op.overview }, { label: 'محصول', href: routes.op.funds }, { label: 'محصولات اعتباری' }]}>
-        <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <span className="lbl" style={{ height: 22, padding: '0 8px', fontSize: 11, background: 'var(--contained-default)', color: 'var(--contained-default-text)', borderRadius: 6, position: 'relative' }}>
-            به‌زودی<span style={{ position: 'absolute', left: -5, top: 7, width: 8, height: 8, background: 'var(--contained-default)', transform: 'rotate(45deg)' }} />
-          </span>
-          <button type="button" className="btnp" disabled title="به‌زودی" aria-disabled="true" style={{ opacity: 0.5, cursor: 'not-allowed', fontSize: 14 }}><Icon d={IC.plus} size={18} strokeWidth={2} />افزودن محصول</button>
-        </span>
+      <PageHeading {...HEAD}>
+        <Pill>به‌زودی</Pill>
+        <button type="button" className="nm-btn" disabled title="به‌زودی" aria-disabled="true"><Icon d={IC.plus} size={17} strokeWidth={2} />افزودن محصول</button>
       </PageHeading>
 
-      {products.isLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 24 }}>{[0, 1, 2].map((i) => <Skeleton key={i} h={268} />)}</div>
-      ) : products.isError ? (
-        <ErrorState message={errMsg(products.error)} onRetry={() => products.refetch()} />
-      ) : (
-        <div style={{ flex: 'none', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 24 }}>
-          {list.map((p) => <ProductCard key={p.id} p={p} orgs={orgs.data} onEdit={() => openEdit(p.id)} />)}
-        </div>
+      {!products.isError && (
+        <StatStrip loading={products.isLoading || orgs.isLoading} items={[
+          { label: 'محصولات فعال', value: faDigits(list.filter((p) => p.status === 'active').length), unit: 'محصول', note: `از ${faDigits(list.length)} محصول اعتباری` },
+          { label: 'سازمان‌های استفاده‌کننده', value: faDigits(usingOrgs), unit: 'سازمان', note: `از ${faDigits(contracted)} سازمان طرف قرارداد` },
+          { label: 'قراردادهای فعال', value: money(contracts), unit: 'قرارداد', note: 'در همه‌ی محصولات' },
+          { label: 'پارامترهای اختصاصی', value: faDigits(overrides.length), unit: 'مورد', note: `در ${faDigits(ovOrgs)} سازمان` },
+        ]} />
       )}
 
-      <OverridesTable products={list} orgs={orgs.data} loading={orgs.isLoading} />
+      <Card flush title="محصولات" count={list.length || undefined}>
+        <Table
+          columns={cols} rows={list} rowKey={(p) => p.id} rowLabel={(p) => p.name}
+          onRowClick={(p) => open(sel?.id === p.id ? null : p.id)} selectedKey={sel?.id ?? null}
+          loading={products.isLoading} error={products.isError ? products.error : undefined} onRetry={() => products.refetch()}
+          empty={<Empty icon={IC.card} title="محصولی تعریف نشده است" />}
+          minWidth={820}
+        />
+      </Card>
 
-      {editing && <EditDrawer key={editing.id} p={editing} orgs={orgs.data} onClose={() => openEdit(null)} />}
+      <Card flush title="پارامترهای اختصاصی سازمان‌ها" count={overrides.length || undefined} sub="هر پارامتر اختصاصی فقط می‌تواند پیش‌فرض را محدودتر کند">
+        <Table
+          columns={ovCols} rows={ov.rows} rowKey={(r) => r.org.id + r.param}
+          rowHref={(r) => routes.op.organization(r.org.id)} rowLabel={(r) => `مشاهده قرارداد سازمان ${r.org.name}`} chevron
+          loading={orgs.isLoading || products.isLoading} error={orgs.isError ? orgs.error : undefined} onRetry={() => orgs.refetch()}
+          empty={<Empty icon={IC.building} title="همهٔ سازمان‌ها از پارامترهای پیش‌فرض استفاده می‌کنند" />}
+          minWidth={820}
+        />
+        {overrides.length > 0 && <TableFoot shown={ov.rows.length} total={overrides.length} unit="پارامتر" page={ov.page} pages={ov.pages} onPage={ov.setPage} />}
+      </Card>
+
+      {sel && <ProductInspector key={sel.id} p={sel} orgs={orgs.data} onClose={() => open(null)} />}
     </>
   );
 }
 
-function ProductCard({ p, orgs, onEdit }: { p: OpProduct; orgs?: Organization[]; onEdit: () => void }) {
-  const ui = PRODUCT_UI[p.kind];
-  const [bg, fg] = TONES[ui.tone];
-  const st = PRODUCT_STATUS[p.status];
-  return (
-    <div className="card" style={{ boxSizing: 'border-box', minHeight: 268, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-      <div style={{ height: 36, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ width: 36, height: 36, borderRadius: 10, background: bg, color: fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={ui.d} size={20} /></span>
-        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}><span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span><span style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ui.type}</span></span>
-        <Lbl tone={st.tone}>{st.label}</Lbl>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {paramRows(p).map(([k, v]) => (
-          <div key={k} style={{ height: 30, display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, borderBottom: '1px dashed var(--divider)' }}><span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{k}</span><span className="num" style={{ marginRight: 'auto', fontWeight: 500, whiteSpace: 'nowrap' }}>{v}</span></div>
-        ))}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 10, background: 'var(--bg-neutral)' }}>
-        <LockTypeChip type={ui.lock} />
-        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, fontSize: 11, lineHeight: 1.5 }}>
-          <span style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ui.lockRule(p)}</span>
-          <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ui.lockRelease}{p.meta?.autoLock === false ? ' · قفل خودکار خاموش' : ''}</span>
-        </span>
-      </div>
-      <div style={{ marginTop: 'auto', height: 32, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: 4, fontSize: 12, color: 'var(--text-secondary)' }}><span className="num" style={{ fontSize: 16, color: 'var(--text-primary)' }}>{orgs ? faDigits(orgsWith(p.kind, orgs).length) : '—'}</span>سازمان فعال</span>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>· {money(p.activeContracts)} کاربر</span>
-        <button type="button" className="btnt" onClick={onEdit} style={{ marginRight: 'auto', height: 32, padding: '0 10px' }}><Icon d={IC.pen} size={16} />ویرایش</button>
-      </div>
-    </div>
-  );
-}
-
-interface OverrideRow { org: Organization; product: OpProduct; param: string; def: string; val: string; date: string }
-const OCOLS = 'minmax(0, 1fr) 132px 168px 120px 128px 88px 32px';
-function OverridesTable({ products, orgs, loading }: { products: OpProduct[]; orgs?: Organization[]; loading: boolean }) {
-  const rows = useMemo<OverrideRow[]>(() => {
-    const out: OverrideRow[] = [];
-    const loan = products.find((p) => p.kind === 'loan');
-    if (!loan || !orgs) return out;
-    const maxM = Math.max(...loan.monthsOptions);
-    for (const o of orgs) {
-      if (!o.settings.loanEnabled) continue;
-      if (o.settings.loanMaxPct < loan.maxPctOfAssets) out.push({ org: o, product: loan, param: 'سقف LTV', def: `${faDigits(loan.maxPctOfAssets)}٪`, val: `${faDigits(o.settings.loanMaxPct)}٪`, date: o.contractStart });
-      const om = Math.max(...o.settings.loanMonthsOptions);
-      if (om < maxM) out.push({ org: o, product: loan, param: 'حداکثر مدت بازپرداخت', def: `${faDigits(maxM)} ماه`, val: `${faDigits(om)} ماه`, date: o.contractStart });
-    }
-    return out.sort((a, b) => b.date.localeCompare(a.date));
-  }, [products, orgs]);
-  return (
-    <div className="card" style={{ flex: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <CardHead title="پارامترهای اختصاصی سازمان‌ها" badge={<Lbl>{faDigits(rows.length)} override</Lbl>}>
-        <span style={{ marginRight: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>هر override فقط می‌تواند پیش‌فرض را محدودتر کند</span>
-      </CardHead>
-      <div style={{ overflowX: 'auto' }}>
-        <div style={{ minWidth: 860 }}>
-          <div style={{ height: 36, display: 'grid', gridTemplateColumns: OCOLS, alignItems: 'center', padding: '0 20px', background: 'var(--table-head)', color: 'var(--grey-600)', fontSize: 12, fontWeight: 700 }}>
-            <span>سازمان</span><span>محصول</span><span>پارامتر</span><span>پیش‌فرض</span><span>مقدار اختصاصی</span><span>از تاریخ</span><span />
-          </div>
-          {loading && <div style={{ padding: 20 }}><Skeleton h={48} /></div>}
-          {!loading && !rows.length && <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>همهٔ سازمان‌ها از پارامترهای پیش‌فرض استفاده می‌کنند</div>}
-          {rows.map((r, i) => {
-            const [bg, fg] = TONES[TILE_TONES[i % 5]];
-            const [pbg, pfg] = TONES[PRODUCT_UI[r.product.kind].tone];
-            return (
-              <div key={r.org.id + r.param} style={{ height: 48, display: 'grid', gridTemplateColumns: OCOLS, alignItems: 'center', padding: '0 20px', borderBottom: '1px dashed var(--divider)', fontSize: 13 }}>
-                <Link href={routes.op.organization(r.org.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, color: 'inherit', textDecoration: 'none' }}>
-                  <span style={{ width: 28, height: 28, borderRadius: 8, background: bg, color: fg, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, flex: 'none' }}>{r.org.logoLetter}</span>
-                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.org.name}</span>
-                </Link>
-                <span><span className="lbl" style={{ height: 22, padding: '0 6px', fontSize: 11, background: pbg, color: pfg }}>{PRODUCT_UI[r.product.kind].short}</span></span>
-                <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{r.param}</span>
-                <span className="num" style={{ color: 'var(--text-secondary)' }}>{r.def}</span>
-                <span className="num" style={{ fontWeight: 500 }}>{r.val}</span>
-                <span className="num" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{jDate(r.date)}</span>
-                <span style={{ display: 'grid', placeItems: 'center' }}><Link href={routes.op.organization(r.org.id)} className="ibtn" aria-label="مشاهده قرارداد سازمان" style={{ width: 28, height: 28 }}><Icon d={IC.chevL} size={18} /></Link></span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 type FieldKey = 'maxPctOfAssets' | 'rateMax' | keyof ProductMeta;
-const FIELDS: Record<OpProduct['kind'], { key: FieldKey; label: string; suffix: string; decimals?: boolean; min: number; max: number }[]> = {
+interface FieldDef { key: FieldKey; label: string; suffix: string; w: number; decimals?: boolean; min: number; max: number }
+const FIELDS: Record<OpProduct['kind'], FieldDef[]> = {
   card_credit: [
-    { key: 'maxPctOfAssets', label: 'سقف نسبت به دارایی آزاد', suffix: '٪', min: 1, max: 100 },
-    { key: 'settleDays', label: 'مهلت تسویه', suffix: 'روز', min: 1, max: 90 },
-    { key: 'latePenaltyPct', label: 'نرخ جریمهٔ تأخیر', suffix: '٪ ماهانه', decimals: true, min: 0, max: 10 },
-    { key: 'perPersonCap', label: 'حداکثر سقف هر نفر', suffix: 'تومان', min: 1_000_000, max: 10_000_000_000 },
-    { key: 'minScore', label: 'حداقل امتیاز اعتباری', suffix: 'امتیاز', min: 300, max: 900 },
+    { key: 'maxPctOfAssets', label: 'سقف نسبت به دارایی آزاد', suffix: '٪', w: 52, min: 1, max: 100 },
+    { key: 'settleDays', label: 'مهلت تسویه', suffix: 'روز', w: 52, min: 1, max: 90 },
+    { key: 'latePenaltyPct', label: 'نرخ جریمهٔ تأخیر', suffix: '٪ ماهانه', w: 52, decimals: true, min: 0, max: 10 },
+    { key: 'perPersonCap', label: 'حداکثر سقف هر نفر', suffix: 'تومان', w: 108, min: 1_000_000, max: 10_000_000_000 },
+    { key: 'minScore', label: 'حداقل امتیاز اعتباری', suffix: 'امتیاز', w: 56, min: 300, max: 900 },
   ],
   loan: [
-    { key: 'maxPctOfAssets', label: 'سقف وام نسبت به دارایی آزاد', suffix: '٪', min: 1, max: 100 },
-    { key: 'rateMax', label: 'نرخ مؤثر سالانه', suffix: '٪', decimals: true, min: 0, max: 60 },
-    { key: 'minScore', label: 'حداقل امتیاز اعتباری', suffix: 'امتیاز', min: 300, max: 900 },
-    { key: 'liquidateAfter', label: 'نقد کردن وثیقه پس از', suffix: 'قسط معوق', min: 1, max: 12 },
+    { key: 'maxPctOfAssets', label: 'سقف وام نسبت به دارایی آزاد', suffix: '٪', w: 52, min: 1, max: 100 },
+    { key: 'rateMax', label: 'نرخ مؤثر سالانه', suffix: '٪', w: 52, decimals: true, min: 0, max: 60 },
+    { key: 'minScore', label: 'حداقل امتیاز اعتباری', suffix: 'امتیاز', w: 56, min: 300, max: 900 },
+    { key: 'liquidateAfter', label: 'نقد کردن وثیقه پس از', suffix: 'قسط معوق', w: 44, min: 1, max: 12 },
   ],
   installment: [
-    { key: 'lockRatioPct', label: 'نسبت قفل اقساطی به مبلغ خرید', suffix: '٪', min: 1, max: 100 },
-    { key: 'feePct', label: 'کارمزد خرید', suffix: '٪', decimals: true, min: 0, max: 20 },
-    { key: 'maxPurchase', label: 'حداکثر مبلغ هر خرید', suffix: 'تومان', min: 1_000_000, max: 10_000_000_000 },
-    { key: 'codeValidityHours', label: 'اعتبار کد خرید', suffix: 'ساعت', min: 1, max: 720 },
+    { key: 'lockRatioPct', label: 'نسبت قفل اقساطی به مبلغ خرید', suffix: '٪', w: 52, min: 1, max: 100 },
+    { key: 'feePct', label: 'کارمزد خرید', suffix: '٪', w: 52, decimals: true, min: 0, max: 20 },
+    { key: 'maxPurchase', label: 'حداکثر مبلغ هر خرید', suffix: 'تومان', w: 108, min: 1_000_000, max: 10_000_000_000 },
+    { key: 'codeValidityHours', label: 'اعتبار کد خرید', suffix: 'ساعت', w: 52, min: 1, max: 720 },
   ],
 };
 
-function EditDrawer({ p, orgs, onClose }: { p: OpProduct; orgs?: Organization[]; onClose: () => void }) {
+/** Default parameters of one product (same fields, ranges and payload as before; saved from the inspector footer). */
+function ProductInspector({ p, orgs, onClose }: { p: OpProduct; orgs?: Organization[]; onClose: () => void }) {
   const toast = useToast();
   const update = useUpdateProductX();
   const ui = PRODUCT_UI[p.kind];
-  const [bg, fg] = TONES[ui.tone];
+  const st = PRODUCT_STATUS[p.status];
   const fields = FIELDS[p.kind];
-  const initVals = () => Object.fromEntries(fields.map((f) => [f.key, Number(f.key === 'maxPctOfAssets' || f.key === 'rateMax' ? p[f.key] : (p.meta?.[f.key as keyof ProductMeta] ?? 0))])) as Record<string, number>;
-  const [vals, setVals] = useState<Record<string, number>>(initVals);
-  const [months, setMonths] = useState<number[]>(p.monthsOptions);
-  const [active, setActive] = useState(p.status === 'active');
-  const [autoLock, setAutoLock] = useState(p.meta?.autoLock !== false);
+  const init = useMemo(() => ({
+    vals: Object.fromEntries(fields.map((f) => [f.key, Number(f.key === 'maxPctOfAssets' || f.key === 'rateMax' ? p[f.key] : (p.meta?.[f.key as keyof ProductMeta] ?? 0))])) as Record<string, number>,
+    months: p.monthsOptions,
+    active: p.status === 'active',
+    autoLock: p.meta?.autoLock !== false,
+  }), [p, fields]);
+  const [vals, setVals] = useState<Record<string, number>>(init.vals);
+  const [months, setMonths] = useState<number[]>(init.months);
+  const [active, setActive] = useState(init.active);
+  const [autoLock, setAutoLock] = useState(init.autoLock);
   const [err, setErr] = useState('');
-  useEffect(() => { setErr(''); }, [vals, months]);
   const orgCount = orgs ? orgsWith(p.kind, orgs).length : 0;
-  const invalid = (f: (typeof fields)[number]) => !(vals[f.key] >= f.min && vals[f.key] <= f.max);
+  const invalid = (f: FieldDef) => !(vals[f.key] >= f.min && vals[f.key] <= f.max);
+  const sameMonths = [...months].sort((a, b) => a - b).join() === [...init.months].sort((a, b) => a - b).join();
+  const dirty = fields.some((f) => !Object.is(vals[f.key], init.vals[f.key])) || !sameMonths || active !== init.active || autoLock !== init.autoLock;
+
+  const setVal = (k: string, n: number) => { setVals((v) => ({ ...v, [k]: n })); setErr(''); };
+  const toggleMonth = (m: number) => { setMonths((x) => (x.includes(m) ? x.filter((y) => y !== m) : [...x, m])); setErr(''); };
+  const reset = () => { setVals(init.vals); setMonths(init.months); setActive(init.active); setAutoLock(init.autoLock); setErr(''); };
 
   const save = () => {
     const bad = fields.find(invalid);
@@ -200,46 +196,43 @@ function EditDrawer({ p, orgs, onClose }: { p: OpProduct; orgs?: Organization[];
   };
 
   return (
-    <Drawer open onClose={onClose} label={`ویرایش ${p.name}`}>
-      <div style={{ minHeight: 36, display: 'flex', alignItems: 'center', gap: 12, flex: 'none' }}>
-        <span style={{ width: 36, height: 36, borderRadius: 10, background: bg, color: fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={ui.d} size={20} /></span>
-        <span style={{ flex: 1, display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}><h6 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>ویرایش — {p.name}</h6><span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>پارامترهای پیش‌فرض برای سازمان‌های جدید</span></span>
-        <button type="button" className="ibtn" aria-label="بستن" onClick={onClose} style={{ width: 32, height: 32 }}><Icon d={IC.x} size={18} /></button>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {fields.map((f) => (
-          <div key={f.key} className="fg"><label className="fl" htmlFor={'pf-' + f.key}>{f.label}</label>
-            <BoxNum id={'pf-' + f.key} value={vals[f.key]} onChange={(n) => setVals({ ...vals, [f.key]: n })} suffix={f.suffix} decimals={f.decimals} invalid={invalid(f)} />
-          </div>
-        ))}
-      </div>
-      {ui.monthChoices.length > 0 && (
-        <div className="fg"><span className="fl">{ui.monthsLabel}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            {ui.monthChoices.map((m) => {
-              const on = months.includes(m);
-              return <Chip key={m} dir="ltr" on={on} onClick={() => setMonths(on ? months.filter((x) => x !== m) : [...months, m])} style={{ height: 30, minWidth: 44 }}>{faDigits(m)}</Chip>;
-            })}
-          </div>
-        </div>
+    <Inspector
+      open onClose={onClose} title="پارامترهای محصول" label={`ویرایش ${p.name}`}
+      footer={(
+        <>
+          {dirty && <button type="button" className="nm-btn ghost" onClick={reset}>لغو تغییرات</button>}
+          <button type="button" className="nm-btn" onClick={save} disabled={update.isPending}>{update.isPending ? 'در حال ذخیره…' : 'ذخیره تغییرات'}</button>
+        </>
       )}
-      <div style={{ minHeight: 48, display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px dashed var(--divider)' }}>
-        <span style={{ flex: 1, display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}><span style={{ fontSize: 13, fontWeight: 500 }}>قفل خودکار هنگام تأیید · نوع «{ui.lock === 'installment' ? 'اقساطی' : 'وثیقه'}»</span><span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{ui.lockRule(p)}؛ {ui.lockRelease}</span></span>
-        <Sw on={autoLock} onClick={() => setAutoLock(!autoLock)} label="قفل خودکار وثیقه" />
-      </div>
-      <div style={{ minHeight: 48, display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px dashed var(--divider)' }}>
-        <span style={{ flex: 1, display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}><span style={{ fontSize: 13, fontWeight: 500 }}>محصول فعال</span><span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>غیرفعال‌سازی فقط روی درخواست‌های جدید اثر دارد</span></span>
-        <Sw on={active} onClick={() => setActive(!active)} label="محصول فعال" />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, background: 'var(--soft-info)', color: 'var(--info-text)', fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>
-        <Icon d={IC.info} size={18} style={{ flex: 'none', marginTop: 1 }} />
-        <span>تغییر پیش‌فرض روی {faDigits(orgCount)} سازمان فعال اثر ندارد؛ قراردادهای موجود مقادیر خود را نگه می‌دارند.</span>
-      </div>
-      <FormError>{err}</FormError>
-      <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
-        <button type="button" className="btnp" onClick={save} disabled={update.isPending} style={{ flex: 1, height: 40, boxShadow: 'var(--shadow-primary)', opacity: update.isPending ? 0.7 : 1 }}>{update.isPending ? 'در حال ذخیره…' : 'ذخیره تغییرات'}</button>
-        <button type="button" className="btno" onClick={onClose} style={{ height: 40 }}>انصراف</button>
-      </div>
-    </Drawer>
+    >
+      <Who lead={<Tile d={ui.d} tone={kt(ui.tone)} size="xl" />} title={p.name} sub={ui.type}
+        pills={<><Pill tone={kt(st.tone)} dot>{st.label}</Pill><LockTypeChip type={ui.lock} /></>} />
+      <KeyStats items={[['سازمان‌ها', orgs ? faDigits(orgCount) : '—'], ['قرارداد فعال', money(p.activeContracts)], ['مانده تسهیلات', `${bn(p.outstanding)} میلیارد`]]} />
+
+      <SettingsGroup title="پارامترهای پیش‌فرض">
+        {fields.map((f) => (
+          <SettingRow key={f.key} label={f.label} htmlFor={'pf-' + f.key}>
+            <NumberInput id={'pf-' + f.key} value={vals[f.key]} onChange={(n) => setVal(f.key, n)} suffix={f.suffix} width={f.w} decimals={f.decimals} invalid={invalid(f)} />
+          </SettingRow>
+        ))}
+        {ui.monthChoices.length > 0 && (
+          <SettingRow label={ui.monthsLabel} stack>
+            <Chips label={ui.monthsLabel} value={months} onChange={toggleMonth} options={ui.monthChoices.map((m) => ({ key: m, label: faDigits(m) }))} />
+          </SettingRow>
+        )}
+      </SettingsGroup>
+
+      <SettingsGroup title="قفل و وضعیت">
+        <SettingRow label={`قفل خودکار هنگام تأیید · نوع «${ui.lock === 'installment' ? 'اقساطی' : 'وثیقه'}»`} desc={`${ui.lockRule(p)}؛ ${ui.lockRelease}`}>
+          <Switch on={autoLock} onChange={setAutoLock} label="قفل خودکار وثیقه" />
+        </SettingRow>
+        <SettingRow label="محصول فعال" desc="غیرفعال‌سازی فقط روی درخواست‌های جدید اثر دارد">
+          <Switch on={active} onChange={setActive} label="محصول فعال" />
+        </SettingRow>
+      </SettingsGroup>
+
+      <Note tone="info">تغییر پیش‌فرض روی {faDigits(orgCount)} سازمان فعال اثر ندارد؛ قراردادهای موجود مقادیر خود را نگه می‌دارند.</Note>
+      {err && <Note tone="err">{err}</Note>}
+    </Inspector>
   );
 }

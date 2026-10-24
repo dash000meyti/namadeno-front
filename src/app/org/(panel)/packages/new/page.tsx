@@ -1,43 +1,52 @@
 'use client';
-/** Design: org-package-recipients.dc.html — wizard step 1: pick the recipients. */
+/**
+ * Send wizard, step 1 — pick the recipients. Kit wizard page: heading + steps → picker (mode tabs, unit, search,
+ * table with checkboxes, pager) beside the selection summary → sticky action bar.
+ */
 import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Icon } from '@/components/ui/Icon';
 import { useCreatePackage, useOrgEmployees, useOrgPackage, useUpdatePackage } from '@/api/org';
-import { routes } from '@/lib/routes';
-import { faDigits, jMonthYear, money } from '@/lib/format';
-import type { Employee } from '@/types/domain';
-import { now } from '@/lib/clock';
-import { AV, I, jParts, monthName, soft } from '@/components/org/packages/meta';
+import {
+  ActionBar, Ava, BigNum, Card, Empty, Ident, Legend, Note, Pill, SearchField, Select, Table, TableFoot, Tabs, Toolbar,
+  usePaging, type Column, type Tone,
+} from '@/components/panel/kit';
+import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 import { WizardHeader } from '@/components/org/packages/Stepper';
-import { CardError, Chk, Notice, Pager, errMsg, useFlash } from '@/components/org/packages/ui';
+import { I, jParts, monthName } from '@/components/org/packages/meta';
+import { errMsg } from '@/components/org/packages/ui';
+import { routes } from '@/lib/routes';
+import { enDigits, faDigits, jMonthYear, money } from '@/lib/format';
+import { now } from '@/lib/clock';
+import type { Employee } from '@/types/domain';
 
-const GRID = '36px minmax(0, 1fr) 84px 104px 84px 92px';
 const PAGE = 8;
 const UNIT_COLORS = ['--chart-1', '--chart-2', '--chart-3', '--warning-main', '--chart-4', '--chart-5', '--primary-light', '--grey-500'];
-const STATUS: Record<Employee['status'], { s: string; tone: 'success' | 'warning' | 'error' }> = {
-  active: { s: 'فعال', tone: 'success' },
-  invited: { s: 'در انتظار', tone: 'warning' },
-  inactive: { s: 'تعلیق', tone: 'error' },
+const STATUS: Record<Employee['status'], [string, Tone]> = {
+  active: ['فعال', 'success'],
+  invited: ['در انتظار', 'warning'],
+  inactive: ['تعلیق', 'error'],
 };
 type Mode = 'all' | 'unit' | 'manual';
+const MODES: { key: Mode; label: string }[] = [{ key: 'all', label: 'همه کارکنان' }, { key: 'unit', label: 'واحد' }, { key: 'manual', label: 'انتخاب دستی' }];
+const CHECK = 'M5 12.5l4.5 4.5L19 7';
+const MINUS = 'M6 12h12';
 
 function RecipientsStep() {
   const router = useRouter();
   const sp = useSearchParams();
   const draftId = sp.get('draft') ?? '';
-  const { data: emps, isLoading, isError, refetch } = useOrgEmployees();
+  const { data: emps, isLoading, isError, error, refetch } = useOrgEmployees();
   const { data: draft, isLoading: draftLoading } = useOrgPackage(draftId);
   const create = useCreatePackage();
   const update = useUpdatePackage();
-  const { flash, toast } = useFlash();
+  const toast = useToast();
 
   const [mode, setMode] = useState<Mode>('all');
   const [dept, setDept] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [q, setQ] = useState('');
-  const [page, setPage] = useState(0);
   const [inited, setInited] = useState(false);
   const [err, setErr] = useState('');
 
@@ -65,15 +74,16 @@ function RecipientsStep() {
   const pickDept = (d: string) => { setDept(d); setSelected(new Set(active.filter((e) => e.department === d).map((e) => e.id))); };
 
   const text = q.trim();
-  const visible = list.filter((e) => !text || e.fullName.includes(text) || e.employeeCode.includes(text) || e.department.includes(text));
+  const code = enDigits(text);
+  const visible = list.filter((e) => !text || e.fullName.includes(text) || e.employeeCode.includes(code) || e.department.includes(text));
+  const pg = usePaging(visible, PAGE, text);
   const visibleActive = visible.filter((e) => e.status === 'active');
-  const pageRows = visible.slice(page * PAGE, page * PAGE + PAGE);
   const nSel = visibleActive.filter((e) => selected.has(e.id)).length;
   const allChecked = visibleActive.length > 0 && nSel === visibleActive.length;
   const someChecked = nSel > 0 && !allChecked;
 
   const toggle = (e: Employee) => {
-    if (e.status !== 'active') { flash(`${e.fullName} در وضعیت «${STATUS[e.status].s}» است و قابل انتخاب نیست`, 'error'); return; }
+    if (e.status !== 'active') { toast(`${e.fullName} در وضعیت «${STATUS[e.status][0]}» است و قابل انتخاب نیست`, 'error'); return; }
     const n = new Set(selected);
     if (n.has(e.id)) n.delete(e.id); else n.add(e.id);
     setSelected(n); setMode('manual'); setErr('');
@@ -94,7 +104,7 @@ function RecipientsStep() {
   const next = () => {
     if (!chosen.length) { setErr('حداقل یک کارمند فعال را انتخاب کنید.'); return; }
     const recipientIds = chosen.map((e) => e.id);
-    const onError = (e: unknown) => flash(errMsg(e), 'error');
+    const onError = (e: unknown) => toast(errMsg(e), 'error');
     if (draftId && draft) {
       update.mutate({ id: draftId, recipientIds }, { onSuccess: (p) => router.push(routes.org.newSettings(p.id)), onError });
     } else {
@@ -106,97 +116,73 @@ function RecipientsStep() {
     }
   };
 
+  const columns: Column<Employee>[] = [
+    {
+      key: 'sel', width: '18px',
+      label: (
+        <button type="button" className="nm-tsel" role="checkbox" aria-checked={allChecked ? 'true' : someChecked ? 'mixed' : 'false'} aria-label="انتخاب همه" onClick={toggleAll}>
+          {(allChecked || someChecked) && <Icon d={allChecked ? CHECK : MINUS} size={12} strokeWidth={3} />}
+        </button>
+      ),
+      render: (e) => {
+        const on = selected.has(e.id) && e.status === 'active';
+        return <button type="button" className="nm-tsel" role="checkbox" aria-checked={on} aria-label={`انتخاب ${e.fullName}`} onClick={() => toggle(e)}>{on && <Icon d={CHECK} size={12} strokeWidth={3} />}</button>;
+      },
+    },
+    { key: 'who', label: 'کارمند', width: 'minmax(0, 1.4fr)', render: (e) => <Ident lead={<Ava letter={e.avatarLetter} id={e.id} />} title={e.fullName} sub={<span className="num">{faDigits(e.employeeCode)}</span>} /> },
+    { key: 'dept', label: 'واحد', width: 'minmax(0, 0.8fr)', render: (e) => <span className="el mute">{e.department}</span> },
+    { key: 'pf', label: 'دارایی کل', width: '120px', render: (e) => <span className="num">{money(e.portfolioValue)}</span> },
+    { key: 'st', label: 'وضعیت', width: '88px', render: (e) => <Pill tone={STATUS[e.status][1]} dot>{STATUS[e.status][0]}</Pill> },
+    { key: 'last', label: 'آخرین بسته', width: '96px', render: (e) => <span className="num sm">{e.lastPackageAt ? jMonthYear(e.lastPackageAt) : '—'}</span> },
+  ];
+
   return (
     <>
-      <WizardHeader step={1} crumb="انتخاب گیرندگان" draftId={draft ? draftId : undefined} />
+      <WizardHeader step={1} draftId={draft ? draftId : undefined} />
 
       {locked && (
-        <Notice tone="warning" d={I.warn}>این بسته قبلاً ارسال شده و قابل ویرایش نیست. <Link href={routes.org.package(draftId)} style={{ fontWeight: 700 }}>مشاهده بسته</Link></Notice>
+        <Note tone="warn" action={<Link href={routes.org.package(draftId)} className="nm-btn sm ghost">مشاهده بسته</Link>}>این بسته قبلاً ارسال شده و قابل ویرایش نیست.</Note>
       )}
 
-      <div style={{ flex: '1 0 auto', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-        {/* Summary (right) */}
-        <div className="card" style={{ width: 300, flex: 'none', boxSizing: 'border-box', padding: 20, display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 0 }}>
-          <h6 style={{ margin: 0, fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>گیرندگان بسته</h6>
-          <div style={{ boxSizing: 'border-box', padding: 14, borderRadius: 12, background: 'var(--soft-primary)', display: 'flex', flexDirection: 'column', gap: 4, lineHeight: 1.2 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>انتخاب‌شده</span>
-            <span style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}><span className="num" style={{ fontSize: 28 }}>{faDigits(chosen.length)}</span><span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>نفر</span></span>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{countNote}</span>
+      <Card title="گیرندگان بسته" sub="کارکنان در وضعیت «تعلیق» یا «در انتظار فعال‌سازی» به‌صورت خودکار از فهرست خارج می‌شوند.">
+        <div className="nm-grid c2" style={{ alignItems: 'center' }}>
+          <div className="nm-col" style={{ gap: 6 }}>
+            <BigNum value={faDigits(chosen.length)} unit="نفر انتخاب‌شده" />
+            <span className="mute" style={{ fontSize: 12.5 }}>{countNote}</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {byUnit.map((u, i) => (
-              <div key={u.label} style={{ height: 34, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px dashed var(--divider)', fontSize: 12 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: `var(${UNIT_COLORS[i % UNIT_COLORS.length]})`, flex: 'none' }} />
-                <span style={{ flex: 1, color: 'var(--text-secondary)' }}>{u.label}</span>
-                <span className="num" style={{ fontWeight: 500 }}>{faDigits(u.count)}</span>
-              </div>
-            ))}
-            {!byUnit.length && <span style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '6px 0' }}>هنوز کسی انتخاب نشده است.</span>}
-          </div>
-          <Notice tone="info">کارکنان در وضعیت «تعلیق» یا «در انتظار فعال‌سازی» به‌صورت خودکار از فهرست خارج می‌شوند.</Notice>
-          {err && <Notice tone="error" d={I.warn}>{err}</Notice>}
-          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button className="btn" onClick={next} disabled={busy || locked || !inited} style={{ height: 40, background: 'var(--primary-main)', color: 'var(--primary-contrast)', boxShadow: 'var(--shadow-primary)', opacity: busy || locked ? 0.7 : 1 }}>
-              {busy ? 'در حال ذخیره…' : 'مرحله بعد: تنظیمات بسته'}<Icon d={I.chevL} size={18} strokeWidth={2} />
-            </button>
-            <Link href={routes.org.packages} className="btn" style={{ height: 40, border: '1px solid var(--outline-border)', background: 'transparent', color: 'var(--text-primary)', textDecoration: 'none' }}>انصراف</Link>
-          </div>
+          {byUnit.length
+            ? <Legend items={byUnit.map((u, i) => ({ label: u.label, value: faDigits(u.count), color: `var(${UNIT_COLORS[i % UNIT_COLORS.length]})` }))} />
+            : <span className="mute" style={{ fontSize: 12.5 }}>هنوز کسی انتخاب نشده است.</span>}
         </div>
+      </Card>
 
-        {/* Picker (left, wide) */}
-        <div className="card" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ minHeight: 60, flex: 'none', boxSizing: 'border-box', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--divider)', flexWrap: 'wrap' }}>
-            {([['all', 'همه کارکنان'], ['unit', 'واحد'], ['manual', 'انتخاب دستی']] as const).map(([k, label]) => {
-              const on = mode === k;
-              return (
-                <button key={k} aria-pressed={on} onClick={() => pickMode(k)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 14px', borderRadius: 999, border: `1px solid ${on ? 'transparent' : 'var(--outline-border)'}`, background: on ? 'var(--soft-primary)' : 'transparent', color: on ? 'var(--primary-text)' : 'var(--text-primary)', fontFamily: 'inherit', fontSize: 13, fontWeight: on ? 700 : 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  {on && <Icon d={I.check} size={14} strokeWidth={2.5} />}{label}
-                </button>
-              );
-            })}
-            {mode === 'unit' && (
-              <span className="fld" style={{ height: 36, padding: '0 10px', width: 150 }}>
-                <select value={dept} onChange={(e) => pickDept(e.target.value)} aria-label="انتخاب واحد" style={{ fontSize: 13 }}>
-                  {depts.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </span>
-            )}
-            <label style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 8, height: 40, width: 240, boxSizing: 'border-box', padding: '0 12px', borderRadius: 8, border: '1px solid var(--outline-border)', background: 'var(--card-bg)', color: 'var(--text-secondary)' }}>
-              <Icon d={I.search} size={18} />
-              <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="جستجوی نام یا کد پرسنلی…" aria-label="جستجوی کارمند" style={{ flex: 1, minWidth: 0, border: 0, outline: 0, background: 'transparent', fontFamily: 'inherit', fontSize: 13, color: 'var(--text-primary)' }} />
-            </label>
-          </div>
-          <div className="th" style={{ height: 36, flex: 'none', display: 'grid', gridTemplateColumns: GRID, alignItems: 'center', gap: 8, padding: '0 12px' }}>
-            <button aria-label="انتخاب همه" aria-pressed={allChecked} onClick={toggleAll} style={{ border: 0, background: 'transparent', padding: 0, display: 'grid', placeItems: 'center', cursor: 'pointer' }}><Chk on={allChecked} some={someChecked} /></button>
-            <span className="cell">کارمند</span><span className="cell">واحد</span><span className="cell">دارایی کل</span><span className="cell">وضعیت</span><span className="cell">آخرین بسته</span>
-          </div>
-          {isLoading && [0, 1, 2, 3, 4].map((i) => <div key={i} style={{ height: 46, borderBottom: '1px dashed var(--divider)', opacity: 0.5 }} />)}
-          {isError && <div style={{ padding: 16 }}><CardError onRetry={() => refetch()} /></div>}
-          {!isLoading && !pageRows.length && !isError && <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>کارمندی پیدا نشد</div>}
-          {pageRows.map((e) => {
-            const on = selected.has(e.id) && e.status === 'active';
-            const sd = STATUS[e.status];
-            const st = soft(sd.tone);
-            const av = AV[list.indexOf(e) % AV.length];
-            return (
-              <div key={e.id} style={{ height: 46, flex: 'none', display: 'grid', gridTemplateColumns: GRID, alignItems: 'center', gap: 8, padding: '0 12px', borderBottom: '1px dashed var(--divider)', fontSize: 13, background: on ? 'var(--nav-active)' : 'transparent', opacity: e.status === 'active' ? 1 : 0.7 }}>
-                <button aria-label={`انتخاب ${e.fullName}`} aria-pressed={on} onClick={() => toggle(e)} style={{ border: 0, background: 'transparent', padding: 0, display: 'grid', placeItems: 'center', cursor: e.status === 'active' ? 'pointer' : 'not-allowed', height: 36 }}><Chk on={on} /></button>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <span style={{ width: 28, height: 28, borderRadius: '50%', background: av[0], color: av[1], display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, flex: 'none' }}>{e.avatarLetter}</span>
-                  <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}><span className="cell" style={{ fontWeight: 600 }}>{e.fullName}</span><span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 400 }}>{faDigits(e.employeeCode)}</span></span>
-                </span>
-                <span className="cell" style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{e.department}</span>
-                <span className="num cell" style={{ fontWeight: 400 }}>{money(e.portfolioValue)}</span>
-                <span><span className="lbl" style={{ height: 22, padding: '0 6px', fontSize: 11, background: st.bg, color: st.fg }}>{sd.s}</span></span>
-                <span className="num cell" style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 400 }}>{e.lastPackageAt ? jMonthYear(e.lastPackageAt) : '—'}</span>
-              </div>
-            );
-          })}
-          <div style={{ flex: 1 }} />
-          <Pager page={page} pageSize={PAGE} total={visible.length} onPage={setPage} />
-        </div>
-      </div>
-      {toast}
+      <Card flush>
+        <Toolbar>
+          <Tabs label="نحوه انتخاب گیرندگان" value={mode} onChange={pickMode} items={MODES} />
+          <span className="grow" />
+          {mode === 'unit' && (
+            <Select label="انتخاب واحد" prefix="واحد" value={dept} onChange={pickDept} align="end"
+              options={depts.map((d) => ({ key: d, label: d, count: active.filter((e) => e.department === d).length }))} />
+          )}
+          <SearchField value={q} onChange={setQ} placeholder="جستجوی نام یا کد پرسنلی…" label="جستجوی کارمند" width={240} />
+        </Toolbar>
+        <Table
+          columns={columns} rows={pg.rows} rowKey={(e) => e.id} rowLabel={(e) => e.fullName} dimRow={(e) => e.status !== 'active'}
+          loading={isLoading} error={isError ? error : undefined} onRetry={() => refetch()}
+          empty={<Empty icon={I.search} title="کارمندی پیدا نشد" />} minWidth={720}
+        />
+        <TableFoot shown={pg.rows.length} total={visible.length} unit="کارمند" page={pg.page} pages={pg.pages} onPage={pg.setPage} />
+      </Card>
+
+      <ActionBar actions={(
+        <button type="button" className="nm-btn" onClick={next} disabled={busy || locked || !inited}>
+          {busy ? 'در حال ذخیره…' : 'مرحله بعد: تنظیمات بسته'}<Icon d={I.chevL} size={16} strokeWidth={2} />
+        </button>
+      )}>
+        {err
+          ? <span className="nm-help err" role="alert">{err}</span>
+          : <span><b className="num" style={{ color: 'var(--text-primary)' }}>{faDigits(chosen.length)}</b> نفر انتخاب شده</span>}
+      </ActionBar>
     </>
   );
 }

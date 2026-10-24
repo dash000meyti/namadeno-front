@@ -1,13 +1,17 @@
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { Motif } from '@/components/ui/Motif';
 
-/** Landing/inner-page section wrapper: optional eyebrow, title and lead above the content. */
+/** Landing/inner-page section wrapper: optional eyebrow, two-tone title (title + muted second line) and lead. */
 export function Section({
-  id, eyebrow, title, lead, center, tight, className, headExtra, children, labelledBy,
+  id, eyebrow, title, mute, lead, center, tight, lined, className, headExtra, children, labelledBy,
 }: {
   id?: string;
   eyebrow?: string;
   title?: React.ReactNode;
+  /** Muted second line of the title (Namadno Luxe two-tone heading). */
+  mute?: React.ReactNode;
+  lined?: boolean;
   lead?: React.ReactNode;
   center?: boolean;
   tight?: boolean;
@@ -18,12 +22,12 @@ export function Section({
 }) {
   const hid = labelledBy ?? (id ? `${id}-title` : undefined);
   return (
-    <section id={id} aria-labelledby={title ? hid : undefined} className={'s-sec' + (tight ? ' tight' : '') + (className ? ' ' + className : '')}>
+    <section id={id} aria-labelledby={title ? hid : undefined} className={'s-sec' + (tight ? ' tight' : '') + (lined ? ' lined' : '') + (className ? ' ' + className : '')}>
       <div className="s-wrap">
         {(eyebrow || title || lead) && (
           <div className={'s-sec-head' + (center ? ' center' : '')}>
             {eyebrow && <span className="s-eyebrow"><span className="dot" />{eyebrow}</span>}
-            {title && <h2 id={hid} className="s-h2">{title}</h2>}
+            {title && <h2 id={hid} className="s-h2">{title}{mute && <><br /><span className="s-mute2">{mute}</span></>}</h2>}
             {lead && <p className="s-lead">{lead}</p>}
             {headExtra}
           </div>
@@ -36,11 +40,12 @@ export function Section({
 
 export interface Crumb { label: string; href?: string }
 
-/** Hero block of an inner page (breadcrumbs + h1 + lead). */
-export function PageHero({ crumbs = [], eyebrow, title, lead, children }: { crumbs?: Crumb[]; eyebrow?: string; title: React.ReactNode; lead?: React.ReactNode; children?: React.ReactNode }) {
+/** Hero block of an inner page (breadcrumbs + eyebrow + two-tone h1 + lead) over the guilloché motif. */
+export function PageHero({ crumbs = [], eyebrow, title, mute, lead, children }: { crumbs?: Crumb[]; eyebrow?: string; title: React.ReactNode; mute?: React.ReactNode; lead?: React.ReactNode; children?: React.ReactNode }) {
   const all: Crumb[] = [{ label: 'خانه', href: '/' }, ...crumbs];
   return (
     <header className="s-phero">
+      <Motif variant="grid" />
       <div className="s-wrap">
         <div className="s-phero-in">
           <nav aria-label="مسیر صفحه" className="s-crumbs">
@@ -52,7 +57,7 @@ export function PageHero({ crumbs = [], eyebrow, title, lead, children }: { crum
             ))}
           </nav>
           {eyebrow && <span className="s-eyebrow"><span className="dot" />{eyebrow}</span>}
-          <h1 className="s-h1 page">{title}</h1>
+          <h1 className="s-h1 page">{title}{mute && <><br /><span className="s-grad">{mute}</span></>}</h1>
           {lead && <p className="s-lead">{lead}</p>}
           {children}
         </div>

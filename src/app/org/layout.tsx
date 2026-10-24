@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import '@/styles/org.css';
 
 export const metadata: Metadata = { title: { default: 'پنل سازمانی', template: '%s · پنل سازمانی نمادنو' } };
 

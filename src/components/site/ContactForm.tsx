@@ -38,7 +38,7 @@ function validate(v: Values, variant: Variant): Partial<Record<Field, string>> {
   if (v.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) e.email = 'نشانی ایمیل معتبر نیست.';
   if (variant === 'demo') {
     if (v.company.trim().length < 2) e.company = 'نام سازمان الزامی است.';
-    if (!v.employees) e.employees = 'تعداد کارکنان را انتخاب کنید.';
+    if (!v.employees) e.employees = 'تعداد همکاران را انتخاب کنید.';
   } else {
     if (!v.topic) e.topic = 'موضوع پیام را انتخاب کنید.';
     if (v.message.trim().length < 10) e.message = 'پیام باید دست‌کم ۱۰ نویسه باشد.';
@@ -76,7 +76,7 @@ export function ContactForm({ variant = 'contact', initialTopic = '' }: { varian
     }
     const topicLabel = CONTACT_TOPICS.find((t) => t.v === v.topic)?.label;
     const lines = variant === 'demo'
-      ? ['درخواست دمو', `تعداد کارکنان: ${v.employees}`, v.email.trim() && `ایمیل: ${v.email.trim()}`, v.message.trim()]
+      ? ['درخواست جلسه‌ی معرفی', `تعداد همکاران: ${v.employees}`, v.email.trim() && `ایمیل: ${v.email.trim()}`, v.message.trim()]
       : [`موضوع: ${topicLabel}`, v.email.trim() && `ایمیل: ${v.email.trim()}`, v.message.trim()];
     m.mutate(
       { name: v.name.trim(), phone: cleanPhone(v.phone), company: v.company.trim() || undefined, message: lines.filter(Boolean).join('\n') },
@@ -98,7 +98,7 @@ export function ContactForm({ variant = 'contact', initialTopic = '' }: { varian
     return (
       <div className="s-done" role="status">
         <span className="s-done-ic"><Icon name="check" /></span>
-        <h3 className="s-h3">{variant === 'demo' ? 'درخواست دمو ثبت شد' : 'پیام شما ثبت شد'}</h3>
+        <h3 className="s-h3">{variant === 'demo' ? 'درخواست جلسه‌ی معرفی ثبت شد' : 'پیام شما ثبت شد'}</h3>
         <p style={{ fontSize: 14, lineHeight: 2, color: 'var(--text-secondary)', maxWidth: 420 }}>
           {variant === 'demo'
             ? 'کارشناسان فروش سازمانی تا دو روز کاری آینده برای هماهنگی جلسه با شما تماس می‌گیرند.'
@@ -127,7 +127,7 @@ export function ContactForm({ variant = 'contact', initialTopic = '' }: { varian
   );
 
   return (
-    <form className="s-form" onSubmit={submit} noValidate aria-label={variant === 'demo' ? 'فرم درخواست دمو' : 'فرم تماس'}>
+    <form className="s-form" onSubmit={submit} noValidate aria-label={variant === 'demo' ? 'فرم رزرو جلسه‌ی معرفی' : 'فرم تماس'}>
       {variant === 'demo' && (
         <div className="s-form-row">
           <div className="s-fieldset">
@@ -136,7 +136,7 @@ export function ContactForm({ variant = 'contact', initialTopic = '' }: { varian
           </div>
           <div className="s-fieldset">
             <div className={'tf' + (show('employees') ? ' err' : '')}>
-              <label className="fl" htmlFor={id('employees')}>تعداد کارکنان *</label>
+              <label className="fl" htmlFor={id('employees')}>تعداد همکاران *</label>
               <select {...fieldProps('employees')}>
                 <option value="">انتخاب کنید</option>
                 {EMPLOYEE_RANGES.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -191,7 +191,7 @@ export function ContactForm({ variant = 'contact', initialTopic = '' }: { varian
       )}
       <div className="s-row" style={{ flexWrap: 'wrap', gap: 12 }}>
         <button type="submit" className="btn lg contained c-primary" disabled={m.isPending} aria-busy={m.isPending}>
-          {m.isPending ? 'در حال ارسال…' : variant === 'demo' ? 'ثبت درخواست دمو' : 'ارسال پیام'}
+          {m.isPending ? 'در حال ارسال…' : variant === 'demo' ? 'رزرو جلسه‌ی معرفی' : 'ارسال پیام'}
           {!m.isPending && <Icon name="send" />}
         </button>
         <span className="cap">با ارسال فرم، <Link href={routes.site.privacy}>سیاست حریم خصوصی</Link> را می‌پذیرید.</span>

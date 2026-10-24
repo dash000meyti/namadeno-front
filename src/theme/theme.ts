@@ -18,11 +18,11 @@ export function createNamadnoTheme(mode: 'light' | 'dark') {
       error: palette.error,
       grey: palette.grey,
       background: dark
-        ? { default: palette.grey[900], paper: palette.grey[800] }
+        ? { default: palette.ink.default, paper: palette.ink.paper }
         : { default: '#FFFFFF', paper: '#FFFFFF' },
       text: dark
-        ? { primary: '#FFFFFF', secondary: palette.grey[500], disabled: palette.grey[600] }
-        : { primary: palette.grey[800], secondary: palette.grey[600], disabled: palette.grey[500] },
+        ? { primary: '#F5F5F7', secondary: '#98989D', disabled: '#636366' }
+        : { primary: '#1D1D1F', secondary: '#6E6E73', disabled: '#A1A1A6' },
       divider: 'rgba(143,151,170,0.2)',
     },
     shape: { borderRadius: 8 },

@@ -5,7 +5,7 @@ import { colorModeScript } from '@/theme/ColorModeProvider';
 
 export const metadata: Metadata = {
   title: { default: 'نمادنو', template: '%s · نمادنو' },
-  description: 'نمادنو — دارایی‌های سازمانی شما در صندوق‌های بورسی؛ کیف پول ریالی، صندوق طلا، درآمد ثابت، اعتبار، وام و کارت.',
+  description: 'نمادنو — ارزشی که می‌ماند. پس‌انداز در صندوق‌های معتبر طلا و درآمد ثابت، اعتبار با پشتوانه دارایی و مزایای سازمانی به‌شکل دارایی.',
   applicationName: 'نمادنو',
 };
 
