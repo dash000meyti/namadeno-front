@@ -16,6 +16,8 @@ import {
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { DateInput } from '@/components/ui/DateInput';
+import { FEATURES } from '@/lib/features';
+import { ORG_ROLES } from '@/lib/org';
 import { LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
 import { contractFunds, fundMeta } from '@/components/op/core/ContractEditor';
@@ -25,16 +27,31 @@ import { now } from '@/lib/clock';
 import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 
+/** Facilities (loans, card credit, installments) are «به‌زودی»: their settings are hidden and sent as disabled. */
+const FAC = FEATURES.orgCredit;
 const SECTORS = ['هلدینگ و سرمایه‌گذاری', 'صنعتی و تولیدی', 'فناوری اطلاعات', 'بیمه و خدمات مالی', 'خدمات و بازرگانی'];
-const ROLES = ['مدیر منابع انسانی', 'تأییدکننده مالی', 'کارشناس'];
+/** Panel roles of the organization's users (index 1 = «تأییدکننده», needed to send packages). */
+const ROLES = ORG_ROLES.map((r) => r.label);
 const STEPS = [
   { label: 'اطلاعات سازمان', sub: 'مشخصات و نماینده' },
-  { label: 'قرارداد و محدودیت‌ها', sub: 'تسهیلات، بسته‌ها، صندوق‌ها' },
+  { label: 'قرارداد و محدودیت‌ها', sub: FAC ? 'تسهیلات، بسته‌ها، صندوق‌ها' : 'شیوه‌ی دریافت، بسته‌ها، صندوق‌ها' },
   { label: 'کاربران سازمان', sub: 'دسترسی پنل سازمانی' },
 ];
 const DRAFT_KEY = 'nm-op-org-draft';
 
-interface OrgUser { id: string; name: string; email: string; mobile: string; role: number }
+/** `tempPassword` = first-login password when SMS invites are off (never written to the saved draft). */
+interface OrgUser { id: string; name: string; email: string; mobile: string; role: number; tempPassword?: string }
+const PW_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+/** A readable temporary password: 10 characters, letters and digits (no look-alike characters). */
+function genPassword() {
+  const letters = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
+  const digits = '23456789';
+  const all = letters + digits;
+  const pick = (set: string) => set[Math.floor(Math.random() * set.length)];
+  const chars = [pick(letters), pick(digits), ...Array.from({ length: 8 }, () => pick(all))];
+  return chars.sort(() => Math.random() - 0.5).join('');
+}
+const withPasswords = (users: OrgUser[]) => users.map((u) => (u.tempPassword ? u : { ...u, tempPassword: genPassword() }));
 interface Form {
   name: string; nid: string; sector: number; staff: string; rep: string; tel: string;
   loan: number; months: number[]; card: number; perCap: string; bnpl: boolean; cash: boolean; invite: boolean;
@@ -46,8 +63,9 @@ const blank = (): Form => {
   const t = now();
   return {
     name: '', nid: '', sector: 2, staff: '', rep: '', tel: '',
-    loan: 40, months: [6, 12, 18], card: 25, perCap: '50000000', bnpl: true, cash: true, invite: true,
-    pol: { vesting: true, milestone: true, collateral: true, installment: true }, lock: 3, msMax: 5,
+    // while facilities are «به‌زودی» (FEATURES.orgCredit off) the organization is created with them disabled
+    loan: FAC ? 40 : 0, months: [6, 12, 18], card: FAC ? 25 : 0, perCap: '50000000', bnpl: FAC, cash: true, invite: true,
+    pol: { vesting: true, milestone: true, collateral: FAC, installment: FAC }, lock: 3, msMax: 5,
     funds: ['gold', 'fixed'], start: jDate(t), end: jDate(new Date(t.getTime() + 364 * 86400000)), users: [],
   };
 };
@@ -98,7 +116,7 @@ export default function OpOrgNewPage() {
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [done, setDone] = useState<Organization | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [nu, setNu] = useState({ name: '', email: '', mobile: '', role: 2 });
+  const [nu, setNu] = useState({ name: '', email: '', mobile: '', role: 2, tempPassword: '' });
   const [nuErr, setNuErr] = useState('');
   const [apiErr, setApiErr] = useState('');
   const loaded = useRef(false);
@@ -110,7 +128,10 @@ export default function OpOrgNewPage() {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
         const d = JSON.parse(raw) as { f: Form; step: number; at: string };
-        setF({ ...blank(), ...d.f }); setStep(d.step || 1); setSavedAt(new Date(d.at));
+        const restored = { ...blank(), ...d.f };
+        // temporary passwords are not saved in the draft: make new ones when invites are off
+        if (!restored.invite) restored.users = withPasswords(restored.users);
+        setF(restored); setStep(d.step || 1); setSavedAt(new Date(d.at));
       }
     } catch { /* ignore */ }
     loaded.current = true;
@@ -119,7 +140,8 @@ export default function OpOrgNewPage() {
     if (!loaded.current || done) return;
     if (step === 1 && JSON.stringify(f) === pristine.current) return; // nothing typed yet
     const at = new Date();
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ f, step, at: at.toISOString() })); setSavedAt(at); } catch { /* ignore */ }
+    const draft = { ...f, users: f.users.map(({ tempPassword: _pw, ...u }) => { void _pw; return u; }) };
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ f: draft, step, at: at.toISOString() })); setSavedAt(at); } catch { /* ignore */ }
   }, [f, step, done]);
 
   const set = (p: Partial<Form>) => { setF((x) => ({ ...x, ...p })); setApiErr(''); };
@@ -139,13 +161,14 @@ export default function OpOrgNewPage() {
     }
     if (n === 2) {
       if (f.loan > 0 && !f.months.length) e.months = 'حداقل یک گزینه بازپرداخت انتخاب کنید.';
-      if (!(Number(enDigits(f.perCap)) > 0)) e.perCap = 'سقف اعتبار هر نفر را وارد کنید.';
+      if (FAC && !(Number(enDigits(f.perCap)) > 0)) e.perCap = 'سقف اعتبار هر نفر را وارد کنید.';
       if (!f.funds.length) e.funds = 'حداقل یک صندوق مجاز انتخاب کنید.';
       if (!startIso) e.start = 'تاریخ شروع معتبر نیست (مثلاً ۱۴۰۵/۰۸/۰۱).';
       if (!endIso) e.end = 'تاریخ پایان معتبر نیست.';
       else if (startIso && endIso <= startIso) e.end = 'تاریخ پایان باید بعد از تاریخ شروع باشد.';
     }
     if (n === 3 && !f.users.length) e.users = 'حداقل یک کاربر سازمانی اضافه کنید.';
+    else if (n === 3 && !f.invite && f.users.some((u) => !PW_RE.test(u.tempPassword ?? ''))) e.users = 'برای هر کاربر رمز موقت معتبر (حداقل ۸ نویسه، حرف و عدد) تعیین کنید.';
     return e;
   };
   const err = tried[step] ? errors(step) : {};
@@ -165,16 +188,17 @@ export default function OpOrgNewPage() {
       name, legalName: name, industry: SECTORS[f.sector], employees: Number(enDigits(f.staff)),
       contractStart: startIso!, contractEnd: endIso!,
       settings: {
-        allowedFunds: f.funds, cashWithdrawalAllowed: f.cash,
+        // the free («آزاد») part of a package is always withdrawable; there is no separate cash switch
+        allowedFunds: f.funds, cashWithdrawalAllowed: true,
         lockPolicies: ['none', ...(f.pol.vesting ? (['vesting'] as const) : []), ...(f.pol.milestone ? (['milestone'] as const) : [])],
-        loanEnabled: f.loan > 0, loanMaxPct: f.loan, loanMonthsOptions: f.months, cardEnabled: f.card > 0, installmentEnabled: f.bnpl,
+        loanEnabled: FAC && f.loan > 0, loanMaxPct: FAC ? f.loan : 0, loanMonthsOptions: f.months, cardEnabled: FAC && f.card > 0, installmentEnabled: FAC && f.bnpl,
       },
       contract: {
-        cardPct: f.card, perPersonCap: Number(enDigits(f.perCap)), vestingMaxMonths: f.lock, milestoneMaxSteps: f.msMax,
-        allowCollateral: f.pol.collateral, allowInstallmentLock: f.bnpl && f.pol.installment,
+        cardPct: FAC ? f.card : 0, perPersonCap: Number(enDigits(f.perCap)), vestingMaxMonths: f.lock, milestoneMaxSteps: f.msMax,
+        allowCollateral: FAC && f.pol.collateral, allowInstallmentLock: FAC && f.bnpl && f.pol.installment,
         nationalId: enDigits(f.nid), representative: { name: f.rep.trim(), phone: enDigits(f.tel) },
       },
-      hrUsers: f.users.map((u) => ({ name: u.name, email: u.email, mobile: enDigits(u.mobile), role: ROLES[u.role] })),
+      hrUsers: f.users.map((u) => ({ name: u.name, email: u.email, mobile: enDigits(u.mobile), role: ROLES[u.role], ...(f.invite ? {} : { tempPassword: u.tempPassword }) })),
       sendInvites: f.invite,
     };
     create.mutate(payload, {
@@ -191,23 +215,25 @@ export default function OpOrgNewPage() {
     setF(blank()); setStep(1); setTried({}); setDone(null); setApiErr(''); setSavedAt(null);
   };
 
-  const openAdd = () => { setNuErr(''); setAddOpen(true); };
+  const openAdd = () => { setNuErr(''); setNu((x) => ({ ...x, tempPassword: genPassword() })); setAddOpen(true); };
   const addUser = () => {
     if (nu.name.trim().length < 3) { setNuErr('نام کاربر را وارد کنید.'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nu.email.trim())) { setNuErr('ایمیل معتبر وارد کنید.'); return; }
     if (!/^09\d{9}$/.test(enDigits(nu.mobile).replace(/\s/g, ''))) { setNuErr('شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.'); return; }
     if (f.users.some((u) => u.email === nu.email.trim())) { setNuErr('این ایمیل قبلاً اضافه شده است.'); return; }
-    set({ users: [...f.users, { id: 'nu-' + Date.now(), name: nu.name.trim(), email: nu.email.trim(), mobile: enDigits(nu.mobile).replace(/\s/g, ''), role: nu.role }] });
-    setNu({ name: '', email: '', mobile: '', role: 2 }); setNuErr(''); setAddOpen(false);
+    if (!f.invite && !PW_RE.test(nu.tempPassword)) { setNuErr('رمز موقت باید حداقل ۸ نویسه و شامل حرف لاتین و عدد باشد.'); return; }
+    set({ users: [...f.users, { id: 'nu-' + Date.now(), name: nu.name.trim(), email: nu.email.trim(), mobile: enDigits(nu.mobile).replace(/\s/g, ''), role: nu.role, ...(f.invite ? {} : { tempPassword: nu.tempPassword }) }] });
+    setNu({ name: '', email: '', mobile: '', role: 2, tempPassword: '' }); setNuErr(''); setAddOpen(false);
   };
 
   const funds = contractFunds(fundsQ.data);
   const hasApprover = f.users.some((u) => u.role === 1);
   // Receive policies («شیوه‌ی دریافت»: free / vesting / milestone) vs. reserves managed by Namadno (collateral / installment / legal).
-  const polRows: { k: keyof Form['pol'] | 'legal' | 'none'; t: LockType | 'none'; receive?: boolean; sub: string; max?: { value: number; set: (n: number) => void; suffix: string } }[] = [
+  // the contract's caps (max vesting months / milestone steps) keep their defaults; they are not asked here
+  const polRows: { k: keyof Form['pol'] | 'legal' | 'none'; t: LockType | 'none'; receive?: boolean; sub: string }[] = [
     { k: 'none', t: 'none', receive: true, sub: 'همیشه مجاز · کل مبلغ بلافاصله آزاد' },
-    { k: 'vesting', t: 'vesting', receive: true, sub: 'آزاد در تاریخ مشخص روی بسته‌های سازمانی', max: { value: f.lock, set: (n) => set({ lock: whole(n, 1, 24) }), suffix: 'ماه' } },
-    { k: 'milestone', t: 'milestone', receive: true, sub: 'دریافت بخش‌به‌بخش با تأیید هر مرحله', max: { value: f.msMax, set: (n) => set({ msMax: whole(n, 2, 10) }), suffix: 'مرحله' } },
+    { k: 'vesting', t: 'vesting', receive: true, sub: 'آزاد در تاریخ مشخص روی بسته‌های سازمانی' },
+    { k: 'milestone', t: 'milestone', receive: true, sub: 'دریافت بخش‌به‌بخش با تأیید هر مرحله' },
     { k: 'collateral', t: 'collateral', sub: 'رزرو پشتوانه از بخش آزاد · طبق سقف وام و کارت' },
     { k: 'installment', t: 'installment', sub: f.bnpl ? 'هم‌زمان با هر خرید اقساطی کارکنان' : 'نیازمند فعال بودن خرید اقساطی' },
     { k: 'legal', t: 'legal', sub: 'همیشه فعال · فقط توسط بهره‌بردار با شماره مرجع' },
@@ -216,13 +242,14 @@ export default function OpOrgNewPage() {
   const polTxt = (receive: boolean) => polRows.filter((p) => !!p.receive === receive && polOn(p.k)).map((p) => LOCK_META[p.t].short).join('، ');
   const summary: [string, string][] = [
     ['شناسه ملی', f.nid ? faDigits(enDigits(f.nid)) : '—'],
-    ['سقف وام', f.loan ? `${faDigits(f.loan)}٪ دارایی آزاد` : 'غیرفعال'],
-    ['بازپرداخت', f.months.length ? f.months.map((m) => faDigits(m)).join(' / ') + ' ماه' : '—'],
-    ['اعتبار کارت', f.card ? `${faDigits(f.card)}٪ دارایی آزاد` : 'غیرفعال'],
-    ['خرید اقساطی', f.bnpl ? 'فعال' : 'غیرفعال'],
+    ...(FAC ? [
+      ['سقف وام', f.loan ? `${faDigits(f.loan)}٪ دارایی آزاد` : 'غیرفعال'],
+      ['بازپرداخت', f.months.length ? f.months.map((m) => faDigits(m)).join(' / ') + ' ماه' : '—'],
+      ['اعتبار کارت', f.card ? `${faDigits(f.card)}٪ دارایی آزاد` : 'غیرفعال'],
+      ['خرید اقساطی', f.bnpl ? 'فعال' : 'غیرفعال'],
+    ] as [string, string][] : []),
     ['شیوه‌های دریافت', polTxt(true)],
-    ['رزروهای مجاز', polTxt(false)],
-    ['برداشت نقدی', f.cash ? 'مجاز' : 'غیرمجاز'],
+    ...(FAC ? [['رزروهای مجاز', polTxt(false)] as [string, string]] : []),
     ['صندوق‌ها', funds.filter((x) => f.funds.includes(x.id)).map((x) => x.shortName).join('، ') || '—'],
     ['کاربران سازمان', faDigits(f.users.length) + ' نفر'],
   ];
@@ -242,11 +269,11 @@ export default function OpOrgNewPage() {
         <Card>
           <Empty
             icon={ICON.check} tone="success" title={`سازمان «${done.name}» ایجاد شد`}
-            sub={<>قرارداد <span className="ltr">{done.contractNo}</span> · نسخه ۱ · سقف وام {f.loan ? faDigits(f.loan) + '٪' : 'غیرفعال'} · اعتبار کارت {f.card ? faDigits(f.card) + '٪' : 'غیرفعال'} · {faDigits(f.users.length)} کاربر سازمانی</>}
+            sub={<>قرارداد <span className="ltr">{done.contractNo}</span> · نسخه ۱{FAC && <> · سقف وام {f.loan ? faDigits(f.loan) + '٪' : 'غیرفعال'} · اعتبار کارت {f.card ? faDigits(f.card) + '٪' : 'غیرفعال'}</>} · {faDigits(f.users.length)} کاربر سازمانی</>}
             action={(
               <>
                 <Pill tone="info" dot>در حال عقد — در انتظار امضای نماینده</Pill>
-                {f.invite && f.users.length > 0 && <span className="mute" style={{ fontSize: 12.5 }}>دعوت‌نامه پیامکی برای {faDigits(f.users.length)} کاربر ارسال شد.</span>}
+                {f.users.length > 0 && <span className="mute" style={{ fontSize: 12.5 }}>{f.invite ? `دعوت‌نامه پیامکی برای ${faDigits(f.users.length)} کاربر ارسال شد.` : 'رمز موقت هر کاربر را به او بدهید؛ در اولین ورود رمز تازه انتخاب می‌کند.'}</span>}
                 <span style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 8 }}>
                   <button type="button" className="nm-btn" onClick={() => router.push(routes.op.organization(done.id))}>مشاهده سازمان</button>
                   <Link href={routes.op.organizations} className="nm-btn ghost">مشاهده سازمان‌ها</Link>
@@ -290,7 +317,7 @@ export default function OpOrgNewPage() {
 
               {step === 2 && (
                 <>
-                  <SettingsGroup title="تسهیلات" footer="این مقادیر سقف چیزی است که منابع انسانی سازمان می‌تواند به کارکنان بدهد.">
+                  {FAC && <SettingsGroup title="تسهیلات" footer="این مقادیر سقف چیزی است که منابع انسانی سازمان می‌تواند به کارکنان بدهد.">
                     <SettingRow label="سقف وام" desc="درصدی از دارایی آزاد کارمند که به‌عنوان پشتوانه رزرو می‌شود · ۰ یعنی غیرفعال" htmlFor="o-loan">
                       <NumberInput id="o-loan" label="سقف وام" value={f.loan} onChange={(n) => set({ loan: whole(n, 0, 60) })} suffix="٪" width={52} decimals />
                     </SettingRow>
@@ -306,19 +333,18 @@ export default function OpOrgNewPage() {
                     <SettingRow label="خرید اقساطی" desc="فروشگاه‌های طرف قرارداد با پشتوانه‌ی دارایی کارکنان">
                       <Switch on={f.bnpl} onChange={(v) => set({ bnpl: v })} label="خرید اقساطی" />
                     </SettingRow>
-                  </SettingsGroup>
+                  </SettingsGroup>}
 
                   {([
                     [true, 'شیوه‌های دریافت مجاز', 'سازمان هنگام ارسال بسته یکی از این شیوه‌ها را انتخاب می‌کند.'],
                     [false, 'رزروهای مجاز', 'این رزروها را نمادنو مدیریت می‌کند. دارایی رزروشده مال کارمند می‌ماند و سود می‌گیرد؛ پس از آزادسازی قابل فروش یا برداشت است.'],
-                  ] as const).map(([receive, title, footer]) => (
+                  ] as const).filter(([receive]) => receive || FAC).map(([receive, title, footer]) => (
                     <SettingsGroup key={title} title={title} footer={footer}>
                       {polRows.filter((p) => !!p.receive === receive).map((p) => {
                         const on = polOn(p.k);
                         const dis = p.k === 'legal' || p.k === 'none' || (p.k === 'installment' && !f.bnpl);
                         return (
                           <SettingRow key={p.k} label={<LockTypeChip type={p.t} long />} desc={p.sub}>
-                            {p.max && on && <NumberInput label={`حداکثر ${LOCK_META[p.t].label}`} value={p.max.value} onChange={p.max.set} suffix={p.max.suffix} width={40} decimals />}
                             <Switch on={on} disabled={dis} label={LOCK_META[p.t].label} onChange={() => { if (p.k !== 'legal' && p.k !== 'none') set({ pol: { ...f.pol, [p.k]: !f.pol[p.k] } }); }} />
                           </SettingRow>
                         );
@@ -326,10 +352,7 @@ export default function OpOrgNewPage() {
                     </SettingsGroup>
                   ))}
 
-                  <SettingsGroup title="بسته‌ها و صندوق‌ها" footer={errText(err.funds) ?? 'کارکنان فقط به صندوق‌های مجاز تخصیص می‌دهند.'}>
-                    <SettingRow label="برداشت نقدی" desc="اجازه برداشت ریالی در بسته‌های جدید">
-                      <Switch on={f.cash} onChange={(v) => set({ cash: v })} label="برداشت نقدی" />
-                    </SettingRow>
+                  <SettingsGroup title="صندوق‌های مجاز" footer={errText(err.funds) ?? 'کارکنان فقط به صندوق‌های مجاز تخصیص می‌دهند.'}>
                     {funds.map((x) => {
                       const soon = x.status === 'coming_soon';
                       const on = f.funds.includes(x.id);
@@ -356,14 +379,14 @@ export default function OpOrgNewPage() {
                 <>
                   <Card title="کاربران سازمان" count={f.users.length || undefined}
                     actions={<button type="button" className="nm-btn sm ghost" onClick={openAdd}><Icon d={ICON.plus} size={15} strokeWidth={2} />افزودن کاربر</button>}>
-                    <span className="mute" style={{ fontSize: 12.5, lineHeight: 1.7 }}>این افراد به پنل سازمانی دسترسی می‌گیرند. برای ارسال بسته، حداقل یک تأییدکننده مالی لازم است.</span>
+                    <span className="mute" style={{ fontSize: 12.5, lineHeight: 1.7 }}>این افراد به پنل سازمانی دسترسی می‌گیرند. برای ارسال بسته، حداقل یک «تأییدکننده» لازم است.</span>
                     {f.users.length ? (
                       <List>
                         {f.users.map((u) => (
                           <ListRow key={u.id}
                             lead={<Ava letter={u.name[0]} id={u.id} />}
                             title={u.name}
-                            sub={<><span className="ltr">{u.email}</span> · <span className="num ltr">{faDigits(u.mobile.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3'))}</span></>}
+                            sub={<><span className="ltr">{u.email}</span> · <span className="num ltr">{faDigits(u.mobile.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3'))}</span>{!f.invite && <> · رمز موقت: <span className="ltr" style={{ fontFamily: 'ui-monospace, monospace', color: 'var(--text-primary)' }}>{u.tempPassword || '—'}</span></>}</>}
                             trail={(
                               <>
                                 <Select label={`نقش ${u.name}`} value={u.role} align="end" options={ROLES.map((t, i) => ({ key: i, label: t }))} onChange={(r) => set({ users: f.users.map((x) => (x.id === u.id ? { ...x, role: r } : x)) })} />
@@ -374,14 +397,14 @@ export default function OpOrgNewPage() {
                         ))}
                       </List>
                     ) : (
-                      <Empty icon={ICON.users} tone={err.users ? 'error' : undefined} title={err.users ?? 'هنوز کاربری اضافه نشده است'} sub="مدیر منابع انسانی و تأییدکننده‌ی مالی سازمان را اضافه کنید."
+                      <Empty icon={ICON.users} tone={err.users ? 'error' : undefined} title={err.users ?? 'هنوز کاربری اضافه نشده است'} sub="مدیر و تأییدکننده‌ی سازمان را اضافه کنید."
                         action={<button type="button" className="nm-btn sm" onClick={openAdd}>افزودن کاربر</button>} />
                     )}
-                    {!hasApprover && f.users.length > 0 && <Note tone="warn">هیچ کاربری نقش «تأییدکننده مالی» ندارد؛ بسته‌ها بدون تأیید مالی ارسال نمی‌شوند.</Note>}
+                    {!hasApprover && f.users.length > 0 && <Note tone="warn">هیچ کاربری نقش «تأییدکننده» ندارد؛ بسته‌ها بدون تأیید نهایی ارسال نمی‌شوند.</Note>}
                   </Card>
                   <SettingsGroup>
-                    <SettingRow label="ارسال دعوت‌نامه پیامکی" desc="لینک ورود به پنل سازمانی برای کاربران ارسال می‌شود">
-                      <Switch on={f.invite} onChange={(v) => set({ invite: v })} label="ارسال دعوت‌نامه" />
+                    <SettingRow label="ارسال دعوت‌نامه پیامکی" desc={f.invite ? 'لینک ورود به پنل سازمانی برای کاربران پیامک می‌شود و هر کاربر رمز خودش را می‌سازد' : 'بدون دعوت‌نامه، هر کاربر با رمز موقت وارد می‌شود و در اولین ورود رمز تازه انتخاب می‌کند'}>
+                      <Switch on={f.invite} onChange={(v) => set(v ? { invite: true } : { invite: false, users: withPasswords(f.users) })} label="ارسال دعوت‌نامه" />
                     </SettingRow>
                   </SettingsGroup>
                 </>
@@ -439,6 +462,14 @@ export default function OpOrgNewPage() {
         <Field label="نقش">
           <Chips label="نقش کاربر سازمان" value={nu.role} onChange={(r) => setNu({ ...nu, role: r })} options={ROLES.map((t, i) => ({ key: i, label: t }))} />
         </Field>
+        {!f.invite && (
+          <Field label="رمز موقت" htmlFor="nu-pw" help="کاربر با این رمز وارد می‌شود و در اولین ورود رمز تازه انتخاب می‌کند">
+            <div className="nm-ctl">
+              <input id="nu-pw" dir="ltr" autoComplete="off" value={nu.tempPassword} onChange={(e) => { setNu({ ...nu, tempPassword: e.target.value.trim() }); setNuErr(''); }} style={{ textAlign: 'right', fontFamily: 'ui-monospace, monospace' }} />
+              <button type="button" className="nm-btn sm text" onClick={() => setNu({ ...nu, tempPassword: genPassword() })}>ساخت دوباره</button>
+            </div>
+          </Field>
+        )}
         {nuErr && <Note tone="err">{nuErr}</Note>}
       </Dialog>
     </>

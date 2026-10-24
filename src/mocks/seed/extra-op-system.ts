@@ -37,7 +37,7 @@ const FUND_META: Record<string, { lock: Partial<LockMap>; holders: Partial<LockM
 const NEW_RULES: PlatformRule[] = [
   { id: 'r-pkg-min-amount', group: 'limits', title: 'حداقل مبلغ بسته', description: 'کمتر از این مبلغ ارسال نمی‌شود', enabled: true, value: 1_000_000, unit: 'تومان' },
   { id: 'r-pkg-max-vesting', group: 'locks', title: 'حداکثر مدت پس‌انداز بسته', description: 'سقف مدت پس‌انداز بسته‌های سازمانی', enabled: true, value: 12, unit: 'ماه' },
-  { id: 'r-pkg-cfo-approval', group: 'limits', title: 'نیاز به تأیید مدیر مالی', description: 'برای بسته‌های بالای ۵۰۰ میلیون', enabled: true },
+  { id: 'r-pkg-cfo-approval', group: 'limits', title: 'نیاز به تأیید نهایی تأییدکننده‌ی سازمان', description: 'برای بسته‌های بالای ۵۰۰ میلیون', enabled: true },
   { id: 'r-withdraw-manual', group: 'limits', title: 'نیاز به تأیید دستی', description: 'برداشت‌های بالای ۲۰۰ میلیون تومان', enabled: true },
   { id: 'r-credit-min-score', group: 'credit', title: 'حداقل امتیاز اعتباری', description: 'برای وام و خرید اقساطی · بازه ۳۰۰ تا ۹۰۰', enabled: true, value: 600, unit: 'امتیاز' },
   { id: 'r-credit-max-ltv', group: 'credit', title: 'حداکثر نسبت پشتوانه', description: 'سهم قابل رزرو از بخش آزاد هر صندوق', enabled: true, value: 70, unit: '٪' },

@@ -28,7 +28,7 @@ const GROUPS: GroupDef[] = [
   { title: 'بسته‌های دارایی', d: IC.inbox, tone: 'primary', rows: [
     { kind: 'field', id: 'r-pkg-min-amount', label: 'حداقل مبلغ بسته', sub: 'کمتر از این مبلغ ارسال نمی‌شود', suffix: 'تومان', w: 100, min: 0 },
     { kind: 'field', id: 'r-pkg-max-vesting', label: 'حداکثر مدت پس‌انداز بسته', sub: 'همچنین سقف کلی در «انواع رزرو دارایی»', suffix: 'ماه', w: 52, min: 1, max: 120 },
-    { kind: 'switch', id: 'r-pkg-cfo-approval', label: 'نیاز به تأیید مدیر مالی', sub: 'برای بسته‌های بالای ۵۰۰ میلیون' },
+    { kind: 'switch', id: 'r-pkg-cfo-approval', label: 'نیاز به تأیید نهایی تأییدکننده‌ی سازمان', sub: 'برای بسته‌های بالای ۵۰۰ میلیون' },
   ] },
   { title: 'تسهیلات', d: IC.percent, tone: 'success', rows: [
     { kind: 'field', id: 'r-credit-min-score', label: 'حداقل امتیاز اعتباری', sub: 'برای وام و خرید اقساطی · بازه ۳۰۰ تا ۹۰۰', suffix: 'امتیاز', w: 60, min: 300, max: 900 },

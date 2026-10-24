@@ -1,7 +1,7 @@
 'use client';
 /**
  * Organization panel — units (departments). Kit list page: stats → list card (search, table) → inspector.
- * Only the organization's administrator (panelRole 'admin') can open it; HR, finance and viewers see a no-access state.
+ * Only the organization's «مدیر» (panelRole 'admin') can open it; «تأییدکننده» and «کارشناس» see a no-access state.
  * The mock enforces the same rule on every write (403 forbidden_role).
  * «سایر» is the default unit of every organization: it cannot be renamed or deleted; deleting another unit moves its colleagues there.
  */

@@ -319,7 +319,7 @@ export default function OrgEmployeePage() {
       {tab === 'loans' && <div className="nm-grid c2 stretch">{loanCard}{cardCard}</div>}
 
       {tab === 'log' && (
-        <Card title="فعالیت اخیر" count={x?.activity.length || undefined} more={{ label: 'گزارش کامل', href: routes.org.reports }}>
+        <Card title="فعالیت اخیر" count={x?.activity.length || undefined}>
           {!x?.activity.length ? (
             extra.isLoading ? <span className="mute" style={{ fontSize: 12.5 }}>در حال دریافت…</span> : <Empty icon={I.inbox} title="فعالیتی ثبت نشده است" />
           ) : (

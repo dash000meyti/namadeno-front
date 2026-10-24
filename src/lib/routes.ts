@@ -45,7 +45,7 @@ export const routes = {
     newSettings: (draft: string) => `/org/packages/new/settings${q({ draft })}`,
     newReview: (draft: string) => `/org/packages/new/review${q({ draft })}`,
     newSent: (id: string) => `/org/packages/new/sent${q({ id })}`,
-    credit: '/org/credit', requests: '/org/requests', reports: '/org/reports', contract: '/org/contract', departments: '/org/departments', notifications: '/org/notifications',
+    credit: '/org/credit', requests: '/org/requests', contract: '/org/contract', departments: '/org/departments', notifications: '/org/notifications',
   },
   op: {
     login: '/op/login', overview: '/op', organizations: '/op/organizations', organization: (id: string) => `/op/organizations/${id}`, orgNew: '/op/organizations/new',

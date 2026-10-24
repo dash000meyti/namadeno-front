@@ -71,7 +71,6 @@ function describe(d: Draft, base: Draft): string[] {
   if (card !== num(base.cardPct)) changes.push(`اعتبار کارت ${faDigits(num(base.cardPct))} → ${faDigits(card)}٪`);
   if (cap !== num(base.perCap)) changes.push(`سقف اعتبار هر نفر ${faDigits(Math.round(num(base.perCap) / 1e6))} → ${faDigits(Math.round(cap / 1e6))} میلیون`);
   if (d.bnpl !== base.bnpl) changes.push(d.bnpl ? 'فعال‌سازی خرید اقساطی' : 'غیرفعال‌سازی خرید اقساطی');
-  if (d.cash !== base.cash) changes.push(d.cash ? 'مجاز شدن برداشت نقدی' : 'غیرمجاز شدن برداشت نقدی');
   if (d.vesting !== base.vesting || d.milestone !== base.milestone || d.collateral !== base.collateral || d.instLock !== base.instLock || d.vestMax !== base.vestMax || d.msMax !== base.msMax) changes.push('تغییر شیوه‌های دریافت و رزروها');
   if (JSON.stringify([...d.funds].sort()) !== JSON.stringify([...base.funds].sort())) changes.push('تغییر صندوق‌های مجاز');
   return changes;
@@ -149,7 +148,6 @@ export function ContractEditor({ c, funds, monthsOptions }: { c: ContractDraft; 
           <NumberInput id={`per-cap-${org.id}`} label="سقف اعتبار هر نفر" value={shown(d.perCap)} onChange={(n) => setNum('perCap', Number.isFinite(n) ? Math.round(Math.abs(n)) : NaN)} suffix="تومان" width={112} invalid={bad('perCap')} />
         </SettingRow>
         <SettingRow label="خرید اقساطی" desc="فروشگاه‌های طرف قرارداد"><Switch on={d.bnpl} onChange={(v) => set({ bnpl: v })} label="خرید اقساطی" /></SettingRow>
-        <SettingRow label="برداشت نقدی" desc="پیش‌فرض بسته‌های جدید"><Switch on={d.cash} onChange={(v) => set({ cash: v })} label="برداشت نقدی" /></SettingRow>
       </SettingsGroup>
 
       {([

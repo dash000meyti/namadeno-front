@@ -1,11 +1,13 @@
 'use client';
 /**
  * Organization dashboard — kit overview page: key numbers, the latest batch, requests waiting for a decision,
- * team assets (free/reserved + mix), one quiet contract line. Detailed charts live in Reports.
+ * sent packages chart and allocation by unit, team assets (free/reserved + mix), one quiet contract line.
+ * The former «گزارش‌ها» page is merged here: its charts are cards and its exports sit in «خروجی گزارش».
  */
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Allocation, Ava, BigNum, Card, Empty, ErrorBlock, FreeLocked, KV, List, Meter, PageHeading, Pill, SkeletonCard, SkeletonRows, StatStrip } from '@/components/panel/kit';
+import { Allocation, Ava, BigNum, Card, Empty, ErrorBlock, FreeLocked, KV, List, MenuButton, Meter, PageHeading, Pill, SkeletonCard, SkeletonRows, StatStrip } from '@/components/panel/kit';
+import { SentChartCard, UnitsMixCard, useReportExportItems } from '@/components/org/packages/ReportCards';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { useDecideOrgRequest, useOrgDashboard, useOrgPackages, useOrgRequests } from '@/api/org';
@@ -22,7 +24,7 @@ const REQ_TYPE: Record<ApprovalRequest['kind'], string> = {
   milestone_release: 'تأیید مرحله قرارداد', loan: 'درخواست وام', cash_withdrawal: 'برداشت نقدی',
   credit_increase: 'افزایش سقف اعتبار', installment: 'خرید اقساطی', profile_change: 'تغییر اطلاعات',
 };
-const STEPS = ['بارگذاری لیست', 'اعتبارسنجی', 'تأیید مدیر مالی', 'ارسال به کارکنان'];
+const STEPS = ['بارگذاری لیست', 'اعتبارسنجی', 'تأیید نهایی', 'ارسال به کارکنان'];
 const stepNo = (title: string) => /مرحله\s+([0-9۰-۹]+)/.exec(title)?.[1];
 /** «۱۸٫۶ میلیارد تومان» as one short string. */
 const compact = (n: number) => compactParts(n).join(' ');
@@ -39,6 +41,7 @@ export default function OrgDashboardPage() {
   const [touched, setTouched] = useState<string[]>([]);
   const [updated, setUpdated] = useState<Date | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const exportItems = useReportExportItems();
 
   useEffect(() => { if (dash.data) setUpdated(new Date()); }, [dash.data]);
 
@@ -108,6 +111,7 @@ export default function OrgDashboardPage() {
     <>
       <PageHeading title="داشبورد" crumbs={[{ label: 'عملیات' }]} sub="وضعیت کارکنان، ارسال‌ها و درخواست‌ها در یک نگاه">
         <span className="mute" style={{ fontSize: 12 }}>{updated ? `به‌روز شده ${time(updated)}` : 'در حال به‌روزرسانی…'}</span>
+        {exportItems.length > 0 && <MenuButton text="خروجی گزارش" label="خروجی گزارش‌ها (Excel یا PDF)" icon={I.download} items={exportItems} />}
       </PageHeading>
 
       <StatStrip loading={!d || !ins} items={d && ins && sent ? [
@@ -196,9 +200,15 @@ export default function OrgDashboardPage() {
         </Card>
       </div>
 
+      {/* Sent packages + allocation by unit (from the former reports page) */}
+      <div className="nm-grid c2 stretch">
+        <SentChartCard />
+        <UnitsMixCard />
+      </div>
+
       {/* Team assets: free/reserved + mix */}
       {!d || !ins ? <SkeletonCard h={180} /> : (
-        <Card title="دارایی کارکنان" sub="مجموع دارایی کارکنان در نمادنو" more={{ label: 'گزارش‌ها', href: routes.org.reports }}>
+        <Card title="دارایی کارکنان" sub="مجموع دارایی کارکنان در نمادنو">
           <div className="nm-grid c2" style={{ gap: 40, alignItems: 'center' }}>
             <div className="nm-stack" style={{ gap: 12 }}>
               <BigNum value={totalParts[0]} unit={totalParts[1]} />

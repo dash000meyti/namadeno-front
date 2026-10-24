@@ -172,7 +172,7 @@ export const useMarkOrgNotificationsRead = () => usePeopleMutation((v: { ids?: s
 /** Panel role of the signed-in user (`undefined` while loading). Only `admin` manages units. */
 export function useOrgPanelRole(): OrgPanelRole | undefined {
   const { data } = useOrgMe();
-  return data ? data.admin.panelRole ?? 'viewer' : undefined;
+  return data ? data.admin.panelRole ?? 'specialist' : undefined;
 }
 
 /** Bulk status change (suspend / reactivate) for several employees. */

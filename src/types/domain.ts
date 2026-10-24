@@ -32,6 +32,8 @@ export interface Session {
   userId: ID;
   orgId?: ID;
   expiresAt: ISODate;
+  /** Signed in with a temporary password: the panel asks for a new password before anything else. */
+  mustChangePassword?: boolean;
 }
 
 /** KYC levels: 1 = Shahkar (mobile ↔ national ID), 2 = civil registry (birth date), 3 = SEJAM. */
@@ -376,14 +378,15 @@ export interface Organization {
     installmentEnabled: boolean;
   };
   /** People who can sign in to the organization panel. `role` is the job title shown in the panel; `panelRole` sets what they may do. */
-  admins: { id: ID; name: string; role: string; email: string; panelRole?: OrgPanelRole }[];
+  admins: { id: ID; name: string; role: string; email: string; panelRole?: OrgPanelRole; /** Has a temporary password set by the operator; changed on first login. */ mustChangePassword?: boolean }[];
 }
 
 /**
- * Access level in the organization panel. Only `admin` (the organization's administrator) may create,
- * rename or delete departments; `hr`, `finance` and `viewer` can only read them. Missing = `viewer`.
+ * Role in the organization panel: «مدیر» (`admin`, full access incl. departments and panel users),
+ * «تأییدکننده» (`approver`, final approval of packages) and «کارشناس» (`specialist`, prepares packages).
+ * Only `admin` may create, rename or delete departments. Missing = `specialist`.
  */
-export type OrgPanelRole = 'admin' | 'hr' | 'finance' | 'viewer';
+export type OrgPanelRole = 'admin' | 'approver' | 'specialist';
 
 /** A unit (department) of an organization. Employees reference it by name (`Employee.department`). */
 export interface OrgDepartment {

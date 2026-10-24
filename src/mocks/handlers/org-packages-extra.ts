@@ -29,9 +29,7 @@
  *          the next step becomes current. Irreversible. Sent packages only. (reclaimStep in handlers/org.ts)
  *          Errors: 404 not_found, 409 not_sent | already_released | already_reclaimed, 422 note_required (≥ 3 characters).
  * GET    /api/v1/org/reports/overview
- *        → ReportsOverview { weekly[], earlierMonths[], currentMonthExtra, units[], exports[], schedules[] }
- * PATCH  /api/v1/org/reports/schedules/:id                 body: { enabled: boolean } → ReportSchedule
- * POST   /api/v1/org/reports/schedules                     body: { title?, format? } → ReportSchedule (201)
+ *        → ReportsOverview { weekly[], earlierMonths[], currentMonthExtra, units[], exports[] }
  * POST   /api/v1/org/reports/exports/:id                   body: { format: 'xlsx' | 'pdf' } → ReportFile { fileName, title, columns, rows }
  * GET    /api/v1/org/contract/approval-chain               → ApprovalChain { items[], updatedAt }
  * PATCH  /api/v1/org/contract/approval-chain               body: { values: Record<id, boolean> } → ApprovalChain
@@ -40,7 +38,7 @@
 import { http, type HttpHandler } from 'msw';
 import type { AllocationSplit, LockPolicy, OrgPackage } from '@/types/domain';
 import type { PackageInsights, ReportFile, ReportsOverview } from '@/api/org-packages-extra';
-import { db, newId } from '../db';
+import { db } from '../db';
 import { body, fail, latency, ok, p, who } from '../http';
 import { defaultOrgPkgStore, type OrgPkgStore } from '../seed/extra-org-packages';
 import { ledger } from './app';
@@ -336,23 +334,8 @@ export const orgPackagesHandlers: HttpHandler[] = [
       const fixed = Math.round((v.fixed / total) * 100);
       return { department, gold, fixed, rial: Math.max(0, 100 - gold - fixed), amount: Math.round(v.gold + v.fixed + v.rial) };
     }).sort((a, b) => b.amount - a.amount);
-    const res: ReportsOverview = { weekly, earlierMonths: s.earlierMonths, currentMonthExtra, units, exports: s.exports, schedules: s.schedules };
+    const res: ReportsOverview = { weekly, earlierMonths: s.earlierMonths, currentMonthExtra, units, exports: s.exports };
     return ok(res);
-  }),
-  http.patch(p('/org/reports/schedules/:id'), async ({ request, params }) => {
-    await latency();
-    const sc = store().schedules.find((x) => x.id === params.id);
-    if (!sc) return fail(404, 'not_found', 'گزارش زمان‌بندی‌شده پیدا نشد.');
-    const b = await body<{ enabled?: boolean }>(request);
-    if (typeof b.enabled === 'boolean') sc.enabled = b.enabled;
-    return ok(sc);
-  }),
-  http.post(p('/org/reports/schedules'), async ({ request }) => {
-    await latency();
-    const b = await body<{ title?: string; format?: 'Excel' | 'PDF' }>(request);
-    const sc = { id: newId('sch'), title: b.title || 'گزارش هفتگی بسته‌های دارایی', period: 'هفتگی · شنبه‌ها ۰۹:۰۰', to: 'منابع انسانی', format: b.format ?? 'Excel', enabled: true, tone: 'primary' as const, icon: 'clock' as const };
-    store().schedules.push(sc);
-    return ok(sc, { status: 201 });
   }),
   http.post(p('/org/reports/exports/:id'), async ({ request, params }) => {
     await latency();

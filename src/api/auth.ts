@@ -36,6 +36,9 @@ export const useOrgLogin = () => {
   });
 };
 
+/** First login with a temporary password: set the user's own password. */
+export const useOrgSetPassword = () => useMutation({ mutationFn: (v: { password: string }) => post<{ ok: true }>('/org/auth/password', v) });
+
 export const useOpLogin = () => {
   const qc = useQueryClient();
   return useMutation({

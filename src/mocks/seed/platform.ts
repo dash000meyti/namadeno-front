@@ -35,12 +35,12 @@ export const ORGANIZATIONS: Organization[] = ORG_ROWS.map(([id, name, contract, 
   },
   admins: id === 'org-arman'
     ? [
-      { id: 'oa-200', name: 'مهسا تهرانی', role: 'مدیر سازمان', email: 'm.tehrani@arman.co', panelRole: 'admin' },
-      { id: 'oa-201', name: 'نیما رضایی', role: 'مدیر منابع انسانی', email: 'nima.rezaei@arman.co', panelRole: 'hr' },
-      { id: 'oa-202', name: 'لیلا کاظمی', role: 'کارشناس جبران خدمات', email: 'l.kazemi@arman.co', panelRole: 'hr' },
-      { id: 'oa-203', name: 'رضا حسینی', role: 'مدیر مالی', email: 'r.hosseini@arman.co', panelRole: 'finance' },
+      { id: 'oa-200', name: 'مهسا تهرانی', role: 'مدیر', email: 'm.tehrani@arman.co', panelRole: 'admin' },
+      { id: 'oa-201', name: 'نیما رضایی', role: 'کارشناس', email: 'nima.rezaei@arman.co', panelRole: 'specialist' },
+      { id: 'oa-202', name: 'لیلا کاظمی', role: 'کارشناس', email: 'l.kazemi@arman.co', panelRole: 'specialist' },
+      { id: 'oa-203', name: 'رضا حسینی', role: 'تأییدکننده', email: 'r.hosseini@arman.co', panelRole: 'approver' },
     ]
-    : [{ id: 'oa-' + id, name: 'مدیر منابع انسانی', role: 'مدیر منابع انسانی', email: 'hr@' + id.slice(4) + '.ir', panelRole: 'admin' }],
+    : [{ id: 'oa-' + id, name: 'مدیر سازمان', role: 'مدیر', email: 'hr@' + id.slice(4) + '.ir', panelRole: 'admin' }],
 }));
 
 // ───────────── Employees of هلدینگ آرمان ─────────────

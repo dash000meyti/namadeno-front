@@ -36,7 +36,7 @@ const SURFACES: Surface[] = [
       { name: 'ورود و داشبورد', items: [L(o.login, 'ورود'), L(o.dashboard, 'داشبورد')] },
       { name: 'کارکنان', items: [L(o.employees, 'کارکنان'), L(o.employee('u-1001'), 'پروفایل کارمند'), L(o.employeeNew, 'افزودن کارمند')] },
       { name: 'بسته‌های دارایی', items: [L(o.packages, 'بسته‌ها'), L(o.newRecipients(), '۱ · گیرندگان'), L(o.newSettings('pkg-draft-yalda'), '۲ · تنظیمات'), L(o.newReview('pkg-draft-yalda'), '۳ · بررسی'), L(o.newSent('pkg-mehr'), 'ارسال شد'), L(o.package('pkg-mehr'), 'جزئیات بسته')] },
-      { name: 'تسهیلات و مدیریت', items: [L(o.credit, 'تسهیلات و اعتبار'), L(o.requests, 'درخواست‌ها'), L(o.reports, 'گزارش‌ها'), L(o.contract, 'تنظیمات قرارداد')] },
+      { name: 'تسهیلات و مدیریت', items: [L(o.credit, 'تسهیلات و اعتبار'), L(o.requests, 'درخواست‌ها'), L(o.departments, 'واحدها'), L(o.notifications, 'اعلان‌ها'), L(o.contract, 'تنظیمات قرارداد')] },
     ],
   },
   {

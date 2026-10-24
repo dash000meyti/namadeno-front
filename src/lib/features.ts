@@ -3,6 +3,9 @@
  * links to them are hidden and their page shows a short coming-soon notice. Flip to `true` when the section is ready.
  */
 export const FEATURES = {
-  /** Organization panel → «تسهیلات و اعتبار» (/org/credit). */
+  /**
+   * Facilities (loans, card credit, installments): the org panel's «تسهیلات و اعتبار» (/org/credit), loan requests,
+   * and the facilities / reserve settings when the operator creates an organization (sent as disabled while off).
+   */
   orgCredit: false,
 };

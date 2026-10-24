@@ -419,7 +419,7 @@ const deptOut = (orgId: string, d: StoredDepartment): OrgDepartment => ({ ...d, 
 function forbidUnlessAdmin(req: Request) {
   const s = who(req, 'org_admin');
   const admin = orgById(s.orgId!).admins.find((a) => a.id === s.userId);
-  if ((admin?.panelRole ?? 'viewer') === 'admin') return null;
+  if ((admin?.panelRole ?? 'specialist') === 'admin') return null;
   return fail(403, 'forbidden_role', 'ساخت و ویرایش واحد فقط با دسترسی مدیر سازمان ممکن است.');
 }
 const cleanName = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, ' ');

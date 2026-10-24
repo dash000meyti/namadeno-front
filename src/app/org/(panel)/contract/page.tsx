@@ -22,6 +22,8 @@ import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDate } from '@/lib/format';
 import type { Organization, OrgPanelRole } from '@/types/domain';
+import { ORG_ROLES } from '@/lib/org';
+import { FEATURES } from '@/lib/features';
 import { I } from '@/components/org/packages/meta';
 import { errMsg } from '@/components/org/packages/ui';
 
@@ -32,12 +34,8 @@ const LOCK_RULES: Record<'none' | 'vesting' | 'milestone', string> = {
   vesting: 'حداکثر ۱۲ ماه · پیش‌فرض ۳ ماه · فقط بخش صندوقی',
   milestone: 'حداکثر ۸ مرحله · هر مرحله حداقل ۵٪ · جمع ۱۰۰٪',
 };
-const ROLES: { key: string; label: string; pick: string; panelRole: OrgPanelRole }[] = [
-  { key: 'hr', label: 'کارشناس HR', pick: 'منابع انسانی', panelRole: 'hr' },
-  { key: 'fin', label: 'مدیر مالی', pick: 'مدیر مالی', panelRole: 'finance' },
-  { key: 'view', label: 'مشاهده‌گر', pick: 'مشاهده‌گر', panelRole: 'viewer' },
-];
-const roleTone = (role: string): Tone => (role.includes('مالی') ? 'success' : role.includes('مدیر') ? 'primary' : role.includes('مشاهده') ? 'neutral' : 'info');
+const ROLES: { key: OrgPanelRole; label: string; pick: string; panelRole: OrgPanelRole }[] = ORG_ROLES.map((r) => ({ key: r.key, label: r.label, pick: r.label, panelRole: r.key }));
+const roleTone = (role: string): Tone => (role === 'مدیر' ? 'primary' : role === 'تأییدکننده' ? 'success' : 'info');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CRUMBS = [{ label: 'مدیریت' }];
 
@@ -68,7 +66,7 @@ export default function OrgContractPage() {
   const [invite, setInvite] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('hr');
+  const [role, setRole] = useState<OrgPanelRole>('specialist');
   const [inviteErr, setInviteErr] = useState<{ field: 'name' | 'email' | 'form'; msg: string } | null>(null);
 
   useEffect(() => {
@@ -101,7 +99,7 @@ export default function OrgContractPage() {
   // steps required by the contract are shown as disabled switches with a «الزامی» pill
   const toggleChain = (id: string) => setChainOn((c) => ({ ...c, [id]: !c[id] }));
 
-  const openInvite = () => { setName(''); setEmail(''); setRole('hr'); setInviteErr(null); setInvite(true); };
+  const openInvite = () => { setName(''); setEmail(''); setRole('specialist'); setInviteErr(null); setInvite(true); };
   const sendInvite = () => {
     if (updateContract.isPending) return;
     if (name.trim().length < 3) { setInviteErr({ field: 'name', msg: 'نام و نام خانوادگی را وارد کنید.' }); return; }
@@ -138,12 +136,11 @@ export default function OrgContractPage() {
             <SettingRow label="تمدید">{val('خودکار · سالانه')}</SettingRow>
           </SettingsGroup>
 
-          <SettingsGroup title={groupTitle(I.percent, 'success', 'شرایط تسهیلات')}>
+          {FEATURES.orgCredit && <SettingsGroup title={groupTitle(I.percent, 'success', 'شرایط تسهیلات')}>
             <SettingRow label="سقف وام">{val(s.loanEnabled ? `${faDigits(s.loanMaxPct)}٪ دارایی` : 'غیرفعال')}</SettingRow>
             <SettingRow label="دوره‌های بازپرداخت">{val(s.loanEnabled ? `${s.loanMonthsOptions.map((m) => faDigits(m)).join(' / ')} ماه` : '—')}</SettingRow>
             <SettingRow label="اعتبار کارت">{val(s.cardEnabled ? 'تا ۲۵٪ دارایی' : 'غیرفعال')}</SettingRow>
-            <SettingRow label="برداشت نقدی بسته‌ها">{val(s.cashWithdrawalAllowed ? 'مجاز · فقط بخش آزاد' : 'غیرفعال')}</SettingRow>
-          </SettingsGroup>
+          </SettingsGroup>}
 
           <SettingsGroup title={groupTitle(HOURGLASS, 'info', 'شیوه‌های دریافت مجاز')} footer="از قرارداد بهره‌بردار · هنگام ارسال بسته قابل انتخاب">
             {(['none', 'vesting', 'milestone'] as const).map((k) => {
@@ -177,7 +174,7 @@ export default function OrgContractPage() {
             }) : <SettingRow label="صندوقی در قرارداد تعریف نشده است" />}
           </SettingsGroup>
 
-          <SettingsGroup title={groupTitle(I.shield, 'primary', 'زنجیره تأیید')} footer="مرحله «تأیید مدیر مالی» طبق قرارداد الزامی است و قابل غیرفعال‌سازی نیست.">
+          <SettingsGroup title={groupTitle(I.shield, 'primary', 'زنجیره تأیید')} footer="تأیید نهایی «تأییدکننده» طبق قرارداد الزامی است و قابل غیرفعال‌سازی نیست.">
             {!chain ? <SkeletonRows n={4} /> : chain.items.map((c) => (
               <SettingRow key={c.id} label={c.label} desc={c.desc}>
                 {c.locked && <Pill icon={I.lock}>الزامی</Pill>}
@@ -189,7 +186,7 @@ export default function OrgContractPage() {
           <SettingsGroup
             title={groupTitle(I.users, 'secondary', 'کاربران پنل')}
             action={<button type="button" className="nm-btn sm ghost" onClick={openInvite}><Icon d={I.plus} size={15} strokeWidth={2} />افزودن کاربر</button>}
-            footer="«مدیر مالی» تأییدکنندهٔ نهایی بسته‌ها است و قابل حذف نیست."
+            footer="نقش‌ها: مدیر (دسترسی کامل)، تأییدکننده (تأیید نهایی بسته‌ها)، کارشناس (آماده‌سازی بسته‌ها)."
           >
             {o.admins.map((u) => (
               <LeadRow key={u.id} lead={<Ava letter={u.name[0]} id={u.id} />} label={u.name} desc={<span className="ltr" style={{ display: 'block', textAlign: 'right' }}>{u.email}</span>}>

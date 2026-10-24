@@ -79,7 +79,7 @@ src/
 | org-employees / org-employee / org-employee-new | `/org/employees` · `/org/employees/[id]` · `/org/employees/new` |
 | org-packages / org-package-detail | `/org/packages` · `/org/packages/[id]` |
 | org-package-recipients → org-package → org-package-review → org-package-sent | `/org/packages/new` → `/new/settings?draft=` → `/new/review?draft=` → `/new/sent?id=` |
-| org-credit / org-requests / org-reports / org-contract | `/org/credit` · `/org/requests` · `/org/reports` · `/org/contract` |
+| org-credit / org-requests / org-reports / org-contract | `/org/credit` · `/org/requests` · داشبورد `/org` (صفحه‌ی گزارش‌ها در داشبورد ادغام شد؛ گزارش‌های زمان‌بندی‌شده حذف شد) · `/org/contract` |
 | op-login / op-overview | `/op/login` · `/op` |
 | op-organizations / op-organization / op-org-new | `/op/organizations` · `/op/organizations/[id]` · `/op/organizations/new` |
 | op-users / op-user | `/op/users` · `/op/users/[id]` |

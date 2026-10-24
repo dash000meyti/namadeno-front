@@ -2,7 +2,9 @@
 import { PanelShell, type NavGroup, type SearchItem } from '@/components/panel/PanelShell';
 import { useOrgMe, useOrgRequests } from '@/api/org';
 import { useOrgNotifications } from '@/api/org-people-extra';
-import { setSession } from '@/api/client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { getSession, setSession } from '@/api/client';
 import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { FEATURES } from '@/lib/features';
@@ -21,6 +23,9 @@ const I = {
 };
 
 export default function OrgPanelLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  // signed in with a temporary password → set a new password first (on the login page)
+  useEffect(() => { if (getSession('org_admin')?.mustChangePassword) router.replace(routes.org.login); }, [router]);
   const { data: me } = useOrgMe();
   const { data: pending } = useOrgRequests('pending');
   const count = pending?.length ?? 0;
@@ -40,7 +45,6 @@ export default function OrgPanelLayout({ children }: { children: React.ReactNode
     ] },
     { title: 'مدیریت', items: [
       ...(isAdmin ? [{ label: 'واحدها', href: routes.org.departments, tone: 'info' as const, d: I.units }] : []),
-      { label: 'گزارش‌ها', href: routes.org.reports, tone: 'secondary', d: I.reports },
       { label: 'تنظیمات قرارداد', short: 'قرارداد', href: routes.org.contract, tone: 'ink', d: I.contract },
     ] },
   ];
@@ -52,7 +56,6 @@ export default function OrgPanelLayout({ children }: { children: React.ReactNode
     { title: 'ارسال بسته دارایی', sub: 'شروع ارسال جدید', kind: 'عملیات', d: I.pkg, href: routes.org.newRecipients() },
     { title: 'درخواست‌ها', sub: faDigits(count) + ' درخواست در انتظار', kind: 'صفحه', d: I.inbox, href: routes.org.requests },
     { title: 'اعلان‌ها', sub: faDigits(unread) + ' اعلان خوانده‌نشده', kind: 'صفحه', d: I.inbox, href: routes.org.notifications },
-    { title: 'گزارش‌ها', sub: 'گزارش بسته‌ها و تخصیص', kind: 'صفحه', d: I.reports, href: routes.org.reports },
     ...(isAdmin ? [{ title: 'واحدها', sub: 'ساخت و ویرایش واحدهای سازمان', kind: 'صفحه', d: I.units, href: routes.org.departments }] : []),
   ];
   return (
@@ -61,7 +64,7 @@ export default function OrgPanelLayout({ children }: { children: React.ReactNode
       brandSub="سازمان"
       homeHref={routes.org.dashboard}
       groups={groups}
-      user={{ name: me?.admin.name ?? 'نیما رضایی', role: me?.admin.role ?? 'مدیر منابع انسانی', letter: (me?.admin.name ?? 'ن')[0] }}
+      user={{ name: me?.admin.name ?? 'نیما رضایی', role: me?.admin.role ?? 'کارشناس', letter: (me?.admin.name ?? 'ن')[0] }}
       logoutHref={routes.org.login}
       onLogout={() => setSession(null, 'org_admin')}
       orgSwitcher={{ name: org?.name ?? 'هلدینگ آرمان', sub: `سازمان فعال · ${faDigits(org?.employees ?? 384)} کارمند`, contract: org?.contractNo ?? 'AR-1042', settingsHref: routes.org.contract }}

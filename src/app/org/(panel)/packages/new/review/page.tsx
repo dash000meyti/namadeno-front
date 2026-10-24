@@ -74,7 +74,7 @@ function ReviewStep() {
   const adminName = me?.admin.name ?? 'نیما رضایی';
 
   const chain: { label: string; sub: string; state: StepState; s: string; tone: Tone }[] = [
-    { label: 'مدیر منابع انسانی', sub: `${adminName} · ${relTime(pkg.createdAt, now())}`, state: ack ? 'done' : 'current', s: ack ? 'تأیید شد' : 'در انتظار', tone: ack ? 'success' : 'warning' },
+    { label: me?.admin.role ?? 'کارشناس', sub: `${adminName} · ${relTime(pkg.createdAt, now())}`, state: ack ? 'done' : 'current', s: ack ? 'تأیید شد' : 'در انتظار', tone: ack ? 'success' : 'warning' },
     { label: 'کنترل بودجه سازمان', sub: over ? 'کسری موجودی حساب سازمان' : `موجودی ${remainNow.value} ${remainNow.unit} تومان`, state: !ack ? 'pending' : over ? 'current' : 'done', s: over ? 'کسری بودجه' : 'کافی', tone: over ? 'error' : 'success' },
     { label: 'ارسال به کارکنان', sub: 'بلافاصله پس از تأیید شما · صندوق ورودی و اعلان', state: canSend ? 'current' : 'pending', s: 'آماده ارسال', tone: canSend ? 'warning' : 'neutral' },
   ];

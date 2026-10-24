@@ -12,7 +12,11 @@ import { qk } from './keys';
 // ───────────── Types ─────────────
 
 export interface ContractVersion { v: number; note: string; at: ISODate; by: string }
-export interface HrUser { id: string; name: string; email: string; mobile?: string; role: string; lastLoginAt?: ISODate; twoFA: boolean; status: 'active' | 'invited' }
+export interface HrUser {
+  id: string; name: string; email: string; mobile?: string; role: string; lastLoginAt?: ISODate; twoFA: boolean; status: 'active' | 'invited';
+  /** How the first login happens: an SMS invite link, or a temporary password set by the operator (changed on first login). */
+  access?: 'invite' | 'temp_password';
+}
 
 /** Operator-only contract & metrics data of an organization (beyond `Organization`). */
 export interface OrgContractExt {
@@ -48,7 +52,8 @@ export interface OrgContractExt {
 /** Body accepted by PATCH /op/organizations/:id (core endpoint, extended by this area). */
 export type OrgPatch = Partial<Organization> & { id: string; contract?: Partial<OrgContractExt>; changeNote?: string };
 /** Body accepted by POST /op/organizations (core endpoint, extended by this area). */
-export type OrgCreate = Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: Omit<HrUser, 'id' | 'status' | 'twoFA'>[]; sendInvites?: boolean };
+/** `hrUsers[].tempPassword`: required for each user when `sendInvites` is false (≥ 8 characters, letters and digits); never stored in plain text. */
+export type OrgCreate = Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: (Omit<HrUser, 'id' | 'status' | 'twoFA' | 'access'> & { tempPassword?: string })[]; sendInvites?: boolean };
 
 export type FacilityKind = 'loan' | 'card' | 'bnpl';
 export interface Facility {

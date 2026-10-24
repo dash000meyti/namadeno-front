@@ -322,12 +322,14 @@ export function Select<K extends string | number>({ value, onChange, options, la
 }
 
 /** «…» menu for row/page actions. */
-export function MenuButton({ items, label, icon = 'M12 5.5h.01M12 12h.01M12 18.5h.01', align }: { items: ({ label: string; onClick: () => void; danger?: boolean; disabled?: boolean } | 'sep')[]; label: string; icon?: string; align?: 'end' }) {
+export function MenuButton({ items, label, icon = 'M12 5.5h.01M12 12h.01M12 18.5h.01', align, text }: { items: ({ label: string; onClick: () => void; danger?: boolean; disabled?: boolean } | 'sep')[]; label: string; icon?: string; align?: 'end'; /** Visible label: renders a ghost button with icon + text instead of an icon button. */ text?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useDismiss(open, () => setOpen(false));
   return (
     <div className="nm-selw" ref={ref}>
-      <button type="button" className="nm-ib" aria-haspopup="menu" aria-expanded={open} aria-label={label} onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}><Icon d={icon} size={18} strokeWidth={2.2} /></button>
+      {text
+        ? <button type="button" className="nm-btn ghost" aria-haspopup="menu" aria-expanded={open} aria-label={label} onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}><Icon d={icon} size={17} />{text}</button>
+        : <button type="button" className="nm-ib" aria-haspopup="menu" aria-expanded={open} aria-label={label} onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}><Icon d={icon} size={18} strokeWidth={2.2} /></button>}
       {open && (
         <div className={cx('nm-menu', align)} role="menu" onClick={(e) => e.stopPropagation()}>
           {items.map((it, i) => it === 'sep' ? <hr key={i} /> : (

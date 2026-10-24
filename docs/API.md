@@ -24,7 +24,8 @@
 | POST | `/auth/signup` | `{ nationalId, mobile, password }` | `Session` |
 | POST | `/auth/password/reset` | `{ mobile, code, password }` | `Session` |
 | POST | `/auth/logout` | — | `{ ok }` |
-| POST | `/org/auth/login` | `{ email, password }` — در ماک، ایمیل یکی از `admins` سازمان نمونه با همان شخص وارد می‌شود (مدیر سازمان / منابع انسانی / مالی)؛ ایمیل دیگر = مدیر منابع انسانی | `Session` (org_admin) |
+| POST | `/org/auth/login` | `{ email, password }` — در ماک، ایمیل یکی از `admins` هر سازمان با همان شخص وارد می‌شود (مدیر / تأییدکننده / کارشناس)؛ ایمیل دیگر = کارشناس سازمان نمونه. کاربری که با رمز موقت ساخته شده `Session.mustChangePassword: true` می‌گیرد و پیش از ورود به پنل باید رمز تازه بسازد | `Session` (org_admin) |
+| POST | `/org/auth/password` | `{ password }` — اولین ورود با رمز موقت: رمز تازه (حداقل ۸ نویسه، حرف و عدد → وگرنه `422 weak_password`)؛ `mustChangePassword` پاک می‌شود | `{ ok }` |
 | POST | `/op/auth/login` | `{ email, password, otp? }` | `Session` (operator) |
 
 ## اپ کارمند
@@ -65,7 +66,7 @@
 
 | روش | مسیر | توضیح | پاسخ |
 |---|---|---|---|
-| GET | `/org/me` | سازمان و ادمین جاری؛ `admin.panelRole` سطح دسترسی است (`admin` · `hr` · `finance` · `viewer`) | `{ organization, admin }` |
+| GET | `/org/me` | سازمان و ادمین جاری؛ `admin.panelRole` نقش است: `admin` «مدیر» · `approver` «تأییدکننده» · `specialist` «کارشناس» (نبودنش = `specialist`)؛ `admin.role` همان برچسب فارسی نقش است | `{ organization, admin }` |
 | GET | `/org/dashboard` | KPIها، بسته‌ها و درخواست‌های اخیر | `OrgDashboard` |
 | GET | `/org/employees?q=&status=&department=` · `/org/employees/:id` | | `Employee[]` · `{ employee, packages, holdings?, requests, loans }` |
 | POST/PATCH | `/org/employees` · `/org/employees/:id` | ساخت: فقط `nationalId` الزامی است؛ `department` خالی = «سایر»؛ `fullName` خالی از ثبت احوال پر می‌شود. ویرایش: `department` خالی = «سایر» | `Employee` |
@@ -79,7 +80,7 @@
 | POST | `/org/packages/:id/milestones/:stepId/reclaim` | `{ note }` — «بازپس‌گیری»: مرحله پرداخت نمی‌شود؛ سهم آن از دارایی کارمند کم می‌شود و به سازمان برمی‌گردد. جزئیات در بخش `org-packages-extra.ts` | `OrgPackage` |
 | GET | `/org/requests?status=` · POST `/org/requests/:id/decision` `{ approve, note? }` | فقط درخواست‌هایی که سازمان تأیید می‌کند: `milestone_release` (و `loan` پس از فعال شدن تسهیلات). برداشت، افزایش اعتبار، اقساط و تغییر مشخصات فقط در کنسول بهره‌بردار (`/op/requests`). همین قاعده برای `/org/people/requests`، `kpis.pendingRequests` داشبورد و درخواست‌های صفحه‌ی کارمند. برای `milestone_release`: `approve: true` مرحله را آزاد می‌کند و `approve: false` یعنی **بازپس‌گیری** همان مرحله (`note` الزامی، حداقل ۳ حرف → `422 note_required`؛ همان اثر `POST …/milestones/:stepId/reclaim`)؛ درخواست `rejected` می‌شود و در UI «بازپس گرفته شد» نمایش داده می‌شود. تصمیم‌های `milestone_release` برگشت‌پذیر نیستند. `ApprovalRequest` فیلدهای اختیاری `packageId`، `stepId` و `trigger` (`employee` \| `due_date`) هم دارد | `ApprovalRequest` |
 | GET | `/org/notifications` · POST `/org/notifications/read` `{ ids? }` | اعلان‌های پنل سازمان (زنگوله): «نیاز به اقدام» (از داده‌ی جاری: مرحله در انتظار تأیید، پیش‌نویس ارسال‌نشده، مهلت پذیرش نزدیک، همکاران فعال‌نشده، پایان قرارداد) + «به‌روزرسانی‌های سامانه»؛ `ids` نبود = همه خوانده شود | `{ items: OrgNotification[] }` · `{ ok }` |
-| GET | `/org/credit` · `/org/reports` | | |
+| GET | `/org/credit` · `/org/reports` | `/org/reports` (ماهانه‌ی ارسال) و `/org/reports/overview` و خروجی‌ها در داشبورد سازمان نمایش داده می‌شوند؛ صفحه‌ی جدای گزارش‌ها حذف شد | |
 | GET/PATCH | `/org/contract` | تنظیمات قرارداد و کاربران پنل | `Organization` |
 
 > **مراحل قرارداد (دریافت مرحله‌ای):** هر مرحله سررسید (`dueDate`) **الزامی** دارد (ساخت و ویرایش پیش‌نویس: `422 bad_steps` «سررسید همه‌ی مراحل الزامی است.»؛ سررسید باید در آینده و هم‌زمان یا پس از مرحله‌ی قبل باشد) و `requiresApproval` اختیاری (نبودنش = `true`). مراحل به ترتیب پیش می‌روند و همیشه یک مرحله‌ی باز `pending_approval` (مرحله‌ی جاری) است. در سررسید مرحله‌ی جاری: اگر `requiresApproval: false` باشد خودکار آزاد می‌شود (درخواست‌های باز آن مرحله با `decidedBy: 'سامانه'` تأیید می‌شوند) و مرحله‌ی بعد بررسی می‌شود؛ اگر تأیید لازم باشد برای هر گیرنده‌ی پذیرفته یک درخواست `milestone_release` با `trigger: 'due_date'`، `packageId`، `stepId` و یادداشت «سررسید این مرحله رسیده است.» باز می‌شود (برای هر مرحله و گیرنده فقط یک بار). قرارداد تا پذیرش کارمند شروع نمی‌شود. **بک‌اند واقعی باید این پردازش را زمان‌بندی‌شده (مثلاً روزانه) اجرا کند**؛ ماک آن را پیش از هر درخواست API اجرا می‌کند (`processDueMilestones` در `src/mocks/handlers/org.ts`). وضعیت `reclaimed` («بازپس گرفته شد»، با `reclaimedAt` و `reclaimNote`) مثل `released` نهایی است.
@@ -293,9 +294,7 @@ POST   /api/v1/org/packages/:id/milestones/:stepId/reclaim   body: { note: strin
          becomes current. Irreversible. Sent packages only. (reclaimStep in handlers/org.ts)
          Errors: 404 not_found, 409 not_sent | already_released | already_reclaimed, 422 note_required (≥ 3 characters).
 GET    /api/v1/org/reports/overview
-       → ReportsOverview { weekly[], earlierMonths[], currentMonthExtra, units[], exports[], schedules[] }
-PATCH  /api/v1/org/reports/schedules/:id                 body: { enabled: boolean } → ReportSchedule
-POST   /api/v1/org/reports/schedules                     body: { title?, format? } → ReportSchedule (201)
+       → ReportsOverview { weekly[], earlierMonths[], currentMonthExtra, units[], exports[] }   (shown on the org dashboard; scheduled reports were removed)
 POST   /api/v1/org/reports/exports/:id                   body: { format: 'xlsx' | 'pdf' } → ReportFile { fileName, title, columns, rows }
 GET    /api/v1/org/contract/approval-chain               → ApprovalChain { items[], updatedAt }
 PATCH  /api/v1/org/contract/approval-chain               body: { values: Record<id, boolean> } → ApprovalChain
@@ -320,7 +319,10 @@ POST   /api/v1/op/core/users/:id/notes                 { text, tag } → UserNot
 POST   /api/v1/op/core/users/:id/reset-password        {} → { sent: true }
 
 ── Overrides of core endpoints ──
-POST   /api/v1/op/organizations          body: Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: {name,email,mobile?,role}[]; sendInvites?: boolean }
+POST   /api/v1/op/organizations          body: Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: {name,email,mobile?,role,tempPassword?}[]; sendInvites?: boolean }
+       sendInvites: true → SMS invite link (the user sets a password). sendInvites: false → every user needs tempPassword
+       (≥ 8 chars, letters + digits; 422 temp_password_required | weak_password); the user changes it on first login
+       (admins[].mustChangePassword, HrUser.access 'temp_password'). The real backend stores only a hash.
                                          → Organization (201, status «onboarding»)   · 422 missing_name | invalid_employees | missing_funds
 PATCH  /api/v1/op/organizations/:id      body: Partial<Organization> & { contract?: Partial<OrgContractExt>; changeNote?: string }
                                          → Organization; a change of settings/contract bumps the contract version (OrgContractExt.versions)

@@ -36,10 +36,6 @@ export interface PackageInsights {
 }
 
 export type ReportRange = 'm1' | 'm3' | 'm6' | 'y1';
-export interface ReportSchedule {
-  id: ID; title: string; period: string; to: string; format: 'Excel' | 'PDF'; lastAt?: ISODate; enabled: boolean;
-  tone: 'primary' | 'info' | 'warning' | 'success'; icon: 'wallet' | 'percent' | 'file' | 'pkg' | 'clock';
-}
 export interface ReportExport { id: 'payroll' | 'credit' | 'tax'; title: string; desc: string; lastAt?: ISODate; tone: 'primary' | 'info' | 'warning'; icon: 'wallet' | 'percent' | 'file' }
 export interface ReportsOverview {
   /** Weekly totals of the last 4 weeks (toman), oldest first. */
@@ -51,7 +47,6 @@ export interface ReportsOverview {
   /** Allocation chosen by employees, per department (percent). */
   units: { department: string; gold: number; fixed: number; rial: number; amount: Toman }[];
   exports: ReportExport[];
-  schedules: ReportSchedule[];
 }
 export interface ReportFile { fileName: string; title: string; columns: string[]; rows: string[][] }
 
@@ -122,7 +117,5 @@ export const useReclaimMilestone = () => {
     },
   });
 };
-export const useToggleSchedule = () => useX((v: { id: string; enabled: boolean }) => patch<ReportSchedule>(`/org/reports/schedules/${v.id}`, { enabled: v.enabled }));
-export const useCreateSchedule = () => useX((v: { title?: string; format?: 'Excel' | 'PDF' }) => post<ReportSchedule>('/org/reports/schedules', v));
 export const useExportReport = () => useX((v: { id: ReportExport['id']; format: 'xlsx' | 'pdf' }) => post<ReportFile>(`/org/reports/exports/${v.id}`, { format: v.format }));
 export const useUpdateApprovalChain = () => useX((values: Record<string, boolean>) => patch<ApprovalChain>('/org/contract/approval-chain', { values }));

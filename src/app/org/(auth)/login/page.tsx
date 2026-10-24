@@ -1,8 +1,12 @@
 'use client';
-/** Organization panel sign-in — shared sign-in layout (AuthLayout), same card language as the app. */
-import { useState } from 'react';
+/**
+ * Organization panel sign-in — shared sign-in layout (AuthLayout), same card language as the app.
+ * A user created with a temporary password (no SMS invite) sets their own password here before entering the panel.
+ */
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useOrgLogin } from '@/api/auth';
+import { useOrgLogin, useOrgSetPassword } from '@/api/auth';
+import { getSession, setSession } from '@/api/client';
 import { Icon } from '@/components/ui/Icon';
 import { AuthField, AuthLayout, CheckRow, PasswordToggle } from '@/components/ui/AuthLayout';
 import { routes } from '@/lib/routes';
@@ -21,6 +25,9 @@ export default function OrgLoginPage() {
   const [remember, setRemember] = useState(true);
   const [touched, setTouched] = useState(false);
   const [forgot, setForgot] = useState(false);
+  // a session that still has a temporary password goes straight to «تعیین رمز عبور»
+  const [mustChange, setMustChange] = useState(false);
+  useEffect(() => { if (getSession('org_admin')?.mustChangePassword) setMustChange(true); }, []);
 
   const errors = {
     email: !email.trim() ? 'ایمیل سازمانی را وارد کنید' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'ایمیل معتبر نیست' : '',
@@ -34,9 +41,11 @@ export default function OrgLoginPage() {
     setTouched(true);
     if (invalid || login.isPending) return;
     login.mutate({ email: email.trim(), password: enDigits(password) }, {
-      onSuccess: () => router.replace(routes.org.dashboard),
+      onSuccess: (s) => { if (s.mustChangePassword) setMustChange(true); else router.replace(routes.org.dashboard); },
     });
   };
+
+  if (mustChange) return <SetPassword onDone={() => router.replace(routes.org.dashboard)} />;
 
   return (
     <AuthLayout
@@ -69,6 +78,50 @@ export default function OrgLoginPage() {
         <button type="submit" className="nm-btn lg block" disabled={login.isPending}>
           {login.isPending ? 'در حال ورود…' : 'ورود'}
         </button>
+      </form>
+    </AuthLayout>
+  );
+}
+
+/** First login with a temporary password: choose a new password (≥ 8 characters, letters and digits) and repeat it. */
+function SetPassword({ onDone }: { onDone: () => void }) {
+  const save = useOrgSetPassword();
+  const [pw, setPw] = useState('');
+  const [again, setAgain] = useState('');
+  const [show, setShow] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const errors = {
+    pw: !pw ? 'رمز عبور تازه را وارد کنید' : !/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(enDigits(pw)) ? 'حداقل ۸ نویسه، شامل حرف لاتین و عدد' : '',
+    again: !again ? 'رمز عبور را تکرار کنید' : again !== pw ? 'با رمز عبور تازه یکسان نیست' : '',
+  };
+  const err = (k: keyof typeof errors) => (touched ? errors[k] : '');
+  const submit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setTouched(true);
+    if (errors.pw || errors.again || save.isPending) return;
+    save.mutate({ password: enDigits(pw) }, {
+      onSuccess: () => {
+        const s = getSession('org_admin');
+        if (s) setSession({ ...s, mustChangePassword: undefined }, 'org_admin');
+        onDone();
+      },
+    });
+  };
+  const field = { className: 'num', dir: 'ltr' as const, style: { textAlign: 'right' as const, letterSpacing: show ? 'normal' : '.12em' } };
+  return (
+    <AuthLayout tag="پنل سازمانی" foot={<span>رمز موقت فقط برای اولین ورود است</span>}>
+      <form onSubmit={submit} noValidate className="nm-auth-card" aria-labelledby="org-setpw-title">
+        <h1 id="org-setpw-title">تعیین رمز عبور</h1>
+        <p className="sub">برای ادامه، به‌جای رمز موقت یک رمز تازه انتخاب کنید.</p>
+        <AuthField label="رمز عبور تازه" icon={LOCK} htmlFor="org-newpw" error={err('pw')}>
+          <input id="org-newpw" type={show ? 'text' : 'password'} value={pw} onChange={(e) => setPw(e.target.value)} aria-invalid={!!err('pw')} autoComplete="new-password" autoFocus {...field} />
+          <PasswordToggle shown={show} onToggle={() => setShow((x) => !x)} />
+        </AuthField>
+        <AuthField label="تکرار رمز عبور" icon={LOCK} htmlFor="org-newpw2" error={err('again')}>
+          <input id="org-newpw2" type={show ? 'text' : 'password'} value={again} onChange={(e) => setAgain(e.target.value)} aria-invalid={!!err('again')} autoComplete="new-password" {...field} />
+        </AuthField>
+        {save.isError && <div role="alert" className="nm-note err"><Icon name="risk" size={18} /><span>{errMsg(save.error)}</span></div>}
+        <button type="submit" className="nm-btn lg block" disabled={save.isPending}>{save.isPending ? 'در حال ذخیره…' : 'ذخیره و ورود'}</button>
       </form>
     </AuthLayout>
   );

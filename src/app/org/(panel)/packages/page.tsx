@@ -64,7 +64,7 @@ export default function OrgPackagesPage() {
         : { note: `${cmp(thisMonthSum)} تومان · ${diff === 0 ? 'برابر' : `${diff > 0 ? '+' : '−'}${faDigits(Math.abs(diff))}`} نسبت به ${lastMonthName}`, trend: diff > 0 ? 'up' as const : undefined }),
     },
     { label: 'در انتظار پذیرش کارکنان', value: faDigits(pendingRecipients.length), unit: 'بسته', note: pendingRecipients.length ? `${cmp(pendingSum)} تومان` : 'همه‌ی بسته‌ها پذیرفته شده‌اند', trend: pendingRecipients.length ? 'warn' : undefined },
-    { label: 'ارسال امسال', value: yearSum.value, unit: `${yearSum.unit} تومان`.trim(), note: `${faDigits(yearSent.length)} بسته · ${money(yearRecipients)} گیرنده`, href: routes.org.reports },
+    { label: 'ارسال امسال', value: yearSum.value, unit: `${yearSum.unit} تومان`.trim(), note: `${faDigits(yearSent.length)} بسته · ${money(yearRecipients)} گیرنده`, href: routes.org.dashboard },
     { label: 'نرخ پذیرش امسال', value: `${faDigits(acceptPct)}٪`, note: `${money(yearAccepted)} از ${money(yearRecipients)} بسته دریافت شد` },
   ];
 
@@ -182,7 +182,6 @@ function PackageInspector({ pkg, onClose }: { pkg: OrgPackage; onClose: () => vo
         <KV rows={[
           ['شیوه‌ی دریافت', pkg.lockPolicy.type === 'none' ? LOCK_META.none.label : `${LOCK_META[pkg.lockPolicy.type].label} · ${policySub(pkg)}`],
           ['تخصیص', allocationText(pkg)],
-          ['برداشت نقدی', pkg.cashAllowed ? 'مجاز' : 'مجاز نیست'],
           ['ایجاد', <span key="c" className="num">{jDate(pkg.createdAt)}</span>],
           ['ارسال', <span key="s" className="num">{pkg.sentAt ? jDate(pkg.sentAt) : '—'}</span>],
           ['مهلت پذیرش', <span key="e" className="num">{pkg.expiresAt ? jDate(pkg.expiresAt) : '۳۰ روز پس از ارسال'}</span>],

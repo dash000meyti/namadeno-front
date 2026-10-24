@@ -269,7 +269,7 @@ function AllocationCard({ allocation, loading }: { allocation?: PackageInsights[
   const a = allocation ?? { gold: 0, fixed: 0, rial: 0 };
   const sum = a.gold + a.fixed + a.rial;
   return (
-    <Card title="تخصیص کارکنان" actions={<Link href={routes.org.reports} className="nm-ib" aria-label="گزارش ترکیب تخصیص"><Icon d={I.reports} size={18} /></Link>}>
+    <Card title="تخصیص کارکنان">
       {loading ? <SkeletonRows n={2} /> : sum ? (
         <Section title="جمع پذیرفته‌شده" action={<BigNum value={cmp(sum)} unit="تومان" />}>
           <Allocation items={ASSETS.map((x) => ({ label: x.label, value: a[x.key], color: x.color }))} fmt={cmp} />

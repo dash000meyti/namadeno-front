@@ -23,6 +23,7 @@ import { ICON, ORG_STATUS, PRODUCT_META, errMsg, fb, fm, orgProducts, pctFa, sig
 import { faDigits, jDate, jMonthYear, money, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { routes } from '@/lib/routes';
+import { ORG_ROLES } from '@/lib/org';
 
 type Tab = 'overview' | 'contract' | 'staff' | 'packages' | 'credit' | 'hr';
 const DAY = 86400000;
@@ -33,7 +34,7 @@ const FAC_TONE: Record<FacilityKind, Tone> = { loan: 'info', bnpl: 'success', ca
 const FAC_STATUS: Record<OrgCreditRow['status'], [string, Tone]> = { current: ['جاری', 'success'], late: ['معوق', 'error'], blocked: ['متوقف', 'neutral'], settled: ['تسویه‌شده', 'neutral'] };
 const EMP_STATUS: Record<Employee['status'], [string, Tone]> = { active: ['فعال', 'success'], invited: ['در انتظار فعال‌سازی', 'warning'], inactive: ['غیرفعال', 'neutral'] };
 const ASSET_SHORT: Record<string, string> = { rial: 'ریال', gold: 'طلا', fixed: 'درآمد ثابت', mixed: 'مختلط', equity: 'سهامی', silver: 'نقره' };
-const HR_ROLES = ['مدیر منابع انسانی', 'مدیر مالی (تأییدکننده)', 'کارشناس HR'];
+const HR_ROLES = ORG_ROLES.map((r) => r.label);
 const bn = (n: number) => `${fb(n)} میلیارد`;
 const b1 = (v: number) => faDigits(String(Math.round(v * 10) / 10), true);
 
@@ -93,7 +94,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
   const [empId, setEmpId] = useState<string | null>(null);
   const [modal, setModal] = useState<'' | 'suspend' | 'invite'>('');
   const [reason, setReason] = useState('عدم تسویه صورت‌حساب مهر ۱۴۰۵');
-  const [inv, setInv] = useState({ name: '', email: '', role: 'کارشناس HR' });
+  const [inv, setInv] = useState({ name: '', email: '', role: 'کارشناس' });
   const [invErr, setInvErr] = useState('');
 
   const prods = orgProducts(org);
@@ -132,9 +133,9 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
     onError: (e) => toast(errMsg(e), 'error'),
   });
   const toggleFinance = () => {
-    const payload: OrgPatch = { id: org.id, contract: { financeApproval: !ext.financeApproval }, changeNote: ext.financeApproval ? 'حذف تأیید مدیر مالی از زنجیره' : 'افزودن تأیید مدیر مالی به زنجیره' };
+    const payload: OrgPatch = { id: org.id, contract: { financeApproval: !ext.financeApproval }, changeNote: ext.financeApproval ? 'حذف تأیید نهایی تأییدکننده از زنجیره' : 'افزودن تأیید نهایی تأییدکننده به زنجیره' };
     update.mutate(payload, {
-      onSuccess: () => toast(ext.financeApproval ? 'تأیید مدیر مالی از زنجیره حذف شد' : 'تأیید مدیر مالی به زنجیره اضافه شد'),
+      onSuccess: () => toast(ext.financeApproval ? 'تأیید نهایی تأییدکننده از زنجیره حذف شد' : 'تأیید نهایی تأییدکننده به زنجیره اضافه شد'),
       onError: (e) => toast(errMsg(e), 'error'),
     });
   };
@@ -143,7 +144,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
     if (!inv.name.trim()) { setInvErr('نام کاربر را وارد کنید.'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inv.email.trim())) { setInvErr('ایمیل معتبر وارد کنید.'); return; }
     invite.mutate({ orgId: org.id, name: inv.name.trim(), email: inv.email.trim(), role: inv.role }, {
-      onSuccess: () => { setModal(''); setInv({ name: '', email: '', role: 'کارشناس HR' }); toast('دعوت‌نامه کاربر HR ارسال شد'); },
+      onSuccess: () => { setModal(''); setInv({ name: '', email: '', role: 'کارشناس' }); toast('دعوت‌نامه کاربر سازمان ارسال شد'); },
       onError: (e) => setInvErr(errMsg(e)),
     });
   };
@@ -232,7 +233,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
         { key: 'staff', label: 'کارکنان', count: org.employees },
         { key: 'packages', label: 'بسته‌ها', count: packages.length },
         { key: 'credit', label: 'تسهیلات', count: ext.credit.activeLoans },
-        { key: 'hr', label: 'کاربران HR', count: ext.hrUsers.length },
+        { key: 'hr', label: 'کاربران سازمان', count: ext.hrUsers.length },
       ]} />
 
       {tab === 'overview' && (
@@ -276,9 +277,9 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
             </div>
             <div className="nm-stack">
               <SettingsGroup title="زنجیره تأیید بسته‌ها" footer="تغییر این گزینه بلافاصله ذخیره می‌شود و نسخه‌ی تازه‌ای از قرارداد می‌سازد.">
-                <SettingRow label="۱ · مدیر منابع انسانی" desc="تأیید اول هر بسته" />
-                <SettingRow label="۲ · مدیر مالی سازمان" desc="نیاز به تأیید مدیر مالی سازمان">
-                  <Switch on={ext.financeApproval} onChange={toggleFinance} disabled={update.isPending} label="نیاز به تأیید مدیر مالی" />
+                <SettingRow label="۱ · کارشناس یا مدیر سازمان" desc="آماده‌سازی و ثبت هر بسته" />
+                <SettingRow label="۲ · تأییدکننده‌ی سازمان" desc="تأیید نهایی پیش از ارسال">
+                  <Switch on={ext.financeApproval} onChange={toggleFinance} disabled={update.isPending} label="نیاز به تأیید نهایی تأییدکننده" />
                 </SettingRow>
                 <SettingRow label="۳ · ارسال به کارکنان" desc="پس از آخرین تأیید" />
               </SettingsGroup>

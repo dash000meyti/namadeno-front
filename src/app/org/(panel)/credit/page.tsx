@@ -129,7 +129,7 @@ function OrgCreditPage() {
         </Card>
       </div>
 
-      <Card flush title="وام‌های فعال" sub={`${faDigits(loans.length)} وام · مانده ${compactMoney(remaining)} · رزرو پشتوانه ${compactMoney(collateral)} تومان`} more={{ label: 'گزارش تسهیلات', href: routes.org.reports }}>
+      <Card flush title="وام‌های فعال" sub={`${faDigits(loans.length)} وام · مانده ${compactMoney(remaining)} · رزرو پشتوانه ${compactMoney(collateral)} تومان`}>
         <Toolbar>
           <Tabs label="وضعیت وام" value={ltab} onChange={setLtab} items={[
             { key: 'all', label: 'همه', count: loans.length },
