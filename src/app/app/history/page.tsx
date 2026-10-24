@@ -16,7 +16,7 @@ import { CATEGORY_LABEL, D, STATUS_LABEL, downloadText, txVisual } from '@/compo
 import '@/components/app/money/money.css';
 
 const BASE_CHIPS: { id: string; label: string }[] = [
-  { id: 'all', label: 'همه' }, { id: 'lock', label: 'قفل و آزادسازی' }, { id: 'inbox', label: 'دریافتی' }, { id: 'trade', label: 'خرید/فروش' }, { id: 'loan', label: 'وام' }, { id: 'card', label: 'کارت' },
+  { id: 'all', label: 'همه' }, { id: 'lock', label: 'رزرو و آزادسازی' }, { id: 'inbox', label: 'دریافتی' }, { id: 'trade', label: 'خرید/فروش' }, { id: 'loan', label: 'وام' }, { id: 'card', label: 'کارت' },
 ];
 
 export default function HistoryPage() {

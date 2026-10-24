@@ -2,33 +2,47 @@
  * Additional mock endpoints owned by the "org-packages" area. Registered before the core handlers (can override).
  *
  * PATCH  /api/v1/org/packages/:id                         (overrides core)
- *        body: Partial<OrgPackage> & { recipientIds?: string[] }
- *        → OrgPackage. Draft only. Validates amount ≥ 0, fixed split = 100%, milestone steps (1–8, each ≥ 5%, sum = 100%)
- *          and (re)builds `milestoneProgress` when the lock policy changes. Errors: 404 not_found, 409 not_draft,
+ *        body: Partial<OrgPackage> & { recipientIds?: string[]; recipientAmounts?: Record<employeeId, Toman> }
+ *        `recipientAmounts` = per-person amounts from an Excel file → amountSource 'file' (amountPerPerson 0, total = Σ amounts).
+ *        `recipientIds` without amounts, or a positive `amountPerPerson`, switches back to one amount for everyone.
+ *        → OrgPackage. Draft only. Validates amount ≥ 0, fixed split = 100%, milestone steps (1–8, each ≥ 5%, sum = 100%,
+ *          every step with a future due date, in order) and (re)builds `milestoneProgress` when the lock policy changes
+ *          (`requiresApproval` missing = true). Errors: 404 not_found, 409 not_draft,
  *          422 bad_amount | bad_split | bad_steps | cash_not_allowed | policy_not_allowed.
  * GET    /api/v1/org/packages/:id/insights
  *        → PackageInsights { recipients[] (with department, code, chosen split, reminded), allocation {gold,fixed,rial},
- *          fixRequests: stepId[], claims: pending milestone_release requests }
+ *          claims: pending milestone_release requests of this package (stepId, trigger) }
  * POST   /api/v1/org/packages/:id/remind                   body: { employeeIds?: string[] } (default: every pending recipient)
  *        → { reminded: number, employeeIds: string[] }   (registered app users get a notification)
- * POST   /api/v1/org/packages/:id/milestones/:stepId/fix   body: { note?: string } → { fixRequests: string[] }
- * DELETE /api/v1/org/packages/:id/milestones/:stepId/fix   → { fixRequests: string[] }   (undo the correction request)
+ * PATCH  /api/v1/org/packages/:id/milestones/:stepId       body: { requiresApproval?: boolean; dueDate?: ISODate }
+ *        → OrgPackage. Draft or sent package, step not settled yet (released / reclaimed). Updates the step in `milestoneProgress`, in
+ *          `lockPolicy.steps` and in the recipients' app copies (milestone lock + inbox). A new future due date withdraws
+ *          a pending request that the old due date opened. Errors: 404 not_found, 409 already_released | already_reclaimed | not_editable,
+ *          422 bad_due (missing / invalid / in the past / before the previous step / after the next step) | no_changes.
+ * (all)  /api/v1/*  (pass-through, registered first in handlers/index.ts) runs processDueMilestones() (handlers/org.ts):
+ *        due steps without approval are released automatically; due steps that need approval open a
+ *        `milestone_release` request (trigger 'due_date'). The real backend does this on a schedule.
+ * POST   /api/v1/org/packages/:id/milestones/:stepId/reclaim   body: { note: string }   («بازپس‌گیری»)
+ *        → OrgPackage. The step is not paid: status 'reclaimed' (+ reclaimedAt, reclaimNote), its share leaves the
+ *          employees' assets (reservation and holding) and returns to the organization's budget; the employee gets a
+ *          ledger entry and a notification with the note; pending requests of the step become 'rejected' with the note;
+ *          the next step becomes current. Irreversible. Sent packages only. (reclaimStep in handlers/org.ts)
+ *          Errors: 404 not_found, 409 not_sent | already_released | already_reclaimed, 422 note_required (≥ 3 characters).
  * GET    /api/v1/org/reports/overview
- *        → ReportsOverview { weekly[], earlierMonths[], currentMonthExtra, units[], exports[], schedules[] }
- * PATCH  /api/v1/org/reports/schedules/:id                 body: { enabled: boolean } → ReportSchedule
- * POST   /api/v1/org/reports/schedules                     body: { title?, format? } → ReportSchedule (201)
+ *        → ReportsOverview { weekly[], earlierMonths[], currentMonthExtra, units[], exports[] }
  * POST   /api/v1/org/reports/exports/:id                   body: { format: 'xlsx' | 'pdf' } → ReportFile { fileName, title, columns, rows }
  * GET    /api/v1/org/contract/approval-chain               → ApprovalChain { items[], updatedAt }
  * PATCH  /api/v1/org/contract/approval-chain               body: { values: Record<id, boolean> } → ApprovalChain
  *        (locked items cannot be disabled → 422 locked_step)
  */
 import { http, type HttpHandler } from 'msw';
-import type { AllocationSplit, LockPolicy, MilestoneStep, OrgPackage } from '@/types/domain';
+import type { AllocationSplit, LockPolicy, OrgPackage } from '@/types/domain';
 import type { PackageInsights, ReportFile, ReportsOverview } from '@/api/org-packages-extra';
-import { db, newId } from '../db';
+import { db } from '../db';
 import { body, fail, latency, ok, p, who } from '../http';
 import { defaultOrgPkgStore, type OrgPkgStore } from '../seed/extra-org-packages';
 import { ledger } from './app';
+import { buildProgress, milestoneDueError, processDueMilestones, reclaimStep } from './org';
 import { now, jalaliToIso } from '@/lib/clock';
 import { jDate, money } from '@/lib/format';
 
@@ -57,7 +71,7 @@ export function chosenSplit(pkg: OrgPackage, employeeId: string): AllocationSpli
 function validatePolicy(lp: LockPolicy | undefined, orgId: string) {
   if (!lp) return null;
   const allowed = org(orgId).settings.lockPolicies;
-  if (!allowed.includes(lp.type)) return fail(422, 'policy_not_allowed', 'این سیاست قفل در قرارداد سازمان مجاز نیست.');
+  if (!allowed.includes(lp.type)) return fail(422, 'policy_not_allowed', 'این شیوه‌ی دریافت در قرارداد سازمان شما فعال نیست.');
   if (lp.type === 'vesting' && (!lp.releaseAt || new Date(lp.releaseAt).getTime() <= now().getTime())) return fail(422, 'bad_release_date', 'تاریخ آزادسازی باید در آینده باشد.');
   if (lp.type === 'milestone') {
     const steps = lp.steps ?? [];
@@ -65,6 +79,8 @@ function validatePolicy(lp: LockPolicy | undefined, orgId: string) {
     if (steps.some((s) => !s.title?.trim())) return fail(422, 'bad_steps', 'عنوان همه مراحل را وارد کنید.');
     if (steps.some((s) => !(s.sharePct >= 5))) return fail(422, 'bad_steps', 'سهم هر مرحله حداقل ۵٪ است.');
     if (steps.reduce((s, x) => s + x.sharePct, 0) !== 100) return fail(422, 'bad_steps', 'جمع درصد مراحل باید ۱۰۰٪ باشد.');
+    const dueErr = milestoneDueError(steps);
+    if (dueErr) return fail(422, 'bad_steps', dueErr);
   }
   return null;
 }
@@ -77,9 +93,9 @@ function buildReport(id: string, orgId: string): ReportFile | null {
   if (id === 'payroll') {
     return {
       fileName: `payroll-${stamp}`, title: 'گزارش حقوق و مزایا',
-      columns: ['عنوان بسته', 'نوع', 'تاریخ ارسال', 'گیرندگان', 'مبلغ هر نفر', 'جمع کل', 'سیاست قفل', 'پذیرفته‌شده'],
-      rows: pk.map((x) => [x.title, REASON[x.reason] ?? x.reason, toCsvDate(x.sentAt), String(x.recipients.length), money(x.amountPerPerson), money(x.total),
-        x.lockPolicy.type === 'none' ? 'بدون قفل' : x.lockPolicy.type === 'vesting' ? 'قفل زمانی تا ' + jDate(x.lockPolicy.releaseAt) : 'آزادسازی مرحله‌ای',
+      columns: ['عنوان بسته', 'نوع', 'تاریخ ارسال', 'گیرندگان', 'مبلغ هر نفر', 'جمع کل', 'شیوه‌ی دریافت', 'پذیرفته‌شده'],
+      rows: pk.map((x) => [x.title, REASON[x.reason] ?? x.reason, toCsvDate(x.sentAt), String(x.recipients.length), x.amountSource === 'file' ? 'متغیر (از فایل)' : money(x.amountPerPerson), money(x.total),
+        x.lockPolicy.type === 'none' ? 'آزاد' : x.lockPolicy.type === 'vesting' ? 'پس‌انداز تا ' + jDate(x.lockPolicy.releaseAt) : 'دریافت مرحله‌ای',
         String(x.recipients.filter((r) => r.status === 'accepted').length)]),
     };
   }
@@ -87,7 +103,7 @@ function buildReport(id: string, orgId: string): ReportFile | null {
     const o = org(orgId);
     return {
       fileName: `credit-${stamp}`, title: 'گزارش تسهیلات',
-      columns: ['کارمند', 'کد پرسنلی', 'واحد', 'دارایی کل', 'قفل‌شده', 'سقف وام'],
+      columns: ['کارمند', 'کد پرسنلی', 'واحد', 'دارایی کل', 'رزروشده', 'سقف وام'],
       rows: employees(orgId).filter((e) => e.status === 'active').map((e) => [e.fullName, e.employeeCode, e.department, money(e.portfolioValue), money(e.lockedValue), money(((e.portfolioValue - e.lockedValue) * o.settings.loanMaxPct) / 100)]),
     };
   }
@@ -101,6 +117,14 @@ function buildReport(id: string, orgId: string): ReportFile | null {
   return null;
 }
 
+/**
+ * Pass-through for every API request (app, org and operator): runs the due-date processing of milestone steps first.
+ * Registered before all other handlers (handlers/index.ts).
+ */
+export const milestoneTickHandlers: HttpHandler[] = [
+  http.all(p('/*'), () => { processDueMilestones(); return undefined; }),
+];
+
 export const orgPackagesHandlers: HttpHandler[] = [
   // ───── draft update (override: validation + milestone progress) ─────
   http.patch(p('/org/packages/:id'), async ({ request, params }) => {
@@ -109,9 +133,10 @@ export const orgPackagesHandlers: HttpHandler[] = [
     const pkg = packages(id).find((x) => x.id === params.id);
     if (!pkg) return fail(404, 'not_found', 'بسته پیدا نشد.');
     if (pkg.status !== 'draft') return fail(409, 'not_draft', 'فقط پیش‌نویس قابل ویرایش است.');
-    const b = await body<Partial<OrgPackage> & { recipientIds?: string[] }>(request);
-    const { recipientIds, id: _ignore, status: _s, recipients: _r, total: _t, milestoneProgress: _m, createdAt: _c, sentAt: _sa, ...rest } = b;
-    void _ignore; void _s; void _r; void _t; void _m; void _c; void _sa;
+    const b = await body<Partial<OrgPackage> & { recipientIds?: string[]; recipientAmounts?: Record<string, number> }>(request);
+    const { recipientIds, recipientAmounts, amountSource: _src, id: _ignore, status: _s, recipients: _r, total: _t, milestoneProgress: _m, createdAt: _c, sentAt: _sa, ...rest } = b;
+    void _ignore; void _s; void _r; void _t; void _m; void _c; void _sa; void _src;
+    if (recipientAmounts && Object.values(recipientAmounts).some((v) => !Number.isFinite(v) || v <= 0)) return fail(422, 'bad_amount', 'مبلغ هر نفر معتبر نیست.');
     if (rest.amountPerPerson !== undefined && (!Number.isFinite(rest.amountPerPerson) || rest.amountPerPerson < 0)) return fail(422, 'bad_amount', 'مبلغ هر نفر معتبر نیست.');
     const bad = validatePolicy(rest.lockPolicy, id);
     if (bad) return bad;
@@ -130,14 +155,25 @@ export const orgPackagesHandlers: HttpHandler[] = [
     if (rest.message === '') delete pkg.message;
     if (rest.lockPolicy) {
       if (rest.lockPolicy.type === 'milestone') {
-        pkg.milestoneProgress = rest.lockPolicy.steps.map((s, i): MilestoneStep => ({ id: `ms-${i + 1}`, title: s.title, sharePct: s.sharePct, dueDate: s.dueDate, status: i === 0 ? 'pending_approval' : 'future' }));
+        pkg.milestoneProgress = buildProgress(rest.lockPolicy.steps);
       } else delete pkg.milestoneProgress;
     }
-    if (recipientIds) {
-      pkg.recipients = recipientIds.map((eid) => ({ employeeId: eid, name: employees(id).find((e) => e.id === eid)?.fullName ?? eid, amount: pkg.amountPerPerson, status: 'pending' as const }));
+    const nameOf = (eid: string) => employees(id).find((e) => e.id === eid)?.fullName ?? eid;
+    if (recipientAmounts) {
+      // per-person amounts from a file: the file decides who receives what
+      const ids = recipientIds ?? Object.keys(recipientAmounts);
+      pkg.recipients = ids.map((eid) => ({ employeeId: eid, name: nameOf(eid), amount: recipientAmounts[eid] ?? 0, status: 'pending' as const }));
+      pkg.amountSource = 'file';
+      pkg.amountPerPerson = 0;
+    } else {
+      if (recipientIds) {
+        pkg.recipients = recipientIds.map((eid) => ({ employeeId: eid, name: nameOf(eid), amount: pkg.amountPerPerson, status: 'pending' as const }));
+        pkg.amountSource = 'uniform';
+      }
+      if ((rest.amountPerPerson ?? 0) > 0) pkg.amountSource = 'uniform';
+      if (pkg.amountSource !== 'file') pkg.recipients.forEach((r) => { r.amount = pkg.amountPerPerson; });
     }
-    pkg.recipients.forEach((r) => { r.amount = pkg.amountPerPerson; });
-    pkg.total = pkg.amountPerPerson * pkg.recipients.length;
+    pkg.total = pkg.recipients.reduce((s, r) => s + r.amount, 0);
     return ok(pkg);
   }),
 
@@ -165,10 +201,10 @@ export const orgPackagesHandlers: HttpHandler[] = [
     const ids = pkg.recipients.map((r) => r.employeeId);
     const pendingStep = pkg.milestoneProgress?.find((s) => s.status === 'pending_approval');
     const claims = pkg.lockPolicy.type === 'milestone'
-      ? db().requests.filter((r) => r.kind === 'milestone_release' && r.status === 'pending' && ids.includes(r.requesterId))
-        .map((r) => ({ stepId: pendingStep?.id, requestId: r.id, requesterName: r.requesterName, createdAt: r.createdAt, note: r.note }))
+      ? db().requests.filter((r) => r.kind === 'milestone_release' && r.status === 'pending' && ids.includes(r.requesterId) && (!r.packageId || r.packageId === pkg.id))
+        .map((r) => ({ stepId: r.stepId ?? pendingStep?.id, requestId: r.id, requesterName: r.requesterName, createdAt: r.createdAt, note: r.note, trigger: r.trigger ?? 'employee' as const }))
       : [];
-    const res: PackageInsights = { recipients, allocation, fixRequests: store().fixRequests[pkg.id] ?? [], claims };
+    const res: PackageInsights = { recipients, allocation, claims };
     return ok(res);
   }),
 
@@ -191,32 +227,75 @@ export const orgPackagesHandlers: HttpHandler[] = [
     return ok({ reminded: pending.length, employeeIds: pending.map((r) => r.employeeId) });
   }),
 
-  // ───── milestone correction request ─────
-  http.post(p('/org/packages/:id/milestones/:stepId/fix'), async ({ request, params }) => {
+  // ───── milestone step: due date and «نیاز به تأیید» ─────
+  http.patch(p('/org/packages/:id/milestones/:stepId'), async ({ request, params }) => {
+    await latency();
+    const id = orgOf(request);
+    const pkg = packages(id).find((x) => x.id === params.id);
+    const steps = pkg?.milestoneProgress ?? [];
+    const i = steps.findIndex((s) => s.id === params.stepId);
+    if (!pkg || pkg.lockPolicy.type !== 'milestone' || i < 0) return fail(404, 'not_found', 'مرحله پیدا نشد.');
+    if (pkg.status !== 'draft' && pkg.status !== 'sent') return fail(409, 'not_editable', 'این قرارداد دیگر قابل تغییر نیست.');
+    const step = steps[i];
+    if (step.status === 'released') return fail(409, 'already_released', 'این مرحله قبلاً آزاد شده است.');
+    if (step.status === 'reclaimed') return fail(409, 'already_reclaimed', 'این مرحله بازپس گرفته شده است.');
+    const b = await body<{ requiresApproval?: boolean; dueDate?: string | null }>(request);
+    const hasDue = 'dueDate' in b;
+    const hasAp = typeof b.requiresApproval === 'boolean';
+    if (!hasDue && !hasAp) return fail(422, 'no_changes', 'سررسید یا نیاز به تأیید را مشخص کنید.');
+    if (hasDue) {
+      const t = b.dueDate ? new Date(b.dueDate).getTime() : NaN;
+      if (!b.dueDate) return fail(422, 'bad_due', 'سررسید مرحله الزامی است.');
+      if (!Number.isFinite(t)) return fail(422, 'bad_due', 'تاریخ سررسید معتبر نیست.');
+      if (t <= now().getTime()) return fail(422, 'bad_due', 'سررسید باید امروز یا پس از آن باشد.');
+      const prev = steps[i - 1]?.dueDate;
+      const next = steps[i + 1]?.dueDate;
+      if (prev && t < new Date(prev).getTime()) return fail(422, 'bad_due', 'سررسید این مرحله نمی‌تواند پیش از مرحله‌ی قبل باشد.');
+      if (next && t > new Date(next).getTime()) return fail(422, 'bad_due', 'سررسید این مرحله نمی‌تواند پس از مرحله‌ی بعد باشد.');
+    }
+    const patchStep = (s?: { dueDate?: string; requiresApproval?: boolean }) => {
+      if (!s) return;
+      if (hasDue) s.dueDate = b.dueDate!;
+      if (hasAp) s.requiresApproval = b.requiresApproval;
+    };
+    patchStep(step);
+    patchStep(pkg.lockPolicy.steps[i]);
+    // the employees' app copies (milestone lock steps and the inbox item's policy)
+    for (const r of pkg.recipients) {
+      const ud = db().users[r.employeeId];
+      if (!ud) continue;
+      const lock = ud.holdings.flatMap((h) => h.locks).find((l) => l.type === 'milestone' && l.sourceId === pkg.id);
+      patchStep(lock?.steps?.find((s) => s.id === step.id));
+      const lp = ud.inbox.find((x) => x.packageId === pkg.id)?.lockPolicy;
+      if (lp && lp !== pkg.lockPolicy && lp.type === 'milestone') patchStep(lp.steps[i]);
+    }
+    // a later due date withdraws the request that the old due date opened
+    if (hasDue) {
+      const list = db().requests;
+      for (let k = list.length - 1; k >= 0; k -= 1) {
+        const q = list[k];
+        if (q.trigger === 'due_date' && q.status === 'pending' && q.packageId === pkg.id && q.stepId === step.id) list.splice(k, 1);
+      }
+    }
+    processDueMilestones(); // e.g. approval turned off for a step whose due date has passed → released now
+    return ok(pkg);
+  }),
+
+  // ───── milestone reclaim («بازپس‌گیری») ─────
+  http.post(p('/org/packages/:id/milestones/:stepId/reclaim'), async ({ request, params }) => {
     await latency();
     const id = orgOf(request);
     const pkg = packages(id).find((x) => x.id === params.id);
     const step = pkg?.milestoneProgress?.find((s) => s.id === params.stepId);
     if (!pkg || !step) return fail(404, 'not_found', 'مرحله پیدا نشد.');
-    if (step.status !== 'pending_approval') return fail(409, 'not_pending', 'این مرحله در انتظار تأیید نیست.');
+    if (pkg.status !== 'sent') return fail(409, 'not_sent', 'بازپس‌گیری فقط برای قرارداد ارسال‌شده ممکن است.');
+    if (step.status === 'released') return fail(409, 'already_released', 'این مرحله آزاد شده و قابل بازپس‌گیری نیست.');
+    if (step.status === 'reclaimed') return fail(409, 'already_reclaimed', 'این مرحله قبلاً بازپس گرفته شده است.');
     const b = await body<{ note?: string }>(request);
-    const list = (store().fixRequests[pkg.id] ??= []);
-    if (!list.includes(step.id)) list.push(step.id);
-    const idx = pkg.milestoneProgress!.indexOf(step) + 1;
-    for (const r of pkg.recipients) {
-      const ud = db().users[r.employeeId];
-      if (ud) ledger.notify(ud, { title: `مرحله ${idx} ${pkg.title} نیاز به اصلاح دارد`, body: b.note || `«${step.title}» توسط سازمان برای اصلاح بازگردانده شد`, tone: 'error', icon: 'flag', href: '/app/history' });
-    }
-    return ok({ fixRequests: list });
-  }),
-  http.delete(p('/org/packages/:id/milestones/:stepId/fix'), async ({ request, params }) => {
-    await latency();
-    const id = orgOf(request);
-    const pkg = packages(id).find((x) => x.id === params.id);
-    if (!pkg) return fail(404, 'not_found', 'بسته پیدا نشد.');
-    const list = (store().fixRequests[pkg.id] ?? []).filter((s) => s !== params.stepId);
-    store().fixRequests[pkg.id] = list;
-    return ok({ fixRequests: list });
+    const note = (b.note ?? '').trim();
+    if (note.length < 3) return fail(422, 'note_required', 'توضیح بازپس‌گیری را برای کارمند بنویسید.');
+    reclaimStep(id, pkg, step, note);
+    return ok(pkg);
   }),
 
   // ───── reports ─────
@@ -235,7 +314,7 @@ export const orgPackagesHandlers: HttpHandler[] = [
     // start of the current Jalali month (mock clock: Aban 1405)
     const parts = jDate(now()).replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).split('/').map(Number);
     const monthStart = new Date(jalaliToIso(parts[0], parts[1], 1)).getTime() - 12 * 3600000;
-    const seededIds = new Set(['pkg-mehr', 'pkg-welfare-aban', 'pkg-ms-portal', 'pkg-shahrivar', 'pkg-tir', 'pkg-eid']);
+    const seededIds = new Set(['pkg-mehr', 'pkg-welfare-aban', 'pkg-ms-portal', 'pkg-ms-brand', 'pkg-shahrivar', 'pkg-tir', 'pkg-eid']);
     const currentMonthExtra = sent.filter((x) => !seededIds.has(x.id) && new Date(x.sentAt!).getTime() >= monthStart).reduce((sum, x) => sum + x.total, 0);
     const byDept: Record<string, { gold: number; fixed: number; rial: number }> = {};
     for (const pkg of sent) {
@@ -255,23 +334,8 @@ export const orgPackagesHandlers: HttpHandler[] = [
       const fixed = Math.round((v.fixed / total) * 100);
       return { department, gold, fixed, rial: Math.max(0, 100 - gold - fixed), amount: Math.round(v.gold + v.fixed + v.rial) };
     }).sort((a, b) => b.amount - a.amount);
-    const res: ReportsOverview = { weekly, earlierMonths: s.earlierMonths, currentMonthExtra, units, exports: s.exports, schedules: s.schedules };
+    const res: ReportsOverview = { weekly, earlierMonths: s.earlierMonths, currentMonthExtra, units, exports: s.exports };
     return ok(res);
-  }),
-  http.patch(p('/org/reports/schedules/:id'), async ({ request, params }) => {
-    await latency();
-    const sc = store().schedules.find((x) => x.id === params.id);
-    if (!sc) return fail(404, 'not_found', 'گزارش زمان‌بندی‌شده پیدا نشد.');
-    const b = await body<{ enabled?: boolean }>(request);
-    if (typeof b.enabled === 'boolean') sc.enabled = b.enabled;
-    return ok(sc);
-  }),
-  http.post(p('/org/reports/schedules'), async ({ request }) => {
-    await latency();
-    const b = await body<{ title?: string; format?: 'Excel' | 'PDF' }>(request);
-    const sc = { id: newId('sch'), title: b.title || 'گزارش هفتگی بسته‌های دارایی', period: 'هفتگی · شنبه‌ها ۰۹:۰۰', to: 'منابع انسانی', format: b.format ?? 'Excel', enabled: true, tone: 'primary' as const, icon: 'clock' as const };
-    store().schedules.push(sc);
-    return ok(sc, { status: 201 });
   }),
   http.post(p('/org/reports/exports/:id'), async ({ request, params }) => {
     await latency();

@@ -44,7 +44,7 @@ const NOTES: [string, [number, number, number], string][] = [
   ['سقف اعتبار هر نفر ۴۰ → ۵۰ میلیون', [1405, 4, 18], 'علی نادری'],
   ['فعال‌سازی خرید اقساطی', [1404, 12, 10], 'سمیرا توکلی'],
   ['افزودن صندوق درآمد ثابت به صندوق‌های مجاز', [1404, 8, 3], 'مهدی رحیمی'],
-  ['حداکثر قفل زمانی ۶ → ۳ ماه', [1404, 5, 11], 'علی نادری'],
+  ['حداکثر مدت پس‌انداز ۶ → ۳ ماه', [1404, 5, 11], 'علی نادری'],
   ['عقد قرارداد اولیه', [1404, 1, 15], 'علی نادری'],
 ];
 
@@ -71,7 +71,7 @@ const PU_SEED: Record<string, PUSeed> = {
   'u-1002': {
     split: { rial: 8_200_000, gold: 52_000_000, fixed: 31_900_000 },
     locks: [
-      ['collateral', 'gold', 20_000_000, 'وثیقه وام با پشتوانه دارایی', 'آزاد با تسویه وام (۱۲ قسط، ۸ مانده)', [1405, 3, 10], { sourceId: 'ln-1002', paidCount: 4, totalCount: 12 }],
+      ['collateral', 'gold', 20_000_000, 'پشتوانه‌ی وام', 'آزاد با تسویه وام (۱۲ قسط، ۸ مانده)', [1405, 3, 10], { sourceId: 'ln-1002', paidCount: 4, totalCount: 12 }],
       ['vesting', 'fixed', 10_000_000, 'پاداش شهریور ۱۴۰۵', 'آزاد در ۱۴۰۵/۰۹/۳۰', [1405, 6, 14], { releaseAt: jalaliToIso(1405, 9, 30), sourceId: 'pkg-shahrivar' }],
     ],
     facilities: [
@@ -83,11 +83,11 @@ const PU_SEED: Record<string, PUSeed> = {
   'u-1003': {
     split: { rial: 12_800_000, gold: 70_000_000, fixed: 62_000_000 },
     locks: [
-      ['collateral', 'fixed', 25_000_000, 'وثیقه وام با پشتوانه دارایی', 'آزاد با تسویه وام (۱۸ قسط، ۱۱ مانده)', [1405, 1, 20], { sourceId: 'ln-1003', paidCount: 7, totalCount: 18 }],
+      ['collateral', 'fixed', 25_000_000, 'پشتوانه‌ی وام', 'آزاد با تسویه وام (۱۸ قسط، ۱۱ مانده)', [1405, 1, 20], { sourceId: 'ln-1003', paidCount: 7, totalCount: 18 }],
       ['milestone', 'gold', 15_000_000, 'قرارداد پروژه سامانه فروش · کل ۲۰ م', 'با تأیید هر مرحله توسط سازمان آزاد می‌شود', [1405, 5, 1], {
         sourceId: 'pkg-ms-sales', contractTotal: 20_000_000,
         steps: [
-          { id: 'mss-1', title: 'تحلیل', sharePct: 25, status: 'released', releasedAt: jalaliToIso(1405, 6, 1) },
+          { id: 'mss-1', title: 'تحلیل', sharePct: 25, status: 'released', releasedAt: jalaliToIso(1405, 6, 1), dueDate: jalaliToIso(1405, 6, 1) },
           { id: 'mss-2', title: 'طراحی', sharePct: 25, status: 'pending_approval', dueDate: jalaliToIso(1405, 8, 25) },
           { id: 'mss-3', title: 'پیاده‌سازی', sharePct: 30, status: 'future', dueDate: jalaliToIso(1405, 10, 1) },
           { id: 'mss-4', title: 'تحویل', sharePct: 20, status: 'future', dueDate: jalaliToIso(1405, 11, 1) },
@@ -122,7 +122,7 @@ const PU_SEED: Record<string, PUSeed> = {
   'u-1004': {
     split: { rial: 40_000_000, gold: 140_000_000, fixed: 88_000_000 },
     locks: [
-      ['collateral', 'gold', 30_000_000, 'وثیقه وام با پشتوانه دارایی', 'آزاد با تسویه وام (۱۲ قسط، ۶ مانده)', [1405, 2, 1], { sourceId: 'ln-1004', paidCount: 6, totalCount: 12 }],
+      ['collateral', 'gold', 30_000_000, 'پشتوانه‌ی وام', 'آزاد با تسویه وام (۱۲ قسط، ۶ مانده)', [1405, 2, 1], { sourceId: 'ln-1004', paidCount: 6, totalCount: 12 }],
       ['vesting', 'fixed', 22_000_000, 'پاداش تیر ۱۴۰۵', 'آزاد در ۱۴۰۵/۱۰/۱۵', [1405, 4, 2], { releaseAt: jalaliToIso(1405, 10, 15), sourceId: 'pkg-tir' }],
     ],
     facilities: [
@@ -151,9 +151,11 @@ export function seed_opCore(db: MockDB) {
     const activeLoans = o.id === 'org-arman' ? 128 : o.settings.loanEnabled ? Math.round(o.employees * 0.33) : 0;
     const hrUsers: HrUser[] = o.id === 'org-arman'
       ? [
-        { id: 'hr-201', name: 'نیما رضایی', email: 'n.rezaei@arman.ir', role: 'مدیر منابع انسانی', lastLoginAt: daysFromNow(0, '09:12'), twoFA: true, status: 'active' },
-        { id: 'hr-202', name: 'لیلا کاظمی', email: 'l.kazemi@arman.ir', role: 'مدیر مالی (تأییدکننده)', lastLoginAt: daysFromNow(-1, '16:40'), twoFA: true, status: 'active' },
-        { id: 'hr-203', name: 'کاوه شریفی', email: 'k.sharifi@arman.ir', role: 'کارشناس HR', twoFA: false, status: 'invited' },
+        { id: 'hr-200', name: 'مهسا تهرانی', email: 'm.tehrani@arman.co', role: 'مدیر', lastLoginAt: daysFromNow(-2, '11:05'), twoFA: true, status: 'active' },
+        { id: 'hr-201', name: 'نیما رضایی', email: 'nima.rezaei@arman.co', role: 'کارشناس', lastLoginAt: daysFromNow(0, '09:12'), twoFA: true, status: 'active' },
+        { id: 'hr-202', name: 'لیلا کاظمی', email: 'l.kazemi@arman.co', role: 'کارشناس', lastLoginAt: daysFromNow(-3, '13:20'), twoFA: true, status: 'active' },
+        { id: 'hr-204', name: 'رضا حسینی', email: 'r.hosseini@arman.co', role: 'تأییدکننده', lastLoginAt: daysFromNow(-1, '16:40'), twoFA: true, status: 'active' },
+        { id: 'hr-203', name: 'کاوه شریفی', email: 'k.sharifi@arman.ir', role: 'کارشناس', twoFA: false, status: 'invited' },
       ]
       : o.admins.map((a, j) => ({ id: 'hr-' + o.id + '-' + j, name: a.name, email: a.email, role: a.role, lastLoginAt: o.status === 'onboarding' ? undefined : daysFromNow(-(i % 4), '10:00'), twoFA: o.status !== 'onboarding', status: o.status === 'onboarding' ? 'invited' : 'active' }));
     orgs[o.id] = {

@@ -7,6 +7,7 @@ import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
 import { Icon } from '@/components/ui/Icon';
 import { useInstallments, usePortfolio, useStores } from '@/api/app';
 import { useCreditExtra, type InstallmentPurchaseX, type StoreX } from '@/api/app-credit-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDayMonth, money } from '@/lib/format';
 import { CI, TONE, type Tone } from '@/components/app/credit/icons';
@@ -94,10 +95,10 @@ export default function InstallmentPage() {
                   {lock && (
                     <>
                       <div className="row" style={{ height: 22, gap: 6 }}>
-                        <span className="lktype" style={{ background: 'var(--soft-secondary)', color: 'var(--secondary-text)' }}><Icon d={CI.lock} size={12} />اقساطی</span>
-                        <span className="num" style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{money(lock.amount)} از {holdingName(lock.holdingKind)} قفل است</span>
+                        <span className="lktype" style={{ background: LOCK_META.installment.bg, color: LOCK_META.installment.fg }}><Icon d={LOCK_META.installment.d} size={12} />{LOCK_META.installment.short}</span>
+                        <span className="num" style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{money(lock.amount)} از {holdingName(lock.holdingKind)} رزرو است</span>
                       </div>
-                      <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>با پرداخت هر قسط، {money(perRel)} از وثیقه آزاد می‌شود · {faDigits(remain)} قسط مانده</span>
+                      <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>با پرداخت هر قسط، {money(perRel)} از پشتوانه آزاد می‌شود · {faDigits(remain)} قسط مانده</span>
                     </>
                   )}
                 </Link>
@@ -116,7 +117,7 @@ export default function InstallmentPage() {
           <div style={{ height: 58, display: 'flex', alignItems: 'flex-start' }}>
             {[
               { label: 'انتخاب کالا', d: CI.cart, t: 'primary' as Tone },
-              { label: 'قفل وثیقه', d: CI.lock, t: 'secondary' as Tone },
+              { label: 'رزرو پشتوانه', d: LOCK_META.installment.d, t: 'secondary' as Tone },
               { label: 'دریافت کد خرید', d: CI.code, t: 'success' as Tone },
             ].map((h, i) => (
               <div key={h.label} style={{ display: 'contents' }}>

@@ -1,5 +1,7 @@
 import type { MockDB } from '../db';
 import type { LockType } from '@/types/domain';
+import { jalaliToIso } from '@/lib/clock';
+import { DEFAULT_UNIT } from '@/lib/org';
 
 /**
  * Extra mock data owned by the "org-people" area, stored under db.extra.orgPeople.
@@ -34,7 +36,21 @@ export interface OrgPeopleExtra {
   profiles: Record<string, OrgPeopleProfile>;
   /** Extra facts the approval checks of a request show (project manager approval etc.). */
   requestMeta: Record<string, { months?: number; manager?: string; managerOk?: boolean; files?: number; store?: string }>;
+  /** Departments per organization (employee counts are computed from `Employee.department`). */
+  departments: Record<string, StoredDepartment[]>;
+  /** Read notification ids per organization (created on first use). */
+  notifRead?: Record<string, string[]>;
 }
+
+/** System updates shown in every organization's «اعلان‌ها» (static content, not stored). */
+export const ORG_UPDATES: { id: string; title: string; body: string; createdAt: string; href?: string }[] = [
+  { id: 'upd-milestone-auto', title: 'آزادسازی خودکار مراحل قرارداد', body: 'برای هر مرحله مشخص کنید نیاز به تأیید دارد یا در سررسید خودکار آزاد شود.', createdAt: jalaliToIso(1405, 8, 15), href: '/org/packages' },
+  { id: 'upd-excel-amounts', title: 'ارسال بسته با فایل اکسل', body: 'گیرندگان و مبلغ هر نفر را با کد ملی از فایل اکسل بارگذاری کنید.', createdAt: jalaliToIso(1405, 8, 14), href: '/org/packages/new' },
+  { id: 'upd-units', title: 'واحدهای سازمان', body: 'مدیر سازمان می‌تواند واحد بسازد و همکاران را بین واحدها جابه‌جا کند.', createdAt: jalaliToIso(1405, 8, 12) },
+  { id: 'upd-calendar', title: 'تقویم شمسی در فیلدهای تاریخ', body: 'همه‌ی فیلدهای تاریخ حالا تقویم دارند؛ تاریخ را انتخاب یا تایپ کنید.', createdAt: jalaliToIso(1405, 8, 10) },
+];
+
+export interface StoredDepartment { id: string; name: string; head?: string; createdAt: string; isDefault?: boolean }
 
 const P = (p: Partial<OrgPeopleProfile> & Pick<OrgPeopleProfile, 'email' | 'score' | 'split'>): OrgPeopleProfile => ({
   kycLevel: 3, locks: [], loan: 0, loanMonths: 12, loanPaid: 0, loanOverdue: 0, cardLimit: 0, cardUsed: 0, bank: 'بانک ملت •••• ۱۲۳۴', lastActiveMin: 600, role: 'کارمند', ...p,
@@ -62,6 +78,18 @@ export function seed_orgPeople(db: MockDB) {
       'RQ-2040': { manager: 'بهرام تهرانی', managerOk: true, files: 2 },
       'RQ-2035': { months: 18 },
       'RQ-2037': { months: 6, store: 'دیجی‌کالا' },
+    },
+    departments: {
+      'org-arman': [
+        { id: 'dep-tech', name: 'فنی', head: 'علی کریمی', createdAt: jalaliToIso(1403, 6, 1) },
+        { id: 'dep-sales', name: 'فروش', head: 'حسین نوری', createdAt: jalaliToIso(1403, 6, 1) },
+        { id: 'dep-fin', name: 'مالی', head: 'رضا حسینی', createdAt: jalaliToIso(1403, 6, 1) },
+        { id: 'dep-ops', name: 'عملیات', createdAt: jalaliToIso(1403, 9, 12) },
+        { id: 'dep-hr', name: 'منابع انسانی', head: 'نیما رضایی', createdAt: jalaliToIso(1403, 6, 1) },
+        { id: 'dep-support', name: 'پشتیبانی', createdAt: jalaliToIso(1404, 11, 20) },
+        { id: 'dep-legal', name: 'حقوقی', createdAt: jalaliToIso(1405, 7, 3) },
+        { id: 'dep-other', name: DEFAULT_UNIT, createdAt: jalaliToIso(1403, 6, 1), isDefault: true },
+      ],
     },
   };
   db.extra.orgPeople = extra;

@@ -190,7 +190,8 @@ export const opHandlers = [
     await latency();
     const status = qs(request).get('status');
     const kind = qs(request).get('kind');
-    return ok(db().requests.filter((r) => (!status || status === 'all' || r.status === status) && (!kind || kind === 'all' || r.kind === kind)));
+    // contract milestones are approved (or reclaimed) by the organization, not by the operator
+    return ok(db().requests.filter((r) => r.kind !== 'milestone_release' && (!status || status === 'all' || r.status === status) && (!kind || kind === 'all' || r.kind === kind)));
   }),
   http.post(p('/op/requests/:id/decision'), async ({ request, params }) => {
     await latency();

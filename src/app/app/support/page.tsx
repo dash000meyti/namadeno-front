@@ -123,7 +123,7 @@ export default function SupportPage() {
 
         <label style={{ height: 48, boxSizing: 'border-box', padding: '0 12px', borderRadius: 12, border: '1px solid var(--outline-border)', background: 'var(--bg-paper)', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
           <Icon d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-3.5-3.5" size={20} style={{ color: 'var(--text-secondary)' }} />
-          <input type="search" placeholder="جست‌وجو در راهنما، مثلاً «قفل زمانی»" aria-label="جست‌وجو در راهنما" value={query}
+          <input type="search" placeholder="جست‌وجو در راهنما، مثلاً «پس‌انداز سازمانی»" aria-label="جست‌وجو در راهنما" value={query}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setQuery(e.target.value); setFaqOpen(0); }}
             style={{ flex: 1, minWidth: 0, height: 44, border: 0, background: 'transparent', color: 'var(--text-primary)', fontFamily: 'inherit', fontSize: 14, outline: 'none', padding: 0 }} />
         </label>

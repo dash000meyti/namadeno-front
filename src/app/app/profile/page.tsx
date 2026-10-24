@@ -15,6 +15,7 @@ import { P } from '@/components/app/core/meta';
 import { ErrorNote, GlassSheet, Switch, errMsg } from '@/components/app/core/ui';
 import { useColorMode } from '@/theme/ColorModeProvider';
 import { faDigits, jDayMonth, maskMobile, money } from '@/lib/format';
+import { HOURGLASS } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 
 const PREFS_KEY = 'nm-app-prefs';
@@ -125,8 +126,8 @@ export default function ProfilePage() {
 
         <SectionCard title="حساب">
           <Link href={routes.app.home} className="rowbtn" style={{ ...dashed, textDecoration: 'none' }}>
-            <RowIcon d={P.lock} tone="warning" />
-            <RowText title="دارایی‌های قفل‌شده" sub={pf.data ? `${faDigits(lockCount)} قفل فعال · آزاد ${money(pf.data.free)}` : '…'} />
+            <RowIcon d={HOURGLASS} tone="warning" />
+            <RowText title="دارایی‌های رزروشده" sub={pf.data ? `${faDigits(lockCount)} رزرو فعال · آزاد ${money(pf.data.free)}` : '…'} />
             <span className="num" style={{ fontSize: 15, fontWeight: 400, whiteSpace: 'nowrap' }}>{pf.data ? money(pf.data.locked) : ''}</span>
             <Chev />
           </Link>

@@ -17,19 +17,20 @@ export function LogoChip({ w = 40, h = 28, r = 6, lh = 14 }: { w?: number; h?: n
 
 export function CardStatusLabel({ card }: { card: Card }) {
   if (card.status === 'active') return <span className="lbl" style={{ background: 'var(--soft-success)', color: 'var(--success-text)' }}>فعال</span>;
-  return <span className="lbl" style={{ background: 'var(--soft-error)', color: 'var(--error-text)' }}>{card.status === 'blocked' ? 'مسدود دائم' : 'مسدود'}</span>;
+  if (card.status === 'blocked') return <span className="lbl" style={{ background: 'var(--soft-error)', color: 'var(--error-text)' }}>باطل‌شده</span>;
+  return <span className="lbl" style={{ background: 'var(--soft-warning)', color: 'var(--warning-text)' }}>موقتاً متوقف</span>;
 }
 
 export function CardFace({ card }: { card: Card }) {
   const blocked = card.status !== 'active';
   return (
     <div style={{ height: 200, display: 'flex', justifyContent: 'center', flex: 'none' }}>
-      <div role="img" aria-label={`کارت نمادنو ${last4(card)} · ${blocked ? 'مسدود' : 'فعال'}`} style={{ width: '100%', maxWidth: 342, height: 200, boxSizing: 'border-box', borderRadius: 20, background: 'var(--brand-card)', color: '#FFFFFF', boxShadow: '0 24px 48px -20px rgb(7 11 20 / .6), inset 0 0 0 1px rgb(255 255 255 / .08)', padding: '20px 22px', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', filter: blocked ? 'grayscale(.55)' : undefined }}>
+      <div role="img" aria-label={`کارت نمادنو ${last4(card)} · ${card.status === 'blocked' ? 'باطل‌شده' : blocked ? 'موقتاً متوقف' : 'فعال'}`} style={{ width: '100%', maxWidth: 342, height: 200, boxSizing: 'border-box', borderRadius: 20, background: 'var(--brand-card)', color: '#FFFFFF', boxShadow: '0 24px 48px -20px rgb(7 11 20 / .6), inset 0 0 0 1px rgb(255 255 255 / .08)', padding: '20px 22px', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', filter: blocked ? 'grayscale(.55)' : undefined }}>
         <LogoMark size={230} style={{ position: 'absolute', left: -46, bottom: -70, color: 'rgb(255 255 255 / .05)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
           <LogoFull height={20} />
           {blocked
-            ? <span className="lbl" style={{ height: 22, background: 'var(--error-main)', color: '#FFFFFF', fontWeight: 700, gap: 4 }}><Icon d={CI.ban} size={12} />{card.status === 'blocked' ? 'مسدود دائم' : 'مسدود'}</span>
+            ? <span className="lbl" style={{ height: 22, background: card.status === 'blocked' ? 'var(--error-main)' : 'rgb(255 255 255 / .18)', color: '#FFFFFF', fontWeight: 700, gap: 4 }}><Icon d={card.status === 'blocked' ? CI.ban : CI.clock} size={12} />{card.status === 'blocked' ? 'باطل‌شده' : 'موقتاً متوقف'}</span>
             : <span className="lbl" style={{ height: 22, background: 'rgb(255 255 255 / .18)', color: '#FFFFFF', fontWeight: 600 }}>فعال</span>}
           <span className="lbl num" style={{ marginRight: 'auto', height: 22, background: 'rgb(255 255 255 / .18)', color: '#FFFFFF', fontWeight: 600 }}>اعتبار {money(card.creditLimit)}</span>
         </div>
@@ -56,7 +57,7 @@ export function cardTxIcon(title: string) {
   if (/سوپرمارکت|هایپر|میوه/.test(title)) return CI.cart;
   if (/شارژ/.test(title)) return CI.bolt;
   if (/تسویه/.test(title)) return CI.refresh;
-  if (/مسدود/.test(title)) return CI.ban;
+  if (/مسدود|توقف|ابطال|باطل/.test(title)) return CI.ban;
   if (/فیزیکی/.test(title)) return CI.card;
   return CI.bag;
 }

@@ -33,7 +33,7 @@ function sections(kind: Kind, x: ReportsExtra, core: OpReports | undefined, rang
     const last = m[m.length - 1]?.aum ?? 0;
     return [
       { title: 'AUM و جریان ورودی ماهانه', rows: [['ماه', 'AUM (تومان)', 'جریان ورودی (تومان)'], ...m.map((r) => [r.month, raw(r.aum), raw(r.inflow)])] },
-      { title: 'تفکیک آزاد / قفل‌شده', rows: [['بخش', 'ارزش (تومان)'], ['آزاد', raw(last - x.lockedValue)], ['قفل‌شده', raw(x.lockedValue)]] },
+      { title: 'تفکیک آزاد / رزروشده', rows: [['بخش', 'ارزش (تومان)'], ['آزاد', raw(last - x.lockedValue)], ['رزروشده', raw(x.lockedValue)]] },
       ...(core ? [{ title: 'AUM به تفکیک صندوق', rows: [['صندوق', 'AUM (تومان)'], ...core.aumByFund.map((f) => [f.name, raw(f.aum)])] }] : []),
     ];
   }
@@ -137,7 +137,7 @@ function AumCard({ x, range, onPdf, onCsv }: { x: ReportsExtra; range: Range; on
           <Spark values={m.map((r) => r.inflow)} color="var(--chart-2)" width={64} height={18} label={`روند جریان ورودی ${rangeText(range)}`} />
           <span><b className="num" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{bn(lastRow.inflow)}</b> میلیارد در {lastRow.month}</span>
         </>
-      ) : 'دارایی تحت مدیریت · آزاد و قفل‌شده'}>
+      ) : 'دارایی تحت مدیریت · آزاد و رزروشده'}>
       {m.length > 1
         ? <LineChart labels={m.map((r) => r.month)} series={[{ name: 'AUM', color: 'var(--chart-1)', values: m.map((r) => r.aum / 1e9), area: true }]} min={lo} height={150} fmt={(n) => dec(n, 0)} label={`AUM ${m[0].month} تا ${m[m.length - 1].month} — میلیارد تومان`} />
         : <Empty title="داده‌ای برای این بازه ثبت نشده است" />}
@@ -256,7 +256,7 @@ function Schedules({ x, loading }: { x?: ReportsExtra; loading: boolean }) {
         )}
       >
         <Field label="عنوان گزارش" htmlFor="sc-name">
-          <span className="nm-in" style={{ width: '100%' }}><input id="sc-name" value={form.name} placeholder="مثلاً گزارش هفتگی قفل‌های وثیقه" onChange={(e) => put({ name: e.target.value })} /></span>
+          <span className="nm-in" style={{ width: '100%' }}><input id="sc-name" value={form.name} placeholder="مثلاً گزارش هفتگی رزروهای پشتوانه" onChange={(e) => put({ name: e.target.value })} /></span>
         </Field>
         <Field label="دوره ارسال">
           <Chips label="دوره ارسال" value={form.period} onChange={(p) => put({ period: p })} options={PERIODS.map((p) => ({ key: p, label: p }))} />

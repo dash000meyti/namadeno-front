@@ -28,7 +28,7 @@ const PAGE = 10;
 const TABS: { key: Filt; label: string }[] = [
   { key: 'all', label: 'همه' }, { key: 'active', label: 'فعال' }, { key: 'paused', label: 'غیرفعال موقت' }, { key: 'coming_soon', label: 'پیش‌نویس' },
 ];
-const PAUSE_BODY = 'خرید و فروش واحدهای این صندوق برای همهٔ کاربران متوقف می‌شود. واحدهای فعلی، سود و NAV و قفل‌ها بدون تغییر باقی می‌مانند و هر زمان می‌توانید صندوق را دوباره فعال کنید.';
+const PAUSE_BODY = 'خرید و فروش واحدهای این صندوق برای همهٔ کاربران متوقف می‌شود. واحدهای فعلی، سود و NAV و رزروها بدون تغییر باقی می‌مانند و هر زمان می‌توانید صندوق را دوباره فعال کنید.';
 
 /** Legacy tone key → kit tone. */
 const kt = (t: ToneKey): Tone => (t === 'default' ? 'neutral' : t);
@@ -94,7 +94,7 @@ export default function OpFundsPage() {
     { key: 'aum', label: 'AUM (میلیارد)', width: '104px', render: (f) => (f.aum ? <span className="num">{bn(f.aum)}</span> : dash) },
     { key: 'inv', label: 'دارندگان', width: '84px', render: (f) => (f.investors ? <span className="num">{money(f.investors)}</span> : dash) },
     {
-      key: 'lock', label: 'قفل‌شده (میلیارد)', width: '128px', col: true, render: (f) => {
+      key: 'lock', label: 'رزروشده (میلیارد)', width: '128px', col: true, render: (f) => {
         if (!f.aum) return dash;
         const l = lockedOf(f);
         return (
@@ -110,11 +110,11 @@ export default function OpFundsPage() {
 
   return (
     <>
-      <PageHeading title="صندوق‌ها" crumbs={[{ label: 'محصول' }]} sub="صندوق‌های قابل معامله در اپ نمادنو، NAV روزانه و سهم آزاد و قفل‌شده‌ی دارایی هر صندوق">
+      <PageHeading title="صندوق‌ها" crumbs={[{ label: 'محصول' }]} sub="صندوق‌های قابل معامله در اپ نمادنو، NAV روزانه و سهم آزاد و رزروشده‌ی دارایی هر صندوق">
         <button type="button" className="nm-btn ghost" onClick={onRefresh} disabled={refresh.isPending}>
           <Icon d={IC.refresh} size={17} />{refresh.isPending ? 'در حال به‌روزرسانی…' : 'به‌روزرسانی NAV'}
         </button>
-        <button type="button" className="nm-btn" onClick={() => toast('درخواست تعریف صندوق جدید ثبت شد؛ پس از مجوز سازمان بورس فعال می‌شود', 'info')}>
+        <button type="button" className="nm-btn" onClick={() => toast('درخواست تعریف صندوق جدید ثبت شد؛ پس از دریافت مجوز فعال می‌شود', 'info')}>
           <Icon d={IC.plus} size={17} strokeWidth={2} />صندوق جدید
         </button>
       </PageHeading>
@@ -123,7 +123,7 @@ export default function OpFundsPage() {
         <StatStrip loading={funds.isLoading} items={[
           { label: 'دارایی تحت مدیریت', value: bn(aum), unit: 'میلیارد تومان', note: 'ارزش روز واحدهای همه‌ی صندوق‌ها' },
           { label: 'صندوق‌های فعال', value: faDigits(count('active')), unit: 'صندوق', note: `از ${faDigits(list.length)} صندوق${count('coming_soon') ? ` · ${faDigits(count('coming_soon'))} پیش‌نویس` : ''}` },
-          { label: 'ارزش قفل‌شده', value: bn(locked), unit: 'میلیارد تومان', note: `${pctT(aum ? (locked / aum) * 100 : 0)} از دارایی صندوق‌ها` },
+          { label: 'ارزش رزروشده', value: bn(locked), unit: 'میلیارد تومان', note: `${pctT(aum ? (locked / aum) * 100 : 0)} از دارایی صندوق‌ها` },
           { label: 'آخرین به‌روزرسانی NAV', value: dayTime(lastNav), note: 'از هسته معاملات' },
         ]} />
       )}
@@ -184,13 +184,13 @@ function FundInspector({ f, onClose }: { f: OpFund; onClose: () => void }) {
         <Who
           lead={<FundTile f={f} size="xl" />}
           title={fundTitle(f)}
-          sub={draft ? 'در انتظار مجوز سازمان بورس' : f.description}
+          sub={draft ? 'در انتظار مجوز' : f.description}
           pills={<><Pill tone={kt(st.tone)} dot>{st.label}</Pill><Pill>ETF {CATEGORY_LABEL[f.category]}</Pill></>}
         />
         <KeyStats items={[['NAV (تومان)', f.nav ? money(f.nav) : '—'], ['AUM', f.aum ? `${bn(f.aum)} میلیارد` : '—'], ['دارندگان', f.investors ? money(f.investors) : '—']]} />
 
         {draft ? (
-          <Note tone="mute">انواع قفل مجاز پس از راه‌اندازی: وثیقه، قفل زمانی، مرحله‌ای، مسدودی</Note>
+          <Note tone="mute">انواع رزرو مجاز پس از راه‌اندازی: پشتوانه، پس‌انداز، مرحله‌ای، مسدودی قانونی</Note>
         ) : (
           <>
             <Section title={`روند NAV · ۳۰ روز · ${big ? 'هزار تومان' : 'تومان'}`} action={ch != null && <Pill tone={trendTone(ch)}>{chg(ch)}</Pill>}>

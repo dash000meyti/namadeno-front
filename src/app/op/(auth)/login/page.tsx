@@ -43,7 +43,6 @@ export default function OpLoginPage() {
     >
       <form className="nm-auth-card" noValidate onSubmit={(e) => { e.preventDefault(); submit(); }} aria-labelledby="op-login-title">
         <h1 id="op-login-title">ورود به کنسول</h1>
-        <p className="sub">با حساب سازمانی نمادنو وارد شوید. عملیات حساس به تأیید دومرحله‌ای نیاز دارد.</p>
 
         <AuthField label="ایمیل سازمانی" icon={MAIL} htmlFor="op-email">
           <input id="op-email" type="email" dir="ltr" autoComplete="username" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} style={{ textAlign: 'right' }} />

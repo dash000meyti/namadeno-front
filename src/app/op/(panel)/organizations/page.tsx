@@ -56,7 +56,7 @@ export default function OpOrganizationsPage() {
     { key: 'st', label: 'وضعیت', width: '100px', render: (o) => <Pill tone={ORG_TONE[o.status]} dot>{ORG_STATUS[o.status].label}</Pill> },
     { key: 'emp', label: 'کارکنان', width: '72px', render: (o) => <span className="num">{faDigits(o.employees)}</span> },
     {
-      key: 'aum', label: 'AUM / قفل', width: '150px', col: true, render: (o) => {
+      key: 'aum', label: 'AUM / رزرو', width: '150px', col: true, render: (o) => {
         const e = cx[o.id];
         if (!e || e.aum <= 0) return <span style={{ color: 'var(--text-disabled)' }}>—</span>;
         const sp = splitPct(e.aum, e.locked);
@@ -65,7 +65,7 @@ export default function OpOrganizationsPage() {
             <span className="num">{bn(e.aum)}</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
               <span style={{ width: 56, flex: 'none' }}><LockBar free={sp.free} locked={e.locked} height={4} /></span>
-              <span className="sm">{pctFa(sp.lockedPct)} قفل</span>
+              <span className="sm">{pctFa(sp.lockedPct)} رزرو</span>
             </span>
           </>
         );
@@ -155,10 +155,10 @@ function ContractInspector({ org, ext, funds, monthsOptions, onClose }: { org: O
           sub={<><span className="ltr">{org.contractNo}</span> · تمدید <span className="num">{org.status === 'onboarding' ? '—' : jDate(org.contractEnd)}</span></>}
           pills={<><Pill tone={ORG_TONE[org.status]} dot>{ORG_STATUS[org.status].label}</Pill><Pill>نسخه {faDigits(ext.version)}</Pill>{c.dirty && <Pill tone="warning">ذخیره‌نشده</Pill>}</>}
         />
-        <KeyStats items={[['کارکنان', faDigits(org.employees)], ['AUM', ext.aum > 0 ? bn(ext.aum) : '—'], ['قفل‌شده', ext.aum > 0 ? pctFa(sp.lockedPct) : '—']]} />
+        <KeyStats items={[['کارکنان', faDigits(org.employees)], ['AUM', ext.aum > 0 ? bn(ext.aum) : '—'], ['رزروشده', ext.aum > 0 ? pctFa(sp.lockedPct) : '—']]} />
 
         {ext.aum > 0 && (
-          <Section title="دارایی قفل‌شده کارکنان" action={<BigNum value={fb(ext.locked)} unit="میلیارد" />}>
+          <Section title="دارایی رزروشده کارکنان" action={<BigNum value={fb(ext.locked)} unit="میلیارد" />}>
             <FreeLocked free={sp.free} locked={ext.locked} fmt={bn} />
             {types.length > 0 && (
               <List>

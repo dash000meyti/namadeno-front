@@ -25,24 +25,25 @@ function navHistory(end: number, days: number, vol: number, drift: number, seed:
 export const FUNDS: Fund[] = [
   { id: 'gold', kind: 'gold', name: 'صندوق طلا', symbol: 'طلانو', shortName: 'طلا', category: 'commodity', description: 'پشتوانه شمش و سکه، محافظ در برابر تورم', nav: 3015000, navChangePct1d: 1.2, return1y: 42, risk: 'medium', aum: 259_000_000_000, investors: 8410, status: 'active', settlement: 'T+1', feePct: 0.1, history: navHistory(3015000, 365, 0.022, 0.0009, 7) },
   { id: 'fixed', kind: 'fixed', name: 'صندوق درآمد ثابت', symbol: 'ثابت‌نو', shortName: 'درآمد ثابت', category: 'fixed_income', description: 'سود روزشمار، کم‌نوسان', nav: 151800, navChangePct1d: 0.08, return1y: 31, effectiveYield: 31, risk: 'low', aum: 184_000_000_000, investors: 9120, status: 'active', settlement: 'T+1', feePct: 0.05, history: navHistory(151800, 365, 0.0008, 0.00074, 11) },
-  { id: 'equity', kind: 'equity', name: 'صندوق سهامی شاخصی', symbol: 'شاخص‌نو', shortName: 'سهام', category: 'equity', description: 'سبدی از بزرگ‌ترین شرکت‌های بورس', nav: 127500, navChangePct1d: -0.6, return1y: 28, risk: 'high', aum: 61_000_000_000, investors: 2310, status: 'active', settlement: 'T+2', feePct: 0.15, history: navHistory(127500, 365, 0.03, 0.0007, 13) },
+  { id: 'equity', kind: 'equity', name: 'صندوق سهامی شاخصی', symbol: 'شاخص‌نو', shortName: 'سهام', category: 'equity', description: 'سبدی از بزرگ‌ترین شرکت‌های کشور', nav: 127500, navChangePct1d: -0.6, return1y: 28, risk: 'high', aum: 61_000_000_000, investors: 2310, status: 'active', settlement: 'T+2', feePct: 0.15, history: navHistory(127500, 365, 0.03, 0.0007, 13) },
   { id: 'mixed', kind: 'mixed', name: 'صندوق مختلط', symbol: 'مختلط‌نو', shortName: 'مختلط', category: 'mixed', description: 'ترکیب سهام و اوراق با درآمد ثابت', nav: 141400, navChangePct1d: 0.3, return1y: 24, risk: 'medium', aum: 38_000_000_000, investors: 1640, status: 'active', settlement: 'T+2', feePct: 0.12, history: navHistory(141400, 365, 0.012, 0.0006, 17) },
   { id: 'silver', kind: 'silver', name: 'صندوق نقره', symbol: 'نقره‌نو', shortName: 'نقره', category: 'commodity', description: 'پشتوانه گواهی سپرده نقره', nav: 250000, navChangePct1d: 0.9, return1y: 36, risk: 'high', aum: 12_000_000_000, investors: 820, status: 'active', settlement: 'T+1', feePct: 0.1, history: navHistory(250000, 365, 0.025, 0.0008, 19) },
   { id: 'saffron', kind: 'saffron', name: 'صندوق زعفران', symbol: 'زعفران‌نو', shortName: 'زعفران', category: 'commodity', description: 'پشتوانه گواهی سپرده زعفران', nav: 98200, navChangePct1d: 0.2, return1y: 19, risk: 'medium', aum: 7_400_000_000, investors: 410, status: 'active', settlement: 'T+1', feePct: 0.1 },
   { id: 'leverage', kind: 'leverage', name: 'صندوق اهرمی', symbol: 'اهرم‌نو', shortName: 'اهرم', category: 'equity', description: 'بازدهی تقویت‌شده سهام، نوسان بالا', nav: 86900, navChangePct1d: -1.4, return1y: -4, risk: 'very_high', aum: 9_100_000_000, investors: 530, status: 'active', settlement: 'T+2', feePct: 0.2 },
   { id: 'project', kind: 'project', name: 'صندوق پروژه', symbol: 'پروژه‌نو', shortName: 'پروژه', category: 'fixed_income', description: 'تأمین مالی پروژه‌های عمرانی، سود دوره‌ای', nav: 104000, navChangePct1d: 0.05, return1y: 26, risk: 'low', aum: 15_300_000_000, investors: 690, status: 'active', settlement: 'T+1', feePct: 0.05 },
-  { id: 'energy', kind: 'energy', name: 'صندوق انرژی', symbol: 'انرژی‌نو', shortName: 'انرژی', category: 'commodity', description: 'گواهی‌های بورس انرژی', nav: 0, navChangePct1d: 0, return1y: 0, risk: 'high', aum: 0, investors: 0, status: 'coming_soon', settlement: 'T+1', feePct: 0.1 },
+  { id: 'energy', kind: 'energy', name: 'صندوق انرژی', symbol: 'انرژی‌نو', shortName: 'انرژی', category: 'commodity', description: 'گواهی‌های انرژی', nav: 0, navChangePct1d: 0, return1y: 0, risk: 'high', aum: 0, investors: 0, status: 'coming_soon', settlement: 'T+1', feePct: 0.1 },
 ];
 
 const NAV = Object.fromEntries(FUNDS.map((f) => [f.id, f.nav]));
 
 // ───────────── Locks ─────────────
 export const MS_STEPS: MilestoneStep[] = [
-  { id: 'ms-1', title: 'تحلیل نیازمندی‌ها', sharePct: 20, status: 'released', releasedAt: jalaliToIso(1405, 6, 15) },
-  { id: 'ms-2', title: 'طراحی رابط کاربری', sharePct: 20, status: 'released', releasedAt: jalaliToIso(1405, 7, 5) },
-  { id: 'ms-3', title: 'پیاده‌سازی نسخه اول', sharePct: 30, status: 'pending_approval', dueDate: jalaliToIso(1405, 8, 20) },
-  { id: 'ms-4', title: 'تست و تحویل', sharePct: 20, status: 'future', dueDate: jalaliToIso(1405, 9, 20) },
-  { id: 'ms-5', title: 'پشتیبانی یک‌ماهه', sharePct: 10, status: 'future', dueDate: jalaliToIso(1405, 10, 20) },
+  { id: 'ms-1', title: 'تحلیل نیازمندی‌ها', sharePct: 20, status: 'released', releasedAt: jalaliToIso(1405, 6, 15), dueDate: jalaliToIso(1405, 6, 15), requiresApproval: true },
+  { id: 'ms-2', title: 'طراحی رابط کاربری', sharePct: 20, status: 'released', releasedAt: jalaliToIso(1405, 7, 5), dueDate: jalaliToIso(1405, 7, 5), requiresApproval: true },
+  { id: 'ms-3', title: 'پیاده‌سازی نسخه اول', sharePct: 30, status: 'pending_approval', dueDate: jalaliToIso(1405, 8, 20), requiresApproval: true },
+  { id: 'ms-4', title: 'تست و تحویل', sharePct: 20, status: 'future', dueDate: jalaliToIso(1405, 9, 20), requiresApproval: true },
+  // time-based support: released automatically at its due date
+  { id: 'ms-5', title: 'پشتیبانی یک‌ماهه', sharePct: 10, status: 'future', dueDate: jalaliToIso(1405, 10, 20), requiresApproval: false },
 ];
 
 const LOCKS: Record<string, Lock[]> = {
@@ -50,7 +51,7 @@ const LOCKS: Record<string, Lock[]> = {
     { id: 'lk-rial-card', type: 'collateral', holdingKind: 'rial', amount: 4_000_000, title: 'رزرو تسویه اعتبار کارت', condition: 'آزاد با تسویه صورت‌حساب آبان', createdAt: jalaliToIso(1405, 7, 1), sourceId: 'card-1' },
   ],
   gold: [
-    { id: 'lk-gold-loan', type: 'collateral', holdingKind: 'gold', amount: 30_000_000, title: 'وثیقه وام', condition: 'آزاد با تسویه وام', createdAt: jalaliToIso(1405, 7, 20), sourceId: 'loan-1', paidCount: 4, totalCount: 12 },
+    { id: 'lk-gold-loan', type: 'collateral', holdingKind: 'gold', amount: 30_000_000, title: 'پشتوانه‌ی وام', condition: 'آزاد با تسویه وام', createdAt: jalaliToIso(1405, 7, 20), sourceId: 'loan-1', paidCount: 4, totalCount: 12 },
     { id: 'lk-gold-ms', type: 'milestone', holdingKind: 'gold', amount: 12_000_000, title: 'قرارداد پروژه پرتال منابع انسانی', condition: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود', createdAt: jalaliToIso(1405, 6, 1), sourceId: 'pkg-ms-portal', contractTotal: 20_000_000, steps: MS_STEPS },
   ],
   fixed: [
@@ -99,7 +100,7 @@ export const SARA_INBOX: InboxPackage[] = [
   { id: 'in-mehr', packageId: 'pkg-mehr', title: 'پاداش مهر ۱۴۰۵', reason: 'bonus', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 20_000_000, message: 'با سپاس از تلاش‌های شما در پروژه‌های فصل دوم.', sentAt: jalaliToIso(1405, 7, 14), expiresAt: jalaliToIso(1405, 8, 30), allocationMode: 'free', cashAllowed: true, lockPolicy: { type: 'vesting', releaseAt: jalaliToIso(1405, 10, 15) }, status: 'pending' },
   { id: 'in-welfare-aban', packageId: 'pkg-welfare-aban', title: 'مزایای رفاهی', reason: 'welfare', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 5_000_000, sentAt: jalaliToIso(1405, 7, 10), allocationMode: 'fixed', fixedSplit: { gold: 0, fixed: 100 }, cashAllowed: false, lockPolicy: { type: 'none' }, status: 'pending' },
   // already accepted (archive)
-  { id: 'in-ms', packageId: 'pkg-ms-portal', title: 'قرارداد پروژه پرتال منابع انسانی', reason: 'project_contract', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 20_000_000, sentAt: jalaliToIso(1405, 6, 1), allocationMode: 'fixed', fixedSplit: { gold: 100, fixed: 0 }, cashAllowed: false, lockPolicy: { type: 'milestone', steps: MS_STEPS.map(({ title, sharePct, dueDate }) => ({ title, sharePct, dueDate })) }, status: 'accepted', acceptedAt: jalaliToIso(1405, 6, 1), acceptedSplit: { gold: 100, fixed: 0 } },
+  { id: 'in-ms', packageId: 'pkg-ms-portal', title: 'قرارداد پروژه پرتال منابع انسانی', reason: 'project_contract', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 20_000_000, sentAt: jalaliToIso(1405, 6, 1), allocationMode: 'fixed', fixedSplit: { gold: 100, fixed: 0 }, cashAllowed: false, lockPolicy: { type: 'milestone', steps: MS_STEPS.map(({ title, sharePct, dueDate, requiresApproval }) => ({ title, sharePct, dueDate, requiresApproval })) }, status: 'accepted', acceptedAt: jalaliToIso(1405, 6, 1), acceptedSplit: { gold: 100, fixed: 0 } },
   { id: 'in-shahrivar', packageId: 'pkg-shahrivar', title: 'پاداش شهریور ۱۴۰۵', reason: 'bonus', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 15_000_000, sentAt: jalaliToIso(1405, 6, 14), allocationMode: 'free', cashAllowed: true, lockPolicy: { type: 'none' }, status: 'accepted', acceptedAt: jalaliToIso(1405, 6, 14), acceptedSplit: { gold: 60, fixed: 40 } },
   { id: 'in-welfare-mordad', packageId: 'pkg-welfare-mordad', title: 'مزایای رفاهی مرداد', reason: 'welfare', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 5_000_000, sentAt: jalaliToIso(1405, 5, 10), allocationMode: 'fixed', fixedSplit: { gold: 0, fixed: 100 }, cashAllowed: false, lockPolicy: { type: 'none' }, status: 'accepted', acceptedAt: jalaliToIso(1405, 5, 10), acceptedSplit: { gold: 0, fixed: 100 } },
   { id: 'in-tir', packageId: 'pkg-tir', title: 'پاداش تیر ۱۴۰۵', reason: 'bonus', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 20_000_000, sentAt: jalaliToIso(1405, 4, 2), allocationMode: 'fixed', fixedSplit: { gold: 0, fixed: 100 }, cashAllowed: false, lockPolicy: { type: 'vesting', releaseAt: jalaliToIso(1405, 10, 15) }, status: 'accepted', acceptedAt: jalaliToIso(1405, 4, 2), acceptedSplit: { gold: 0, fixed: 100 } },
@@ -109,26 +110,37 @@ export const SARA_INBOX: InboxPackage[] = [
 
 // ───────────── Transactions ─────────────
 type TxSeed = Omit<Transaction, 'trackingCode' | 'status'> & { status?: Transaction['status'] };
-const tx = (t: TxSeed, i: number): Transaction => ({ status: 'success', trackingCode: 'NM-' + (0x7f21a + i * 977).toString(16).toUpperCase().slice(-5), ...t });
+/** Tehran time of day for each seed transaction (jalaliToIso gives 12:00); later rows of the same day are earlier. */
+const TX_TIME: Record<string, string> = {
+  'tx-01': '18:42', 'tx-02': '15:10', 'tx-03': '09:24', 'tx-04': '20:05', 'tx-05': '11:37', 'tx-06': '10:15',
+  'tx-07': '13:48', 'tx-08': '16:02', 'tx-09': '08:55', 'tx-10': '19:20', 'tx-11': '12:30', 'tx-12': '17:45',
+  'tx-13': '10:05', 'tx-14': '14:22', 'tx-15': '09:40', 'tx-16': '21:10', 'tx-17': '18:05', 'tx-18': '11:12',
+};
+const atTime = (iso: string, hm?: string) => {
+  if (!hm) return iso;
+  const [h, m] = hm.split(':').map(Number);
+  return new Date(new Date(iso).getTime() + (h * 60 + m - 720) * 60000).toISOString();
+};
+const tx = (t: TxSeed, i: number): Transaction => ({ status: 'success', trackingCode: 'NM-' + (0x7f21a + i * 977).toString(16).toUpperCase().slice(-5), ...t, at: atTime(t.at, TX_TIME[t.id]) });
 
 export const SARA_TX: Transaction[] = [
   { id: 'tx-01', category: 'card', title: 'خرید با کارت — فروشگاه آنلاین', subtitle: 'کارت نمادنو', at: jalaliToIso(1405, 8, 3), amount: -2_340_000 },
   { id: 'tx-02', category: 'fund', title: 'سود درآمد ثابت', subtitle: 'صندوق درآمد ثابت', at: jalaliToIso(1405, 8, 2), amount: 52_000, holdingKind: 'fixed' },
-  { id: 'tx-03', category: 'lock', title: 'آزادسازی وثیقه با پرداخت قسط', subtitle: 'صندوق مختلط', at: jalaliToIso(1405, 8, 2), amount: 875_000, holdingKind: 'mixed', lockType: 'installment', lockEvent: 'released' },
+  { id: 'tx-03', category: 'lock', title: 'آزادسازی پشتوانه با پرداخت قسط', subtitle: 'صندوق مختلط', at: jalaliToIso(1405, 8, 2), amount: 875_000, holdingKind: 'mixed', lockType: 'installment', lockEvent: 'released' },
   { id: 'tx-04', category: 'rial', title: 'برداشت به حساب بانکی', subtitle: 'کیف پول ریالی', at: jalaliToIso(1405, 8, 1), amount: -5_000_000, holdingKind: 'rial', status: 'pending' },
   { id: 'tx-05', category: 'card', title: 'خرید با کارت — سوپرمارکت', subtitle: 'کارت نمادنو', at: jalaliToIso(1405, 8, 1), amount: -860_000 },
   { id: 'tx-06', category: 'inbox', title: 'دریافت پاداش مهر — هلدینگ آرمان', subtitle: 'تأیید دریافت', at: jalaliToIso(1405, 7, 28), amount: 20_000_000 },
   { id: 'tx-07', category: 'trade', title: 'خرید صندوق طلا', subtitle: 'طلانو', at: jalaliToIso(1405, 7, 26), amount: -10_000_000, units: 3.32, holdingKind: 'gold' },
-  { id: 'tx-08', category: 'lock', title: 'قفل وثیقه وام — صندوق طلا', subtitle: 'آزاد با تسویه وام', at: jalaliToIso(1405, 7, 20), amount: 30_000_000, holdingKind: 'gold', lockType: 'collateral', lockEvent: 'locked' },
+  { id: 'tx-08', category: 'lock', title: 'رزرو پشتوانه‌ی وام — صندوق طلا', subtitle: 'آزاد با تسویه وام', at: jalaliToIso(1405, 7, 20), amount: 30_000_000, holdingKind: 'gold', lockType: 'collateral', lockEvent: 'locked' },
   { id: 'tx-09', category: 'loan', title: 'قسط وام — ۴ از ۱۲', subtitle: 'از کیف پول ریالی', at: jalaliToIso(1405, 7, 15), amount: -2_850_000, holdingKind: 'rial' },
   { id: 'tx-10', category: 'lock', title: 'آزادسازی مرحله ۲ قرارداد پروژه', subtitle: 'مرحله ۲ از ۵', at: jalaliToIso(1405, 7, 5), amount: 4_000_000, holdingKind: 'gold', lockType: 'milestone', lockEvent: 'released' },
   { id: 'tx-11', category: 'fund', title: 'سود درآمد ثابت', subtitle: 'صندوق درآمد ثابت', at: jalaliToIso(1405, 7, 1), amount: 48_000, holdingKind: 'fixed' },
   { id: 'tx-12', category: 'lock', title: 'آزادسازی مرحله ۱ قرارداد پروژه', subtitle: 'مرحله ۱ از ۵', at: jalaliToIso(1405, 6, 15), amount: 4_000_000, holdingKind: 'gold', lockType: 'milestone', lockEvent: 'released' },
   { id: 'tx-13', category: 'inbox', title: 'دریافت پاداش شهریور', subtitle: 'هلدینگ آرمان', at: jalaliToIso(1405, 6, 14), amount: 15_000_000 },
-  { id: 'tx-14', category: 'inbox', title: 'دریافت قرارداد پروژه', subtitle: 'صندوق طلا · همه قفل', at: jalaliToIso(1405, 6, 1), amount: 20_000_000, holdingKind: 'gold', lockType: 'milestone', lockEvent: 'locked' },
+  { id: 'tx-14', category: 'inbox', title: 'دریافت قرارداد پروژه', subtitle: 'صندوق طلا · دریافت مرحله‌ای', at: jalaliToIso(1405, 6, 1), amount: 20_000_000, holdingKind: 'gold', lockType: 'milestone', lockEvent: 'locked' },
   { id: 'tx-15', category: 'inbox', title: 'مزایای رفاهی مرداد', subtitle: 'صندوق درآمد ثابت', at: jalaliToIso(1405, 5, 10), amount: 5_000_000, holdingKind: 'fixed' },
-  { id: 'tx-16', category: 'lock', title: 'قفل زمانی پاداش تیر', subtitle: 'آزاد در ۱۴۰۵/۱۰/۱۵', at: jalaliToIso(1405, 4, 2), amount: 20_000_000, holdingKind: 'fixed', lockType: 'vesting', lockEvent: 'locked' },
-  { id: 'tx-17', category: 'installment', title: 'خرید اقساطی — دیجی‌کالا', subtitle: '۶ قسط · وثیقه صندوق مختلط', at: jalaliToIso(1405, 6, 10), amount: -5_250_000 },
+  { id: 'tx-16', category: 'lock', title: 'پس‌انداز پاداش تیر', subtitle: 'آزاد در ۱۴۰۵/۱۰/۱۵', at: jalaliToIso(1405, 4, 2), amount: 20_000_000, holdingKind: 'fixed', lockType: 'vesting', lockEvent: 'locked' },
+  { id: 'tx-17', category: 'installment', title: 'خرید اقساطی — دیجی‌کالا', subtitle: '۶ قسط · پشتوانه‌ی صندوق مختلط', at: jalaliToIso(1405, 6, 10), amount: -5_250_000 },
   { id: 'tx-18', category: 'rial', title: 'واریز از کارت بانکی', subtitle: 'شاپرک · کیف پول ریالی', at: jalaliToIso(1405, 6, 5), amount: 10_000_000, holdingKind: 'rial' },
 ].map((t, i) => tx(t as TxSeed, i));
 
@@ -138,7 +150,7 @@ export const SARA_NOTIFS: AppNotification[] = [
   { id: 'nt-2', title: 'مرحله ۳ قرارداد پروژه در انتظار تأیید سازمان است', body: '«پیاده‌سازی نسخه اول» (۳۰٪) · با تأیید هلدینگ آرمان ۶٬۰۰۰٬۰۰۰ تومان آزاد می‌شود', at: minutesAgo(60), read: false, tone: 'warning', icon: 'flag', href: '/app/assets/gold' },
   { id: 'nt-3', title: 'قسط وام ۱۵ آبان سررسید می‌شود', body: 'مبلغ قسط ۲٬۸۵۰٬۰۰۰ تومان · قسط ۵ از ۱۲', at: daysFromNow(0, '09:00'), read: false, tone: 'warning', icon: 'calendar', href: '/app/credit' },
   { id: 'nt-4', title: 'سود روزانه درآمد ثابت واریز شد', body: '+۵۱٬۰۰۰ تومان به صندوق درآمد ثابت', at: daysFromNow(0, '08:30'), read: false, tone: 'secondary', icon: 'percent', href: '/app/assets/fixed' },
-  { id: 'nt-5', title: '۲۰٬۰۰۰٬۰۰۰ تومان پاداش تیر در ۱۴۰۵/۱۰/۱۵ آزاد می‌شود', body: 'قفل زمانی سازمان روی صندوق درآمد ثابت · تا آن تاریخ قابل فروش یا برداشت نیست', at: daysFromNow(-1, '18:00'), read: true, tone: 'warning', icon: 'lock', href: '/app/assets/fixed' },
+  { id: 'nt-5', title: '۲۰٬۰۰۰٬۰۰۰ تومان پاداش تیر در ۱۴۰۵/۱۰/۱۵ آزاد می‌شود', body: 'پس‌انداز سازمانی در صندوق درآمد ثابت · تا آن روز برای شما بازده می‌گیرد', at: daysFromNow(-1, '18:00'), read: true, tone: 'warning', icon: 'clock', href: '/app/assets/fixed' },
   { id: 'nt-6', title: '۴٬۰۰۰٬۰۰۰ تومان از قرارداد پروژه آزاد شد', body: 'مرحله ۲ «طراحی رابط کاربری» تأیید شد · صندوق طلا · ۲ از ۵ مرحله', at: jalaliToIso(1405, 7, 5), read: true, tone: 'success', icon: 'unlock', href: '/app/history' },
   { id: 'nt-7', title: 'امتیاز اعتباری به ۷۴۲ رسید', body: 'سطح «عالی» · ۱۸ امتیاز بیشتر از ماه قبل', at: jalaliToIso(1405, 7, 14), read: true, tone: 'success', icon: 'trend', href: '/app/credit/score' },
 ];

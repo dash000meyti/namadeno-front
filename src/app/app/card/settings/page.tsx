@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useCard, useCredit, usePortfolio, useTransactions } from '@/api/app';
 import { useBlockCard, useCardSettingsX, useCreditExtra, useRequestPhysicalCard, type CardSettingsX } from '@/api/app-credit-extra';
 import { ApiRequestError } from '@/api/client';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDate, money } from '@/lib/format';
 import { now } from '@/lib/clock';
@@ -53,7 +54,7 @@ export default function CardSettingsPage() {
       onSuccess: () => { if (msg) toast(msg); },
       onError: (e) => {
         setLocal((l) => { const n = { ...l }; for (const k of Object.keys(patch)) delete n[k as keyof CardSettingsX]; return n; });
-        toast(e instanceof ApiRequestError ? e.message : 'ذخیره تنظیمات ناموفق بود', 'error');
+        toast(e instanceof ApiRequestError ? e.message : 'تنظیمات ذخیره نشد؛ دوباره امتحان کنید', 'error');
       },
     });
   };
@@ -66,7 +67,7 @@ export default function CardSettingsPage() {
   const sources = (extra.data?.cardLockSources ?? ['rial', 'gold']).map((k) => pf.data?.holdings.find((h) => h.kind === k)?.name ?? k);
 
   const requestPhysical = () => physical.mutate(undefined, { onSuccess: (r) => { toast('درخواست کارت فیزیکی ثبت شد'); router.push(routes.app.receipt(r.transaction.id)); } });
-  const doBlock = () => block.mutate(undefined, { onSuccess: (r) => { setConfirmBlock(false); toast('کارت مسدود دائم شد', 'info'); router.push(routes.app.receipt(r.transaction.id)); } });
+  const doBlock = () => block.mutate(undefined, { onSuccess: (r) => { setConfirmBlock(false); toast('کارت باطل شد', 'info'); router.push(routes.app.receipt(r.transaction.id)); } });
 
   return (
     <>
@@ -86,17 +87,17 @@ export default function CardSettingsPage() {
             <div className="card" style={{ boxSizing: 'border-box', padding: '8px 16px 10px', display: 'flex', flexDirection: 'column', flex: 'none' }}>
               <div className="row" style={{ height: 26, gap: 8 }}>
                 <span style={{ fontSize: 14, fontWeight: 700 }}>پشتوانه اعتبار کارت</span>
-                <span className="lktype" style={{ marginRight: 'auto', background: 'var(--soft-info)', color: 'var(--info-text)' }}><Icon d={CI.lock} size={12} />وثیقه اعتبار و وام</span>
+                <span className="lktype" style={{ marginRight: 'auto', background: LOCK_META.collateral.bg, color: LOCK_META.collateral.fg }}><Icon d={LOCK_META.collateral.d} size={12} />{LOCK_META.collateral.label}</span>
               </div>
               <KvRows h={32} rows={[
                 { k: 'سقف اعتبار', v: money(c.creditLimit), u: 'تومان' },
-                { k: `بدون وثیقه · امتیاز ${faDigits(credit.data?.score ?? 0)}`, v: money(extra.data?.cardUnsecuredLimit ?? 0), u: 'تومان' },
+                { k: `بر پایه‌ی امتیاز ${faDigits(credit.data?.score ?? 0)}`, v: money(extra.data?.cardUnsecuredLimit ?? 0), u: 'تومان' },
                 ...(cardLocks.length
-                  ? cardLocks.map((h) => ({ k: `قفل فعلی · ${h.name}`, v: money(h.locks.filter((l) => l.sourceId === c.id).reduce((x, l) => x + l.amount, 0)), u: 'تومان' }))
-                  : [{ k: 'قفل فعلی', v: '۰', u: 'تومان' }]),
-                { k: 'منبع قفل‌های بعدی', v: sources.join('، سپس ') },
+                  ? cardLocks.map((h) => ({ k: `رزرو فعلی · ${h.name}`, v: money(h.locks.filter((l) => l.sourceId === c.id).reduce((x, l) => x + l.amount, 0)), u: 'تومان' }))
+                  : [{ k: 'رزرو فعلی', v: '۰', u: 'تومان' }]),
+                { k: 'منبع رزروهای بعدی', v: sources.join('، سپس ') },
               ]} />
-              <span style={{ paddingTop: 6, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>مصرف بیش از بخش بدون وثیقه، به همان میزان از دارایی آزاد قفل می‌شود و با تسویه صورت‌حساب آزاد می‌شود. <Link href={routes.app.asset('rial')} style={{ fontWeight: 700, color: 'var(--primary-text)', textDecoration: 'none' }}>مشاهده کیف پول ریالی</Link></span>
+              <span style={{ paddingTop: 6, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>مصرف بیش از سقف بر پایه‌ی امتیاز، به همان اندازه از دارایی آزاد شما به‌عنوان پشتوانه رزرو می‌شود و با تسویه‌ی صورت‌حساب دوباره آزاد می‌شود. <Link href={routes.app.asset('rial')} style={{ fontWeight: 700, color: 'var(--primary-text)', textDecoration: 'none' }}>مشاهده کیف پول ریالی</Link></span>
             </div>
 
             {/* switches */}
@@ -141,8 +142,8 @@ export default function CardSettingsPage() {
               <Icon d={CI.card} size={18} />درخواست کارت فیزیکی<span className="lbl" style={{ height: 20, background: 'var(--soft-default)', color: 'var(--default-text)', fontWeight: 600 }}>رایگان</span>
             </button>
             {c.status === 'blocked'
-              ? <span style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--error-text)', flex: 'none' }}><Icon d={CI.ban} size={16} />کارت مسدود دائم شده است</span>
-              : <button type="button" onClick={() => setConfirmBlock(true)} style={{ height: 40, border: 0, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: 'var(--error-text)', cursor: 'pointer', flex: 'none' }}><Icon d={CI.ban} size={16} />مسدودسازی دائم کارت</button>}
+              ? <span style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--error-text)', flex: 'none' }}><Icon d={CI.ban} size={16} />این کارت باطل شده است</span>
+              : <button type="button" onClick={() => setConfirmBlock(true)} style={{ height: 40, border: 0, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: 'var(--error-text)', cursor: 'pointer', flex: 'none' }}><Icon d={CI.ban} size={16} />ابطال کارت</button>}
           </>
         )}
       </Scr>
@@ -150,14 +151,14 @@ export default function CardSettingsPage() {
       <AppHeader title="تنظیمات کارت" back={routes.app.card} />
       <BottomNav active="card" />
 
-      <Sheet open={confirmBlock} onClose={() => setConfirmBlock(false)} title="مسدودسازی دائم کارت" subtitle="این کار برگشت‌پذیر نیست">
+      <Sheet open={confirmBlock} onClose={() => setConfirmBlock(false)} title="ابطال کارت" subtitle="این کار قابل بازگشت نیست">
         <span style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--text-secondary)' }}>
-          پس از مسدودسازی دائم، خرید، برداشت و شارژ با این کارت ممکن نیست. بدهی جاری ({money(c?.creditUsed ?? 0)} تومان) همچنان باید تسویه شود و وثیقه کارت تا تسویه قفل می‌ماند. برای مسدودی موقت از دکمه «مسدودسازی» در صفحه کارت استفاده کنید.
+          پس از ابطال، خرید، برداشت و شارژ با این کارت انجام نمی‌شود. بدهی جاری ({money(c?.creditUsed ?? 0)} تومان) همچنان باید تسویه شود و پشتوانه‌ی کارت تا تسویه رزرو می‌ماند. اگر فقط می‌خواهید کارت مدتی کار نکند، از «توقف موقت» در صفحه‌ی کارت استفاده کنید.
         </span>
         <ApiErrorNotice error={block.error} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <button type="button" className="btn" onClick={() => setConfirmBlock(false)} style={{ border: '1px solid var(--outline-border)', background: 'transparent', color: 'var(--text-primary)' }}>انصراف</button>
-          <button type="button" className="btn" onClick={doBlock} disabled={block.isPending} style={{ background: 'var(--error-main)', color: 'var(--error-contrast)' }}>{block.isPending ? '…' : 'مسدود کن'}</button>
+          <button type="button" className="btn" onClick={doBlock} disabled={block.isPending} style={{ background: 'var(--error-main)', color: 'var(--error-contrast)' }}>{block.isPending ? '…' : 'ابطال کارت'}</button>
         </div>
       </Sheet>
     </>

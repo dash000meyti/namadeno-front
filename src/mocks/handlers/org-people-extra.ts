@@ -13,13 +13,23 @@
  * GET  /api/v1/org/people/requests
  *      → { items: RequestRow[]; avgResponseDays: number | null }   requests enriched with employee facts, details and rule checks
  * POST /api/v1/org/people/requests/:id/reopen
- *      → ApprovalRequest                undo a decision (409 irreversible for an approved milestone release)
- * POST /api/v1/org/people/employees/import   { rows: ImportRow[]; sendSms: boolean }
+ *      → ApprovalRequest                undo a decision (409 irreversible for a decided milestone_release: released or reclaimed)
+ * POST /api/v1/org/people/employees/import   { rows: ImportRow[]; sendSms: boolean }   (per row only nationalId is required; empty unit → «سایر»)
  *      → { created: Employee[]; errors: { row: number; message: string }[] }
  * POST /api/v1/org/people/employees/status   { ids: string[]; status: 'active' | 'invited' | 'inactive' }
  *      → { updated: number }
+ * GET    /api/v1/org/departments                       → OrgDepartment[]   any panel role (units + employee counts)
+ * POST   /api/v1/org/departments    { name, head? }    → 201 OrgDepartment · 403 forbidden_role · 422 missing_name · 409 duplicate_name
+ * PATCH  /api/v1/org/departments/:id { name?, head? }  → OrgDepartment (a rename moves the unit's employees too) · 403 · 404 · 409 · 422 (default_unit: «سایر» keeps its name)
+ * DELETE /api/v1/org/departments/:id                   → { ok: true, moved: number } (its employees move to «سایر») · 403 forbidden_role · 409 default_unit
+ *        Every organization has the default unit «سایر» (`isDefault`), created with the organization.
+ * POST   /api/v1/org/departments/:id/members { employeeIds: string[] } → OrgDepartment (moves those employees into the unit) · 403 · 404 · 422 no_employees
+ *        Writes are allowed only for the organization's administrator (`admins[].panelRole === 'admin'`).
+ * GET  /api/v1/org/notifications            → { items: OrgNotification[] }  needs-action items (derived from current data) + system updates
+ * POST /api/v1/org/notifications/read       { ids?: string[] } (omitted = all) → { ok: true }
  * POST /api/v1/org/employees  (override of the core endpoint)
- *      { fullName, nationalId, mobile, employeeCode?, department?, jobTitle?, joinedAt?, email?, role?, cardLimitPct?, sendSms? }
+ *      { nationalId, department?, fullName?, mobile?, employeeCode?, jobTitle?, joinedAt?, email?, role?, cardLimitPct?, sendSms? }
+ *      Only the national id is required. No unit → «سایر». No name → looked up by national id (civil registry; simulated here).
  *      → 201 Employee · 422 missing_fields | bad_national_id | bad_mobile · 409 duplicate | duplicate_code
  * GET  /api/v1/org/*  (pass-through) syncs portfolio/locked of employees that have an app account, then falls through.
  * POST /api/v1/org/requests/:id/decision  (pass-through) notifies the employee's app for non-milestone requests,
@@ -28,15 +38,17 @@
  * Types: src/api/org-people-extra.ts
  */
 import { http, type HttpHandler } from 'msw';
-import type { AllocationSplit, ApprovalRequest, AssetKind, Employee, Holding, Lock, LockType, Loan, LoanInstallment, OrgPackage } from '@/types/domain';
-import type { CreditLoanRow, EmpActivity, EmpDetailExtra, EmpFacts, ImportRow, PeopleCredit, PeopleInsights, RequestRow } from '@/api/org-people-extra';
+import type { AllocationSplit, ApprovalRequest, AssetKind, Employee, Holding, Lock, LockType, Loan, LoanInstallment, MilestoneStep, OrgDepartment, OrgPackage } from '@/types/domain';
+import type { CreditLoanRow, EmpActivity, EmpDetailExtra, EmpFacts, ImportRow, OrgNotification, PeopleCredit, PeopleInsights, RequestRow } from '@/api/org-people-extra';
 import { db, newId, recalcHoldings, type UserData } from '../db';
 import { body, fail, latency, ok, p, who } from '../http';
-import { seed_orgPeople, type OrgPeopleExtra, type OrgPeopleProfile } from '../seed/extra-org-people';
+import { ORG_UPDATES, seed_orgPeople, type OrgPeopleExtra, type OrgPeopleProfile, type StoredDepartment } from '../seed/extra-org-people';
 import { jalaliToIso, minutesAgo, now } from '@/lib/clock';
 import { JALALI_MONTHS, enDigits, faDigits, jDayMonth, money, pct, signedMoney } from '@/lib/format';
 import { ASSET_META, LOCK_META } from '@/lib/locks';
+import { DEFAULT_UNIT, isOrgRequest } from '@/lib/org';
 import { ledger } from './app';
+import { AUTO_DECIDER } from './org';
 
 // ───────────── helpers ─────────────
 const nowIso = () => now().toISOString();
@@ -97,7 +109,7 @@ function synthLoan(e: Employee, pr: OrgPeopleProfile): Loan | undefined {
 }
 
 const LOCK_TEXT: Record<LockType, { title: string; condition: string }> = {
-  collateral: { title: 'وثیقه وام', condition: 'آزاد با تسویه وام' },
+  collateral: { title: 'پشتوانه‌ی وام', condition: 'آزاد با تسویه وام' },
   vesting: { title: 'پاداش تیر ۱۴۰۵', condition: 'آزاد در ۱۴۰۵/۱۰/۱۵' },
   milestone: { title: 'قرارداد پروژه', condition: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود' },
   installment: { title: 'خرید اقساطی', condition: 'با پرداخت هر قسط، بخشی آزاد می‌شود' },
@@ -161,8 +173,9 @@ function factsOf(orgId: string, e: Employee): EmpFacts {
   const total = holdings.reduce((s, h) => s + h.value, 0);
   const gold = total ? Math.round((val('gold') / total) * 100) : 0;
   const fixed = total ? Math.round((val('fixed') / total) * 100) : 0;
-  const ms = packages(orgId).find((x) => x.status !== 'draft' && x.milestoneProgress?.some((s) => s.status === 'pending_approval') && x.recipients.some((r) => r.employeeId === e.id));
-  const step = ms?.milestoneProgress?.find((s) => s.status === 'pending_approval');
+  const waits = (s: MilestoneStep) => s.status === 'pending_approval' && s.requiresApproval !== false;
+  const ms = packages(orgId).find((x) => x.status !== 'draft' && x.milestoneProgress?.some(waits) && x.recipients.some((r) => r.employeeId === e.id));
+  const step = ms?.milestoneProgress?.find(waits);
   return {
     id: e.id, portfolio, locked, free: Math.max(0, portfolio - locked),
     locks: [...byType.entries()].map(([type, amount]) => ({ type, amount })),
@@ -195,7 +208,7 @@ function activityOf(orgId: string, e: Employee, ud: UserData | undefined, loans:
       else out.push({ id: 's-' + pkg.id, kind: 'package', title: 'دریافت بسته ' + pkg.title, meta: `${money(r.amount)} تومان · ${r.status === 'pending' ? 'در انتظار تأیید کارمند' : 'منقضی‌شده'}`, at: pkg.sentAt });
     }
     for (const l of loans) {
-      out.push({ id: 'ls-' + l.id, kind: 'loan', title: 'دریافت وام با پشتوانه دارایی', meta: `${money(l.principal)} تومان · ${faDigits(l.months)} ماهه · وثیقه ${fundName(l.collateral.holdingKind)}`, at: l.startedAt });
+      out.push({ id: 'ls-' + l.id, kind: 'loan', title: 'دریافت وام با پشتوانه دارایی', meta: `${money(l.principal)} تومان · ${faDigits(l.months)} ماهه · پشتوانه‌ی ${fundName(l.collateral.holdingKind)}`, at: l.startedAt });
       l.installments.filter((i) => i.status === 'paid').slice(-2).forEach((i) => out.push({ id: `lp-${l.id}-${i.n}`, kind: 'loan', title: `پرداخت قسط ${faDigits(i.n)} وام`, meta: `${money(i.amount)} تومان · ${faDigits(l.months - i.n)} قسط مانده`, at: i.paidAt ?? i.dueDate }));
     }
   }
@@ -279,37 +292,46 @@ function enrich(r: ApprovalRequest): RequestRow {
         { label: 'زمان تسویه', value: 'پایا · امروز ۱۸:۰۰' },
       ];
       base.checks = [
-        { label: 'برداشت نقدی بسته مجاز', ok: !!src?.cashAllowed, value: src?.cashAllowed ? 'مجاز' : 'غیرمجاز' },
+        { label: 'برداشت نقدی بسته مجاز', ok: !!src?.cashAllowed, value: src?.cashAllowed ? 'مجاز' : 'فقط صندوق' },
         { label: 'موجودی آزاد (قابل برداشت)', ok: rialFree >= amount, value: money(rialFree) },
         { label: 'سقف برداشت ماهانه', ok: true, value: '۲۵٪' },
       ];
       break;
     }
     case 'milestone_release': {
-      const pkg = packages(orgId).find((x) => x.lockPolicy.type === 'milestone' && x.recipients.some((y) => y.employeeId === e.id));
+      const pkg = (r.packageId ? packages(orgId).find((x) => x.id === r.packageId) : undefined)
+        ?? packages(orgId).find((x) => x.lockPolicy.type === 'milestone' && x.recipients.some((y) => y.employeeId === e.id));
       const steps = pkg?.milestoneProgress ?? [];
       const pending = steps.find((s) => s.status === 'pending_approval');
       const titleStep = steps.find((s) => r.title.includes(s.title));
-      const step = r.status === 'pending' ? pending ?? titleStep : titleStep ?? pending;
+      const byId = r.stepId ? steps.find((s) => s.id === r.stepId) : undefined;
+      const step = byId ?? (r.status === 'pending' ? pending ?? titleStep : titleStep ?? pending);
       const idx = step ? steps.indexOf(step) + 1 : 0;
       const lock = ud?.holdings.flatMap((h) => h.locks).find((l) => l.type === 'milestone' && l.sourceId === pkg?.id);
       const total = lock?.contractTotal ?? pkg?.recipients.find((y) => y.employeeId === e.id)?.amount ?? 0;
       const share = step?.sharePct ?? 0;
       const stepAmount = r.amount ?? Math.round((total * share) / 100);
-      const releasedPct = steps.filter((s) => s.status === 'released').reduce((s, x) => s + x.sharePct, 0);
-      const lockedNow = lock ? lock.amount : Math.round((total * (100 - releasedPct)) / 100);
+      // settled = released or reclaimed (a reclaimed share went back to the organization)
+      const settledPct = steps.filter((s) => s.status === 'released' || s.status === 'reclaimed').reduce((s, x) => s + x.sharePct, 0);
+      const lockedNow = lock ? lock.amount : Math.round((total * (100 - settledPct)) / 100);
       const lockedAfter = r.status === 'pending' ? Math.max(0, lockedNow - stepAmount) : lockedNow;
       const kind: AssetKind = lock?.holdingKind ?? (pkg?.fixedSplit && pkg.fixedSplit.fixed > pkg.fixedSplit.gold ? 'fixed' : 'gold');
-      const prevReleased = steps.slice(0, Math.max(0, idx - 1)).every((s) => s.status === 'released');
+      const prevReleased = steps.slice(0, Math.max(0, idx - 1)).every((s) => s.status === 'released' || s.status === 'reclaimed');
       const releasedN = steps.filter((s) => s.status === 'released').length;
       base.source = `${fundName(kind)} · آزادسازی ${pct(share)}`;
       base.sourceColor = DOT[kind] ?? 'var(--chart-1)';
+      const byDue = r.trigger === 'due_date';
       base.details = [
         { label: 'قرارداد', value: pkg?.title ?? '—' },
         { label: 'مرحله', value: step ? `${faDigits(idx)} از ${faDigits(steps.length)} · ${step.title}` : '—' },
-        { label: 'قفل باقی‌مانده پس از تأیید', value: `${money(lockedAfter)} تومان` },
+        ...(step?.dueDate ? [{ label: 'سررسید', value: jDayMonth(step.dueDate, true) }] : []),
+        { label: r.status === 'pending' ? 'رزرو باقی‌مانده پس از تأیید' : 'رزرو باقی‌مانده', value: `${money(lockedAfter)} تومان` },
       ];
-      base.checks = [
+      // a request opened by the due date has no completion report from the employee
+      base.checks = byDue ? [
+        { label: 'سررسید مرحله رسیده است', ok: true, value: step?.dueDate ? jDayMonth(step.dueDate) : '—' },
+        { label: 'مراحل قبلی آزاد شده', ok: prevReleased, value: `${faDigits(releasedN)} از ${faDigits(steps.length)}` },
+      ] : [
         { label: 'گزارش انجام تعهد ثبت شد', ok: true, value: `${jDayMonth(r.createdAt)} · ${faDigits(meta.files ?? 1)} فایل` },
         { label: 'تأیید مدیر پروژه', ok: meta.managerOk ?? false, value: meta.managerOk ? meta.manager ?? 'تأیید شد' : 'در انتظار' },
         { label: 'مراحل قبلی آزاد شده', ok: prevReleased, value: `${faDigits(releasedN)} از ${faDigits(steps.length)}` },
@@ -320,7 +342,7 @@ function enrich(r: ApprovalRequest): RequestRow {
     case 'installment': {
       const months = meta.months ?? 6;
       const cap = Math.round(f.free * 0.3);
-      base.source = `وثیقه اقساطی · ${fundName(bestFund)}`;
+      base.source = `پشتوانه‌ی اقساطی · ${fundName(bestFund)}`;
       base.sourceColor = DOT[bestFund];
       base.details = [
         { label: 'فروشگاه', value: meta.store ?? '—' },
@@ -349,25 +371,92 @@ function enrich(r: ApprovalRequest): RequestRow {
   return base;
 }
 
+/** Simulated civil-registry (ثبت احوال) lookup: a stable sample name for a national id. The real backend reads the registry. */
+const CIVIL_FIRST = ['مینا', 'کامران', 'شیدا', 'پویا', 'الهام', 'بهار', 'آرش', 'نیلوفر', 'سینا', 'ترانه'];
+const CIVIL_LAST = ['راد', 'زارع', 'یزدانی', 'نیک‌نام', 'صادقی', 'امینی', 'فرهادی', 'مهرابی', 'شکوهی', 'رحمانی'];
+const civilName = (nid: string) => `${CIVIL_FIRST[Number(nid[8] ?? 0)]} ${CIVIL_LAST[Number(nid[9] ?? 0)]}`;
+
 function createEmployee(orgId: string, b: Partial<Employee> & { email?: string; role?: string; cardLimitPct?: number }): Employee | { status: number; code: string; message: string } {
-  const fullName = (b.fullName ?? '').trim();
   const nationalId = normDigits(b.nationalId ?? '');
   const mobile = normDigits(b.mobile ?? '');
   const code = normDigits(b.employeeCode ?? '');
-  if (!fullName || !nationalId || !mobile) return { status: 422, code: 'missing_fields', message: 'نام، کد ملی و موبایل الزامی است.' };
+  // only the national id is required; the unit falls back to «سایر» and the name comes from the civil registry
+  if (!nationalId) return { status: 422, code: 'missing_fields', message: 'کد ملی الزامی است.' };
   if (!/^\d{10}$/.test(nationalId)) return { status: 422, code: 'bad_national_id', message: 'کد ملی باید ۱۰ رقم باشد.' };
-  if (!/^09\d{9}$/.test(mobile)) return { status: 422, code: 'bad_mobile', message: 'شماره موبایل معتبر نیست.' };
+  if (mobile && !/^09\d{9}$/.test(mobile)) return { status: 422, code: 'bad_mobile', message: 'شماره موبایل معتبر نیست.' };
+  const fullName = (b.fullName ?? '').trim() || civilName(nationalId);
   const list = employees(orgId);
   if (list.some((e) => e.nationalId === nationalId)) return { status: 409, code: 'duplicate', message: 'کارمندی با این کد ملی وجود دارد.' };
   if (code && list.some((e) => e.employeeCode === code)) return { status: 409, code: 'duplicate_code', message: 'این کد پرسنلی قبلاً ثبت شده است.' };
   const e: Employee = {
-    id: newId('u'), fullName, nationalId, mobile, employeeCode: code || String(1080 + list.length), department: b.department || 'عمومی', jobTitle: b.jobTitle ?? '',
+    id: newId('u'), fullName, nationalId, mobile, employeeCode: code || String(1080 + list.length), department: (b.department ?? '').trim() || DEFAULT_UNIT, jobTitle: b.jobTitle ?? '',
     status: 'invited', joinedAt: b.joinedAt || nowIso(), totalReceived: 0, portfolioValue: 0, lockedValue: 0, avatarLetter: fullName[0],
   };
   list.unshift(e);
   orgById(orgId).employees += 1;
   store().profiles[e.id] = { ...BLANK, email: b.email ?? '', role: b.role ?? 'کارمند', cardLimit: 0 };
   return e;
+}
+
+// ───────────── departments ─────────────
+/** Units of an organization. Any department name used by an employee but missing here is added (e.g. after an import). */
+function departments(orgId: string): StoredDepartment[] {
+  const s = store();
+  const list = ((s.departments ??= {})[orgId] ??= []);
+  // the default unit «سایر» exists for every organization (an org created later gets it on first use)
+  if (!list.some((d) => d.isDefault)) {
+    const same = list.find((d) => d.name === DEFAULT_UNIT);
+    if (same) same.isDefault = true;
+    else list.push({ id: newId('dep'), name: DEFAULT_UNIT, createdAt: orgById(orgId).contractStart || nowIso(), isDefault: true });
+  }
+  for (const name of new Set(employees(orgId).map((e) => e.department))) {
+    if (name && !list.some((d) => d.name === name)) list.push({ id: newId('dep'), name, createdAt: nowIso() });
+  }
+  return list;
+}
+const deptOut = (orgId: string, d: StoredDepartment): OrgDepartment => ({ ...d, employees: employees(orgId).filter((e) => e.department === d.name).length });
+/** The signed-in panel user may manage units only as the organization's administrator. */
+function forbidUnlessAdmin(req: Request) {
+  const s = who(req, 'org_admin');
+  const admin = orgById(s.orgId!).admins.find((a) => a.id === s.userId);
+  if ((admin?.panelRole ?? 'specialist') === 'admin') return null;
+  return fail(403, 'forbidden_role', 'ساخت و ویرایش واحد فقط با دسترسی مدیر سازمان ممکن است.');
+}
+const cleanName = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, ' ');
+
+// ───────────── notifications ─────────────
+const DAY = 86400000;
+/** Needs-action items are derived from the current data, so they disappear once handled. */
+function notifications(orgId: string): Omit<OrgNotification, 'read'>[] {
+  const t = now().getTime();
+  const action: Omit<OrgNotification, 'read'>[] = [];
+  for (const r of db().requests.filter((x) => x.orgId === orgId && x.status === 'pending' && isOrgRequest(x))) {
+    action.push({ id: `act-${r.id}`, kind: 'action', title: r.title, body: `${r.requesterName} · منتظر تأیید شما`, createdAt: r.createdAt, href: `/org/requests?id=${r.id}` });
+  }
+  for (const pk of packages(orgId)) {
+    if (pk.status === 'draft') {
+      action.push({ id: `act-draft-${pk.id}`, kind: 'action', title: `پیش‌نویس «${pk.title}» هنوز ارسال نشده`, body: `${faDigits(pk.recipients.length)} گیرنده · برای ارسال، بررسی و تأیید کنید`, createdAt: pk.createdAt, href: `/org/packages/new/review?draft=${pk.id}` });
+    } else if (pk.status === 'sent' && pk.expiresAt) {
+      const left = new Date(pk.expiresAt).getTime() - t;
+      const waiting = pk.recipients.filter((r) => r.status === 'pending').length;
+      if (waiting && left > 0 && left < 14 * DAY) {
+        action.push({ id: `act-expiry-${pk.id}-${waiting}`, kind: 'action', title: `${faDigits(waiting)} همکار هنوز «${pk.title}» را نپذیرفته‌اند`, body: `مهلت پذیرش تا ${jDayMonth(pk.expiresAt)} · یادآوری بفرستید`, createdAt: new Date(Math.min(t, new Date(pk.expiresAt).getTime() - 7 * DAY)).toISOString(), href: `/org/packages/${pk.id}` });
+      }
+    }
+  }
+  const invited = employees(orgId).filter((e) => e.status === 'invited');
+  if (invited.length) {
+    const last = invited.reduce((m, e) => (e.joinedAt > m ? e.joinedAt : m), invited[0].joinedAt);
+    action.push({ id: `act-invited-${invited.length}`, kind: 'action', title: `${faDigits(invited.length)} همکار هنوز حساب خود را فعال نکرده‌اند`, body: 'کد فعال‌سازی را از پروفایل هر همکار دوباره بفرستید', createdAt: last > now().toISOString() ? now().toISOString() : last, href: '/org/employees' });
+  }
+  const o = orgById(orgId);
+  const end = new Date(o.contractEnd).getTime() - t;
+  if (end > 0 && end < 60 * DAY) {
+    action.push({ id: `act-contract-${o.contractEnd}`, kind: 'action', title: 'قرارداد سازمان رو به پایان است', body: `پایان قرارداد ${jDayMonth(o.contractEnd, true)} · برای تمدید با مدیر حساب هماهنگ کنید`, createdAt: new Date(t - DAY).toISOString(), href: '/org/contract' });
+  }
+  action.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const updates = ORG_UPDATES.map((u) => ({ ...u, kind: 'update' as const })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return [...action, ...updates];
 }
 
 // ───────────── handlers ─────────────
@@ -428,7 +517,8 @@ export const orgPeopleHandlers: HttpHandler[] = [
     let amount = 0;
     for (const x of packages(orgId)) {
       for (const s of x.milestoneProgress ?? []) {
-        if (s.status !== 'pending_approval') continue;
+        // steps released automatically at their due date never wait for the organization
+        if (s.status !== 'pending_approval' || s.requiresApproval === false) continue;
         count += 1;
         amount += Math.round((x.total * s.sharePct) / 100);
       }
@@ -501,8 +591,8 @@ export const orgPeopleHandlers: HttpHandler[] = [
   http.get(p('/org/people/requests'), async ({ request }) => {
     await latency();
     const orgId = orgOf(request);
-    const list = db().requests.filter((r) => r.orgId === orgId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const decided = list.filter((r) => r.decidedAt);
+    const list = db().requests.filter((r) => r.orgId === orgId && isOrgRequest(r)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const decided = list.filter((r) => r.decidedAt && r.decidedBy !== AUTO_DECIDER); // automatic releases are not a response
     const avg = decided.length ? decided.reduce((s, r) => s + (new Date(r.decidedAt!).getTime() - new Date(r.createdAt).getTime()), 0) / decided.length / 86400000 : null;
     return ok({ items: list.map(enrich), avgResponseDays: avg === null ? null : Math.round(avg * 10) / 10 });
   }),
@@ -514,6 +604,7 @@ export const orgPeopleHandlers: HttpHandler[] = [
     if (!r) return fail(404, 'not_found', 'درخواست پیدا نشد.');
     if (r.status === 'pending') return ok(r);
     if (r.kind === 'milestone_release' && r.status === 'approved') return fail(409, 'irreversible', 'مبلغ این مرحله آزاد شده و قابل بازگشت نیست.');
+    if (r.kind === 'milestone_release' && r.status === 'rejected') return fail(409, 'irreversible', 'سهم این مرحله بازپس گرفته شده و قابل بازگشت نیست.');
     r.status = 'pending';
     delete r.decidedAt;
     delete r.decidedBy;
@@ -527,7 +618,6 @@ export const orgPeopleHandlers: HttpHandler[] = [
     const created: Employee[] = [];
     const errors: { row: number; message: string }[] = [];
     (b.rows ?? []).forEach((row, i) => {
-      if (!row.employeeCode?.trim()) { errors.push({ row: i + 1, message: 'کد پرسنلی الزامی است.' }); return; }
       const res = createEmployee(orgId, { ...row });
       if ('id' in res) created.push(res);
       else errors.push({ row: i + 1, message: res.message });
@@ -543,6 +633,100 @@ export const orgPeopleHandlers: HttpHandler[] = [
     let updated = 0;
     for (const e of employees(orgId)) if (b.ids?.includes(e.id)) { e.status = b.status; updated += 1; }
     return ok({ updated });
+  }),
+
+  http.get(p('/org/notifications'), async ({ request }) => {
+    await latency();
+    const orgId = orgOf(request);
+    const read = new Set(store().notifRead?.[orgId] ?? []);
+    return ok({ items: notifications(orgId).map((n) => ({ ...n, read: read.has(n.id) })) });
+  }),
+
+  http.post(p('/org/notifications/read'), async ({ request }) => {
+    await latency();
+    const orgId = orgOf(request);
+    const b = await body<{ ids?: string[] }>(request);
+    const s = store();
+    const map = (s.notifRead ??= {});
+    const cur = new Set(map[orgId] ?? []);
+    for (const id of b.ids ?? notifications(orgId).map((n) => n.id)) cur.add(id);
+    map[orgId] = [...cur];
+    return ok({ ok: true });
+  }),
+
+  http.get(p('/org/departments'), async ({ request }) => {
+    await latency();
+    const orgId = orgOf(request);
+    return ok(departments(orgId).map((d) => deptOut(orgId, d)));
+  }),
+
+  http.post(p('/org/departments'), async ({ request }) => {
+    await latency();
+    const denied = forbidUnlessAdmin(request);
+    if (denied) return denied;
+    const orgId = orgOf(request);
+    const b = await body<{ name?: string; head?: string }>(request);
+    const name = cleanName(b.name);
+    if (name.length < 2) return fail(422, 'missing_name', 'نام واحد را وارد کنید.');
+    const list = departments(orgId);
+    if (list.some((d) => d.name === name)) return fail(409, 'duplicate_name', 'واحدی با این نام وجود دارد.');
+    const d: StoredDepartment = { id: newId('dep'), name, head: cleanName(b.head) || undefined, createdAt: nowIso() };
+    list.push(d);
+    return ok(deptOut(orgId, d), { status: 201 });
+  }),
+
+  http.patch(p('/org/departments/:id'), async ({ request, params }) => {
+    await latency();
+    const denied = forbidUnlessAdmin(request);
+    if (denied) return denied;
+    const orgId = orgOf(request);
+    const list = departments(orgId);
+    const d = list.find((x) => x.id === params.id);
+    if (!d) return fail(404, 'not_found', 'واحد پیدا نشد.');
+    const b = await body<{ name?: string; head?: string }>(request);
+    if (b.name !== undefined && d.isDefault && cleanName(b.name) !== d.name) return fail(422, 'default_unit', 'نام واحد پیش‌فرض «سایر» قابل تغییر نیست.');
+    if (b.name !== undefined) {
+      const name = cleanName(b.name);
+      if (name.length < 2) return fail(422, 'missing_name', 'نام واحد را وارد کنید.');
+      if (list.some((x) => x.id !== d.id && x.name === name)) return fail(409, 'duplicate_name', 'واحدی با این نام وجود دارد.');
+      for (const e of employees(orgId)) if (e.department === d.name) e.department = name;
+      d.name = name;
+    }
+    if (b.head !== undefined) d.head = cleanName(b.head) || undefined;
+    return ok(deptOut(orgId, d));
+  }),
+
+  http.post(p('/org/departments/:id/members'), async ({ request, params }) => {
+    await latency();
+    const denied = forbidUnlessAdmin(request);
+    if (denied) return denied;
+    const orgId = orgOf(request);
+    const d = departments(orgId).find((x) => x.id === params.id);
+    if (!d) return fail(404, 'not_found', 'واحد پیدا نشد.');
+    const b = await body<{ employeeIds?: string[] }>(request);
+    const ids = new Set(b.employeeIds ?? []);
+    const moved = employees(orgId).filter((e) => ids.has(e.id));
+    if (!moved.length) return fail(422, 'no_employees', 'دست‌کم یک همکار را انتخاب کنید.');
+    for (const e of moved) e.department = d.name;
+    return ok(deptOut(orgId, d));
+  }),
+
+  http.delete(p('/org/departments/:id'), async ({ request, params }) => {
+    await latency();
+    const denied = forbidUnlessAdmin(request);
+    if (denied) return denied;
+    const orgId = orgOf(request);
+    const list = departments(orgId);
+    const i = list.findIndex((x) => x.id === params.id);
+    if (i < 0) return fail(404, 'not_found', 'واحد پیدا نشد.');
+    const d = list[i];
+    if (d.isDefault) return fail(409, 'default_unit', 'واحد پیش‌فرض «سایر» حذف نمی‌شود.');
+    // its employees move to the default unit (nobody is left without a unit)
+    const fallback = list.find((x) => x.isDefault)!.name;
+    let moved = 0;
+    for (const e of employees(orgId)) if (e.department === d.name) { e.department = fallback; moved += 1; }
+    list.splice(i, 1);
+    return ok({ ok: true, moved });
   }),
 
   // Override of the core create endpoint: honours joinedAt / e-mail / role and validates the national id, mobile and code.

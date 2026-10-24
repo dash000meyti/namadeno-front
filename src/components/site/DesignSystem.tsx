@@ -45,7 +45,7 @@ const LOCKS: (LockType | 'none')[] = ['none', 'collateral', 'vesting', 'installm
 const NAV = [
   { id: 'ds-logo', label: 'لوگو و موتیف' }, { id: 'ds-colors', label: 'رنگ‌ها' }, { id: 'ds-theme', label: 'توکن‌های تم' }, { id: 'ds-type', label: 'تایپوگرافی' },
   { id: 'ds-shape', label: 'شعاع و فاصله' }, { id: 'ds-shadow', label: 'سایه‌ها' }, { id: 'ds-buttons', label: 'دکمه‌ها' },
-  { id: 'ds-labels', label: 'برچسب و چیپ' }, { id: 'ds-fields', label: 'فیلدها و هشدار' }, { id: 'ds-locks', label: 'آزاد و قفل‌شده' }, { id: 'ds-cards', label: 'کارت‌ها' },
+  { id: 'ds-labels', label: 'برچسب و چیپ' }, { id: 'ds-fields', label: 'فیلدها و هشدار' }, { id: 'ds-locks', label: 'آزاد و رزروشده' }, { id: 'ds-cards', label: 'کارت‌ها' },
 ];
 
 /** Reads the current computed values of CSS custom properties (refreshes after a theme switch). */
@@ -271,12 +271,12 @@ export function DesignSystem() {
           </div>
         </Block>
 
-        <Block id="ds-locks" title="آزاد و قفل‌شده" en="LockBar · LockLegend · LockTypeChip · lkstep — available = free only">
+        <Block id="ds-locks" title="آزاد و رزروشده" en="LockBar · LockLegend · LockTypeChip · lkstep — available = free only">
           <div className="s-g s-g3" style={{ gap: 12 }}>
             {[
-              { n: 'صندوق طلا', free: 56_000_000, locked: 42_000_000, st: 'بخشی قفل', c: 'c-warning' },
+              { n: 'صندوق طلا', free: 56_000_000, locked: 42_000_000, st: 'بخشی رزروشده', c: 'c-warning' },
               { n: 'صندوق سهامی', free: 8_200_000, locked: 0, st: 'همه آزاد', c: 'c-success' },
-              { n: 'صندوق نقره', free: 0, locked: 2_100_000, st: 'همه قفل', c: 'c-default' },
+              { n: 'صندوق نقره', free: 0, locked: 2_100_000, st: 'همه رزروشده', c: 'c-default' },
             ].map((k) => (
               <div key={k.n} className="card" style={{ padding: '14px 16px', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
                 <div className="s-row" style={{ gap: 8 }}><span style={{ fontSize: 13, fontWeight: 600 }}>{k.n}</span><span className={`lbl soft ${k.c}`} style={{ marginRight: 'auto', height: 20, fontSize: 11 }}>{k.st}</span></div>

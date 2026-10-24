@@ -7,7 +7,7 @@ import { routes } from '@/lib/routes';
 
 export const metadata: Metadata = {
   title: 'سوالات متداول',
-  description: 'پاسخ سوال‌های رایج درباره دارایی آزاد و قفل‌شده، تبدیل صندوق‌ها، وام، برداشت و همکاری سازمانی در نمادنو.',
+  description: 'پاسخ سوال‌های رایج درباره خرید و فروش دارایی، بخش آزاد و رزروشده، وام، برداشت و همکاری سازمانی در نمادنو.',
 };
 
 export default function FaqPage() {
@@ -16,7 +16,7 @@ export default function FaqPage() {
       <PageHero
         crumbs={[{ label: 'سوالات متداول' }]}
         title="سوالات متداول"
-        lead="پاسخ رایج‌ترین پرسش‌ها درباره‌ی افتتاح حساب، صندوق‌ها، دارایی آزاد و قفل‌شده، اعتبار و همکاری سازمانی."
+        lead="پاسخ رایج‌ترین پرسش‌ها درباره‌ی افتتاح حساب، خرید و فروش دارایی، بخش آزاد و رزروشده، اعتبار و همکاری سازمانی."
       />
       <section className="s-sec" style={{ paddingTop: 24 }} aria-label="فهرست سوالات">
         <div className="s-wrap" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

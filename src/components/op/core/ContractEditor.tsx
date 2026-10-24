@@ -56,7 +56,7 @@ function check(d: Draft): { key: ErrKey; msg: string } | null {
   if (!Number.isInteger(card) || card < 0 || card > 50) return { key: 'cardPct', msg: 'اعتبار کارت باید عددی بین ۰ تا ۵۰ درصد باشد.' };
   if (!(cap > 0)) return { key: 'perCap', msg: 'سقف اعتبار هر نفر را وارد کنید.' };
   if (loan > 0 && d.months.length === 0) return { key: 'months', msg: 'حداقل یک گزینه بازپرداخت انتخاب کنید.' };
-  if (d.vesting && (!Number.isInteger(vest) || vest < 1 || vest > 24)) return { key: 'vestMax', msg: 'حداکثر قفل زمانی باید بین ۱ تا ۲۴ ماه باشد.' };
+  if (d.vesting && (!Number.isInteger(vest) || vest < 1 || vest > 24)) return { key: 'vestMax', msg: 'حداکثر مدت پس‌انداز باید بین ۱ تا ۲۴ ماه باشد.' };
   if (d.milestone && (!Number.isInteger(ms) || ms < 2 || ms > 10)) return { key: 'msMax', msg: 'حداکثر مراحل باید بین ۲ تا ۱۰ باشد.' };
   if (d.funds.filter((f) => CONTRACT_FUND_IDS.includes(f)).length === 0) return { key: 'funds', msg: 'حداقل یک صندوق مجاز انتخاب کنید.' };
   return null;
@@ -71,8 +71,7 @@ function describe(d: Draft, base: Draft): string[] {
   if (card !== num(base.cardPct)) changes.push(`اعتبار کارت ${faDigits(num(base.cardPct))} → ${faDigits(card)}٪`);
   if (cap !== num(base.perCap)) changes.push(`سقف اعتبار هر نفر ${faDigits(Math.round(num(base.perCap) / 1e6))} → ${faDigits(Math.round(cap / 1e6))} میلیون`);
   if (d.bnpl !== base.bnpl) changes.push(d.bnpl ? 'فعال‌سازی خرید اقساطی' : 'غیرفعال‌سازی خرید اقساطی');
-  if (d.cash !== base.cash) changes.push(d.cash ? 'مجاز شدن برداشت نقدی' : 'غیرمجاز شدن برداشت نقدی');
-  if (d.vesting !== base.vesting || d.milestone !== base.milestone || d.collateral !== base.collateral || d.instLock !== base.instLock || d.vestMax !== base.vestMax || d.msMax !== base.msMax) changes.push('تغییر سیاست‌های قفل');
+  if (d.vesting !== base.vesting || d.milestone !== base.milestone || d.collateral !== base.collateral || d.instLock !== base.instLock || d.vestMax !== base.vestMax || d.msMax !== base.msMax) changes.push('تغییر شیوه‌های دریافت و رزروها');
   if (JSON.stringify([...d.funds].sort()) !== JSON.stringify([...base.funds].sort())) changes.push('تغییر صندوق‌های مجاز');
   return changes;
 }
@@ -117,16 +116,18 @@ export function useContractDraft(org: Organization, ext: OrgContractExt, onSaved
 }
 export type ContractDraft = ReturnType<typeof useContractDraft>;
 
-/** The contract terms as settings groups: facility limits, allowed lock policies, allowed funds. */
+/** The contract terms as settings groups: facility limits, allowed receive policies + reserves, allowed funds. */
 export function ContractEditor({ c, funds, monthsOptions }: { c: ContractDraft; funds: Fund[]; monthsOptions: number[] }) {
   const { d, set, setNum, org } = c;
   const bad = (k: ErrKey) => c.error?.key === k;
   const options = Array.from(new Set([...monthsOptions, ...d.months])).sort((a, b) => a - b);
   const offDefault = d.months.join(',') !== DEFAULT_MONTHS.join(',');
-  const policies: { t: LockType; desc: string; on: boolean; toggle?: () => void; disabled?: boolean; max?: { key: 'vestMax' | 'msMax'; suffix: string; label: string } }[] = [
-    { t: 'vesting', desc: 'تا تاریخ؛ حداکثر مدت قفل', on: d.vesting, toggle: () => set({ vesting: !d.vesting }), max: { key: 'vestMax', suffix: 'ماه', label: 'حداکثر مدت قفل زمانی' } },
-    { t: 'milestone', desc: 'با تأیید مراحل؛ حداکثر تعداد مراحل', on: d.milestone, toggle: () => set({ milestone: !d.milestone }), max: { key: 'msMax', suffix: 'مرحله', label: 'حداکثر مراحل آزادسازی' } },
-    { t: 'collateral', desc: 'وثیقه وام و کارت از بخش آزاد', on: d.collateral, toggle: () => set({ collateral: !d.collateral }) },
+  // Receive policies («شیوه‌ی دریافت»: free / vesting / milestone) vs. reserves managed by Namadno (collateral / installment / legal).
+  const policies: { t: LockType | 'none'; receive?: boolean; desc: string; on: boolean; toggle?: () => void; disabled?: boolean; max?: { key: 'vestMax' | 'msMax'; suffix: string; label: string } }[] = [
+    { t: 'none', receive: true, desc: 'همیشه مجاز · کل مبلغ بلافاصله آزاد', on: true, disabled: true },
+    { t: 'vesting', receive: true, desc: 'آزاد در تاریخ مشخص؛ حداکثر مدت پس‌انداز', on: d.vesting, toggle: () => set({ vesting: !d.vesting }), max: { key: 'vestMax', suffix: 'ماه', label: 'حداکثر مدت پس‌انداز' } },
+    { t: 'milestone', receive: true, desc: 'دریافت با تأیید هر مرحله؛ حداکثر تعداد مراحل', on: d.milestone, toggle: () => set({ milestone: !d.milestone }), max: { key: 'msMax', suffix: 'مرحله', label: 'حداکثر تعداد مراحل' } },
+    { t: 'collateral', desc: 'پشتوانه‌ی وام و کارت از بخش آزاد', on: d.collateral, toggle: () => set({ collateral: !d.collateral }) },
     { t: 'installment', desc: d.bnpl ? 'هم‌زمان با خرید اقساطی' : 'نیازمند فعال بودن خرید اقساطی', on: d.bnpl && d.instLock, toggle: () => set({ instLock: !d.instLock }), disabled: !d.bnpl },
     { t: 'legal', desc: 'همیشه فعال · فقط بهره‌بردار', on: true, disabled: true },
   ];
@@ -147,20 +148,24 @@ export function ContractEditor({ c, funds, monthsOptions }: { c: ContractDraft; 
           <NumberInput id={`per-cap-${org.id}`} label="سقف اعتبار هر نفر" value={shown(d.perCap)} onChange={(n) => setNum('perCap', Number.isFinite(n) ? Math.round(Math.abs(n)) : NaN)} suffix="تومان" width={112} invalid={bad('perCap')} />
         </SettingRow>
         <SettingRow label="خرید اقساطی" desc="فروشگاه‌های طرف قرارداد"><Switch on={d.bnpl} onChange={(v) => set({ bnpl: v })} label="خرید اقساطی" /></SettingRow>
-        <SettingRow label="برداشت نقدی" desc="پیش‌فرض بسته‌های جدید"><Switch on={d.cash} onChange={(v) => set({ cash: v })} label="برداشت نقدی" /></SettingRow>
       </SettingsGroup>
 
-      <SettingsGroup title="سیاست‌های قفل مجاز در قرارداد">
-        {policies.map((p) => {
-          const mx = p.max;
-          return (
-            <SettingRow key={p.t} label={<LockTypeChip type={p.t} long />} desc={p.desc}>
-              {mx && p.on && <NumberInput label={mx.label} value={shown(d[mx.key])} onChange={(n) => setNum(mx.key, n)} suffix={mx.suffix} width={40} decimals invalid={bad(mx.key)} />}
-              <Switch on={p.on} onChange={() => p.toggle?.()} label={LOCK_META[p.t].label} disabled={p.disabled} />
-            </SettingRow>
-          );
-        })}
-      </SettingsGroup>
+      {([
+        [true, 'شیوه‌های دریافت مجاز در قرارداد', 'سازمان هنگام ارسال بسته یکی از این شیوه‌ها را انتخاب می‌کند.'],
+        [false, 'رزروهای مجاز در قرارداد', 'این رزروها را نمادنو مدیریت می‌کند؛ دارایی رزروشده مال کارمند می‌ماند و سود می‌گیرد.'],
+      ] as const).map(([receive, title, footer]) => (
+        <SettingsGroup key={title} title={title} footer={footer}>
+          {policies.filter((p) => !!p.receive === receive).map((p) => {
+            const mx = p.max;
+            return (
+              <SettingRow key={p.t} label={<LockTypeChip type={p.t} long />} desc={p.desc}>
+                {mx && p.on && <NumberInput label={mx.label} value={shown(d[mx.key])} onChange={(n) => setNum(mx.key, n)} suffix={mx.suffix} width={40} decimals invalid={bad(mx.key)} />}
+                <Switch on={p.on} onChange={() => p.toggle?.()} label={LOCK_META[p.t].label} disabled={p.disabled} />
+              </SettingRow>
+            );
+          })}
+        </SettingsGroup>
+      ))}
 
       <SettingsGroup title="صندوق‌های مجاز">
         {contractFunds(funds).map((f) => {

@@ -14,7 +14,8 @@
  * POST   /api/v1/op/core/users/:id/reset-password        {} → { sent: true }
  *
  * ── Overrides of core endpoints ──
- * POST   /api/v1/op/organizations          body: Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: {name,email,mobile?,role}[]; sendInvites?: boolean }
+ * POST   /api/v1/op/organizations          body: Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: {name,email,mobile?,role,tempPassword?}[]; sendInvites?: boolean }
+ *        Without invites every user needs a temporary password (422 temp_password_required / weak_password); they change it on first login.
  *                                          → Organization (201, status «onboarding»)   · 422 missing_name | invalid_employees | missing_funds
  * PATCH  /api/v1/op/organizations/:id      body: Partial<Organization> & { contract?: Partial<OrgContractExt>; changeNote?: string }
  *                                          → Organization; a change of settings/contract bumps the contract version (OrgContractExt.versions)
@@ -33,6 +34,7 @@ import { seed_opCore, type OpCoreExtra, type PlatformUserMeta } from '../seed/ex
 import { ledger, portfolioOf } from './app';
 import { daysFromNow, now } from '@/lib/clock';
 import { faDigits, jDayMonth, money } from '@/lib/format';
+import { roleOfLabel } from '@/lib/org';
 
 const nowIso = () => now().toISOString();
 const OPERATOR = 'علی نادری';
@@ -165,7 +167,7 @@ export const opCoreHandlers: HttpHandler[] = [
     if (!o) return fail(404, 'not_found', 'سازمان پیدا نشد.');
     const b = await body<{ name?: string; email?: string; role?: string }>(request);
     if (!b.name || !b.email) return fail(422, 'missing_fields', 'نام و ایمیل کاربر HR الزامی است.');
-    const u: HrUser = { id: newId('hr'), name: b.name, email: b.email, role: b.role || 'کارشناس HR', twoFA: false, status: 'invited' };
+    const u: HrUser = { id: newId('hr'), name: b.name, email: b.email, role: b.role || 'کارشناس', twoFA: false, status: 'invited' };
     orgExt(o).hrUsers.push(u);
     return ok(u, { status: 201 });
   }),
@@ -179,14 +181,21 @@ export const opCoreHandlers: HttpHandler[] = [
     if (b.settings && b.settings.allowedFunds && b.settings.allowedFunds.length === 0) return fail(422, 'missing_funds', 'حداقل یک صندوق مجاز انتخاب کنید.');
     const id = newId('org');
     const name = b.name.trim();
-    const hr = (b.hrUsers ?? []).map((u): HrUser => ({ id: newId('hr'), name: u.name, email: u.email, mobile: u.mobile, role: u.role, twoFA: false, status: 'invited' }));
+    const users = b.hrUsers ?? [];
+    if (b.sendInvites === false) {
+      if (users.some((u) => !u.tempPassword)) return fail(422, 'temp_password_required', 'بدون دعوت‌نامه، برای هر کاربر رمز موقت تعیین کنید.');
+      if (users.some((u) => !/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(u.tempPassword ?? ''))) return fail(422, 'weak_password', 'رمز موقت باید حداقل ۸ نویسه و شامل حرف و عدد باشد.');
+    }
+    // the temporary password itself is not kept in the mock (any password signs in); only "must change on first login" is
+    const withTemp = (u: { tempPassword?: string }) => b.sendInvites === false && !!u.tempPassword;
+    const hr = users.map((u): HrUser => ({ id: newId('hr'), name: u.name, email: u.email, mobile: u.mobile, role: u.role, twoFA: false, status: 'invited', access: withTemp(u) ? 'temp_password' : 'invite' }));
     const o: Organization = {
       id, name, legalName: b.legalName ?? name, contractNo: b.contractNo ?? 'NW-' + Math.floor(1130 + Math.random() * 800), industry: b.industry ?? '',
       employees: b.employees ?? 0, activeEmployees: 0, status: 'onboarding',
       contractStart: b.contractStart ?? nowIso(), contractEnd: b.contractEnd ?? new Date(now().getTime() + 365 * 86400000).toISOString(),
       budgetYear: b.budgetYear ?? 0, budgetUsed: 0, logoLetter: name[0],
       settings: { allowedFunds: ['gold', 'fixed'], cashWithdrawalAllowed: true, lockPolicies: ['none', 'vesting', 'milestone'], loanEnabled: true, loanMaxPct: 40, loanMonthsOptions: [3, 6, 12], cardEnabled: true, installmentEnabled: false, ...(b.settings ?? {}) },
-      admins: hr.map((u) => ({ id: u.id, name: u.name, role: u.role, email: u.email })),
+      admins: hr.map((u) => ({ id: u.id, name: u.name, role: u.role, email: u.email, panelRole: roleOfLabel(u.role), ...(u.access === 'temp_password' ? { mustChangePassword: true } : {}) })),
     };
     db().organizations.unshift(o);
     db().employees[id] = [];
@@ -385,7 +394,7 @@ export const opCoreHandlers: HttpHandler[] = [
       if (b.amount > h.free) return fail(422, 'exceeds_free', `مبلغ مسدودی از بخش آزاد «${h.name}» (${money(h.free)} تومان) بیشتر است.`, { free: h.free });
       const lock = ledger.addLock(ud, b.holdingKind, { type: 'legal', amount: b.amount, title: 'مسدودی قانونی — شماره ' + faDigits(b.reference), condition: 'تا رفع دستور مرجع · ' + reason, reference: b.reference });
       ledger.addTx(ud, { category: 'lock', title: 'مسدودی قانونی — ' + h.name, subtitle: 'تا رفع دستور مرجع', amount: b.amount, holdingKind: b.holdingKind, lockType: 'legal', lockEvent: 'locked' });
-      ledger.notify(ud, { title: 'مسدودی قانونی روی حساب شما اعمال شد', body: `${money(b.amount)} تومان از ${h.name} تا رفع دستور مرجع قفل شد. برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.`, tone: 'error', icon: 'lock', href: '/app/support' });
+      ledger.notify(ud, { title: 'مسدودی قانونی روی حساب شما اعمال شد', body: `${money(b.amount)} تومان از ${h.name} تا رفع دستور مرجع مسدود شد. برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.`, tone: 'error', icon: 'lock', href: '/app/support' });
       addLog(id, `اعمال مسدودی قانونی ${money(b.amount)} روی «${h.name}» — شماره ${faDigits(b.reference)}`, 'error');
       return ok(lock);
     }

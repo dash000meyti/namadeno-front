@@ -217,6 +217,16 @@ button.nm-li{width:100%;border-left:0;border-right:0;border-bottom:0;background:
 button.nm-li:first-child{border-top:0}
 .nm-li .nm-col b{font-size:13.5px;font-weight:600}
 .nm-li .trail{display:flex;align-items:center;gap:6px;flex:none;font-size:13px}
+/* FileDrop: spreadsheet drop zone */
+.nm-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:220px;padding:28px 20px;box-sizing:border-box;border-radius:14px;border:1.5px dashed var(--outline-border);background:var(--bg-neutral);text-align:center;cursor:pointer;transition:border-color .15s,background-color .15s}
+.nm-drop:hover{border-color:rgb(var(--primary-main-rgb) / .5)}
+.nm-drop.on{border-color:var(--primary-main);background:var(--sel-row)}
+.nm-drop>b{font-size:15px;font-weight:600;line-height:1.5}
+.nm-drop>.mute{font-size:12.5px}
+.nm-drop>.act{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:6px}
+.nm-li>.nm-check{flex:none;margin-right:auto}
+.nm-unread{flex:none;width:8px;height:8px;border-radius:50%;background:var(--primary-main)}
+.nm-li[aria-pressed="true"]>.nm-check>i{background:var(--primary-main);border-color:var(--primary-main)}
 .nm-card-b>.nm-list:first-child{margin-top:-8px}
 .nm-card-b>.nm-list:last-child{margin-bottom:-8px}
 
@@ -284,7 +294,8 @@ button.nm-li:first-child{border-top:0}
 .nm-in input,.nm-in select{flex:1;min-width:0;width:100%;height:100%;border:0;outline:0;background:transparent;color:var(--text-primary);font-family:inherit;font-size:13px;padding:0 10px;font-variant-numeric:tabular-nums}
 .nm-in input:focus-visible,.nm-in select:focus-visible{outline:none}
 /* native select inside a form field (.nm-ctl) */
-.nm-ctl select{flex:1;min-width:0;height:44px;border:0;outline:0;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;padding:0;cursor:pointer}
+.nm-ctl select{flex:1;min-width:0;height:44px;border:0;outline:0;background:transparent;color:var(--text-primary);font-family:inherit;font-size:15px;padding:0;-webkit-appearance:none;appearance:none;cursor:pointer}
+.nm-ctl>.ico{pointer-events:none}
 .nm-ctl select:focus-visible{outline:none}
 .nm-in .sfx{flex:none;height:100%;display:flex;align-items:center;padding:0 10px;font-size:12px;color:var(--text-secondary);background:var(--bg-neutral);white-space:nowrap}
 .nm-in.num input{text-align:center}

@@ -1,7 +1,7 @@
 'use client';
 /**
  * Organization panel — employee profile. Kit detail page: heading with avatar + status pills + actions → key numbers → tabs →
- * cards: assets (holdings with the free/locked split, active locks, milestone contract, account), packages, facilities, activity.
+ * cards: assets (holdings with the free/reserved split, active reserves, milestone contract, account), packages, facilities, activity.
  */
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -19,15 +19,16 @@ import { usePanelToast } from '@/components/org/people/PanelToast';
 import { EMP_STATUS, I, MsSeg, errMsg, million } from '@/components/org/people/shared';
 import { EMP_TONE, SuspendNotice } from '@/components/org/people/EmployeeSidePanel';
 import { useStartPackage } from '@/components/org/people/useStartPackage';
-import { LOCK_META } from '@/lib/locks';
+import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
+import { FEATURES } from '@/lib/features';
 import { now } from '@/lib/clock';
 import { faDigits, jDate, jDayMonth, jMonthYear, money, pct, relTime, signedMoney, time } from '@/lib/format';
 
 type Tab = 'assets' | 'pkgs' | 'loans' | 'log';
 const ACT_ICON: Record<EmpActivity['kind'], { d: string; tone: Tone }> = {
   milestone: { d: I.flag, tone: 'primary' }, login: { d: I.shield, tone: 'neutral' }, loan: { d: I.percent, tone: 'info' },
-  lock: { d: I.lock, tone: 'warning' }, package: { d: I.pkg, tone: 'primary' }, installment: { d: I.lock, tone: 'secondary' }, card: { d: I.credit, tone: 'primary' },
+  lock: { d: HOURGLASS, tone: 'warning' }, package: { d: I.pkg, tone: 'primary' }, installment: { d: LOCK_META.installment.d, tone: 'secondary' }, card: { d: I.credit, tone: 'primary' },
 };
 const KIND: Partial<Record<AssetKind, [IconName, Tone]>> = {
   rial: ['banknote', 'neutral'], gold: ['gold', 'warning'], silver: ['gold', 'neutral'], fixed: ['chart', 'secondary'], equity: ['trend', 'primary'], mixed: ['pie', 'success'],
@@ -100,7 +101,7 @@ export default function OrgEmployeePage() {
   };
   const setStatus = (status: 'active' | 'inactive') =>
     update.mutate({ id: emp.id, status }, {
-      onSuccess: () => show(status === 'inactive' ? `حساب ${emp.fullName} تعلیق شد · دارایی‌ها دست‌نخورده می‌ماند` : `تعلیق حساب ${emp.fullName} برداشته شد`),
+      onSuccess: () => show(status === 'inactive' ? `حساب ${emp.fullName} تعلیق شد · دارایی‌ها دست‌نخورده می‌ماند` : `حساب ${emp.fullName} دوباره فعال شد`),
       onError: (e) => show(errMsg(e), 'error'),
     });
 
@@ -120,9 +121,9 @@ export default function OrgEmployeePage() {
     },
     { key: 'total', label: 'کل', width: '112px', render: (h) => <span className="num" style={{ fontWeight: 600 }}>{money(h.value)}</span> },
     { key: 'free', label: 'آزاد', width: '112px', render: (h) => <span className="num" style={{ color: h.free > 0 ? undefined : 'var(--text-disabled)' }}>{money(h.free)}</span> },
-    { key: 'locked', label: 'قفل', width: '112px', render: (h) => (h.locked > 0 ? <span className="num" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={I.lock} size={12} />{money(h.locked)}</span> : dash) },
+    { key: 'locked', label: 'رزرو', width: '112px', render: (h) => (h.locked > 0 ? <span className="num" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={HOURGLASS} size={12} />{money(h.locked)}</span> : dash) },
     {
-      key: 'split', label: 'آزاد / قفل', width: '104px', col: true,
+      key: 'split', label: 'آزاد / رزرو', width: '104px', col: true,
       render: (h) => <><span style={{ width: '100%' }}><LockBar free={h.free} locked={h.locked} height={5} /></span><span className="sm el">{h.locked ? Array.from(new Set(h.locks.map((l) => LOCK_META[l.type].short))).join(' + ') : 'همه آزاد'}</span></>,
     },
   ];
@@ -146,7 +147,7 @@ export default function OrgEmployeePage() {
       },
     },
     { key: 'src', label: 'منبع', width: '128px', render: ({ h }) => <span className="sm el">{h.name}</span> },
-    { key: 'amount', label: 'مبلغ قفل', width: '112px', render: ({ l }) => <span className="num" style={{ fontWeight: 600 }}>{money(l.amount)}</span> },
+    { key: 'amount', label: 'مبلغ رزرو', width: '112px', render: ({ l }) => <span className="num" style={{ fontWeight: 600 }}>{money(l.amount)}</span> },
   ];
   const pkgCols: Column<OrgPackage>[] = [
     { key: 'title', label: 'عنوان', width: 'minmax(0, 1.4fr)', render: (p) => <Ident lead={<Tile d={I.pkg} tone={p.reason === 'welfare' ? 'info' : 'primary'} />} title={p.title} /> },
@@ -160,7 +161,7 @@ export default function OrgEmployeePage() {
     },
     { key: 'date', label: 'تاریخ', width: '92px', render: (p) => <span className="num sm">{jDate(p.sentAt!)}</span> },
     {
-      key: 'st', label: 'وضعیت · قفل', width: '120px', render: (p) => {
+      key: 'st', label: 'وضعیت', width: '120px', render: (p) => {
         const r = p.recipients.find((y) => y.employeeId === emp.id);
         if (r?.status === 'accepted' && p.lockPolicy.type !== 'none') return <LockTypeChip type={p.lockPolicy.type} />;
         return r?.status === 'pending' ? <Pill tone="warning" dot>در انتظار تأیید</Pill> : r?.status === 'expired' ? <Pill dot>منقضی</Pill> : <Pill tone="success" dot>دریافت‌شده</Pill>;
@@ -177,7 +178,7 @@ export default function OrgEmployeePage() {
     const remaining = unpaid.reduce((s, i) => s + i.amount, 0);
     const colHolding = holdings.find((h) => h.kind === loan.collateral.holdingKind)?.name ?? loan.collateral.holdingKind;
     return (
-      <Card title="وام فعال" actions={<Pill tone={overdue ? 'error' : 'success'} dot>{overdue ? `${faDigits(overdue)} قسط معوق` : 'به‌موقع'}</Pill>} more={{ label: 'فهرست تسهیلات', href: routes.org.credit }}>
+      <Card title="وام فعال" actions={<Pill tone={overdue ? 'error' : 'success'} dot>{overdue ? `${faDigits(overdue)} قسط معوق` : 'به‌موقع'}</Pill>} more={FEATURES.orgCredit ? { label: 'فهرست تسهیلات', href: routes.org.credit } : undefined}>
         <BigNum value={money(loan.principal)} unit={`تومان · ${faDigits(loan.months)} ماهه · نرخ ${pct(loan.ratePct)}`} />
         <Meter value={loan.months ? paid / loan.months : 0} label={`${faDigits(paid)} از ${faDigits(loan.months)} قسط پرداخت شده`} />
         <KV rows={[
@@ -186,18 +187,18 @@ export default function OrgEmployeePage() {
           ['قسط بعدی', <span key="n" className="num" style={{ color: next ? (overdue ? 'var(--error-text)' : 'var(--warning-text)') : undefined }}>{next ? jDayMonth(next.dueDate, true) : '—'}</span>],
           ['مانده بدهی', <span key="r" className="num">{money(remaining)} تومان</span>],
         ]} />
-        <Note tone="info" icon={I.lock}>وثیقه اعتبار و وام: {money(loan.collateral.amount)} تومان از {colHolding} قفل است · آزاد با تسویه وام ({faDigits(unpaid.length)} قسط مانده).</Note>
+        <Note tone="info" icon={LOCK_META.collateral.d}>{LOCK_META.collateral.label}: {money(loan.collateral.amount)} تومان از {colHolding} رزرو است و با تسویه‌ی وام آزاد می‌شود ({faDigits(unpaid.length)} قسط مانده).</Note>
       </Card>
     );
   })() : (
-    <Card title="وام فعال" actions={<Pill>ندارد</Pill>} more={{ label: 'فهرست تسهیلات', href: routes.org.credit }}>
+    <Card title="وام فعال" actions={<Pill>ندارد</Pill>} more={FEATURES.orgCredit ? { label: 'فهرست تسهیلات', href: routes.org.credit } : undefined}>
       <span className="mute" style={{ fontSize: 13, lineHeight: 1.7 }}>این کارمند وام فعالی ندارد.</span>
-      <Note tone="info">سقف وام قابل درخواست: {money(Math.round(freeTotal * 0.4))} تومان (۴۰٪ دارایی آزاد · قفل‌ها در ظرفیت وثیقه حساب نمی‌شوند).</Note>
+      <Note tone="info">سقف وام قابل درخواست: {money(Math.round(freeTotal * 0.4))} تومان (۴۰٪ دارایی آزاد · بخش رزروشده در محاسبه‌ی پشتوانه حساب نمی‌شود).</Note>
     </Card>
   );
   const cardCard = card ? (() => {
     const rialRes = locks.find(({ l }) => l.type === 'collateral' && l.holdingKind === 'rial');
-    const st: [string, Tone] = card.status === 'active' ? ['فعال', 'success'] : card.status === 'frozen' ? ['مسدود موقت', 'warning'] : ['مسدود', 'error'];
+    const st: [string, Tone] = card.status === 'active' ? ['فعال', 'success'] : card.status === 'frozen' ? ['توقف موقت', 'warning'] : ['باطل‌شده', 'neutral'];
     return (
       <Card title="اعتبار کارت نمادنو" actions={<Pill tone={st[1]} dot>{st[0]}</Pill>} more={{ label: 'قواعد قرارداد', href: routes.org.contract }}>
         <BigNum value={money(card.creditLimit)} unit={`تومان سقف · استفاده‌شده ${money(card.creditUsed)}`} />
@@ -208,7 +209,7 @@ export default function OrgEmployeePage() {
           ['تسویه بعدی', <span key="d" className="num" style={{ color: 'var(--warning-text)' }}>{jDayMonth(card.statementDue, true)}</span>],
           ['اقساط معوق', <span key="o" className="num" style={{ color: card.overdue ? 'var(--error-text)' : 'var(--success-text)' }}>{faDigits(card.overdue)} مورد</span>],
         ]} />
-        <Note tone="info">{rialRes ? `${money(rialRes.l.amount)} تومان از کیف پول ریالی برای تسویه صورت‌حساب رزرو و قفل است (وثیقه) · آزاد با تسویه صورت‌حساب.` : 'سقف اعتبار کارت طبق قرارداد سازمان تا ۲۵٪ دارایی آزاد کارمند تعیین می‌شود.'}</Note>
+        <Note tone="info">{rialRes ? `${money(rialRes.l.amount)} تومان از کیف پول ریالی پشتوانه‌ی صورت‌حساب کارت است و با تسویه‌ی صورت‌حساب آزاد می‌شود.` : 'سقف اعتبار کارت طبق قرارداد سازمان تا ۲۵٪ دارایی آزاد کارمند تعیین می‌شود.'}</Note>
       </Card>
     );
   })() : (
@@ -228,14 +229,14 @@ export default function OrgEmployeePage() {
       >
         {!inactive
           ? <button type="button" className="nm-btn line danger" disabled={update.isPending} onClick={() => setConfirmSuspend(true)}><Icon d={I.ban} size={16} />تعلیق</button>
-          : <button type="button" className="nm-btn line ok" disabled={update.isPending} onClick={() => setStatus('active')}><Icon d={I.check} size={16} />رفع تعلیق</button>}
+          : <button type="button" className="nm-btn line ok" disabled={update.isPending} onClick={() => setStatus('active')}><Icon d={I.check} size={16} />فعال‌سازی دوباره</button>}
         <button type="button" className="nm-btn" disabled={pkgStart.pending || inactive} onClick={() => pkgStart.start([emp.id])}><Icon d={I.pkg} size={16} />ارسال بسته</button>
       </PageHeading>
 
       <StatStrip items={[
         { label: 'دارایی کل', value: million(total), unit: 'میلیون تومان', note: x && total ? `امروز ${signedMoney(today)}` : undefined, trend: today > 0 ? 'up' : today < 0 ? 'down' : undefined },
         { label: 'دارایی آزاد', value: million(freeTotal), unit: 'میلیون', note: 'قابل فروش و برداشت' },
-        { label: 'قفل‌شده', value: million(lockedTotal), unit: 'میلیون', note: locks.length ? `${faDigits(locks.length)} قفل در ${faDigits(lockHoldingsN)} دارایی` : 'بدون قفل فعال' },
+        { label: 'رزروشده', value: million(lockedTotal), unit: 'میلیون', note: locks.length ? `${faDigits(locks.length)} رزرو فعال در ${faDigits(lockHoldingsN)} دارایی` : 'همه آزاد' },
         {
           label: 'تسهیلات فعال', value: million((loan?.principal ?? 0) + (card?.creditLimit ?? 0)), unit: 'میلیون',
           note: [loan && `وام ${million(loan.principal)} م`, card && `کارت ${million(card.creditLimit)} م`].filter(Boolean).join(' · ') || 'بدون تسهیلات',
@@ -254,7 +255,7 @@ export default function OrgEmployeePage() {
           <div className="nm-stack">
             <Card flush title="دارایی‌ها" count={holdings.length || undefined}>
               <Table columns={holdCols} rows={holdings} rowKey={(h) => h.kind} loading={!holdings.length && extra.isLoading}
-                empty={<Empty title={emp.status === 'invited' ? 'کارمند هنوز حساب خود را فعال نکرده و دارایی ندارد' : 'دارایی‌ای ثبت نشده است'} />} />
+                empty={<Empty title={emp.status === 'invited' ? 'کارمند هنوز حساب نمادنو خود را فعال نکرده است' : 'دارایی‌ای ثبت نشده است'} />} />
               {holdings.length > 0 && (
                 <div style={{ padding: '14px 20px 18px', borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}><b style={{ fontSize: 13 }}>جمع دارایی</b><BigNum value={money(total)} unit="تومان" style={{ marginRight: 'auto' }} /></div>
@@ -263,16 +264,16 @@ export default function OrgEmployeePage() {
               )}
             </Card>
             {holdings.length > 0 && (
-              <Card flush title="قفل‌های فعال" count={locks.length || undefined} sub={locks.length ? `${money(lockedTotal)} تومان` : undefined}>
+              <Card flush title="رزروهای فعال" count={locks.length || undefined} sub={locks.length ? `${money(lockedTotal)} تومان` : undefined}>
                 <Table columns={lockCols} rows={locks} rowKey={({ l }) => l.id} minWidth={620}
-                  empty={<Empty icon={I.lock} tone="success" title="همه دارایی این کارمند آزاد است" />} />
+                  empty={<Empty icon={LOCK_META.none.d} tone="success" title="همه‌ی دارایی این کارمند آزاد است" />} />
               </Card>
             )}
           </div>
 
           <div className="nm-stack">
             {msPkg && (
-              <Card title="آزادسازی مرحله‌ای" more={{ label: 'جزئیات قرارداد', href: routes.org.package(msPkg.id) }}>
+              <Card title={LOCK_META.milestone.label} more={{ label: 'جزئیات قرارداد', href: routes.org.package(msPkg.id) }}>
                 <Ident lead={<Tile d={I.flag} tone="primary" />} title={msPkg.title} sub={<span className="num">کل {money(msTotal)} تومان · {msHolding}</span>} />
                 <Section>
                   <MsSeg steps={steps} label={msProgText} />
@@ -282,11 +283,13 @@ export default function OrgEmployeePage() {
                   {steps.map((m) => {
                     const rel = m.status === 'released';
                     const pend = m.status === 'pending_approval';
-                    return <ListRow key={m.id} title={m.title} sub={<span className="num">{pct(m.sharePct)} قرارداد</span>} trail={<Pill tone={rel ? 'success' : pend ? 'warning' : 'neutral'}>{rel ? 'آزاد شده' : pend ? 'در انتظار تأیید' : 'آینده'}</Pill>} />;
+                    const auto = m.requiresApproval === false; // released automatically at its due date
+                    const back = m.status === 'reclaimed'; // «بازپس‌گیری»: returned to the organization
+                    return <ListRow key={m.id} title={m.title} sub={<span className="num">{pct(m.sharePct)} قرارداد{back && m.reclaimNote ? ` · ${m.reclaimNote}` : !rel && !back && m.dueDate ? ` · سررسید ${jDayMonth(m.dueDate)}` : ''}</span>} trail={<Pill tone={rel ? 'success' : back ? 'error' : pend ? (auto ? 'info' : 'warning') : 'neutral'}>{rel ? 'آزاد شده' : back ? 'بازپس گرفته شد' : pend ? (auto ? 'خودکار در سررسید' : 'در انتظار تأیید') : 'آینده'}</Pill>} />;
                   })}
                 </List>
                 {released && <div role="status"><Note tone="ok">مرحله {faDigits(released.idx)} تأیید شد · {money(released.amount)} تومان آزاد شد</Note></div>}
-                {pending && (
+                {pending && pending.requiresApproval !== false && (
                   <button type="button" className="nm-btn block" disabled={release.isPending} onClick={approveMs}>
                     <Icon d={I.check} size={16} strokeWidth={2.2} />{release.isPending ? 'در حال آزادسازی…' : `تأیید انجام تعهد و آزادسازی ${pct(pending.sharePct)}`}
                   </button>
@@ -316,7 +319,7 @@ export default function OrgEmployeePage() {
       {tab === 'loans' && <div className="nm-grid c2 stretch">{loanCard}{cardCard}</div>}
 
       {tab === 'log' && (
-        <Card title="فعالیت اخیر" count={x?.activity.length || undefined} more={{ label: 'گزارش کامل', href: routes.org.reports }}>
+        <Card title="فعالیت اخیر" count={x?.activity.length || undefined}>
           {!x?.activity.length ? (
             extra.isLoading ? <span className="mute" style={{ fontSize: 12.5 }}>در حال دریافت…</span> : <Empty icon={I.inbox} title="فعالیتی ثبت نشده است" />
           ) : (

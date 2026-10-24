@@ -6,6 +6,7 @@ import { Icon, LogoMark, type IconName } from '@/components/ui/Icon';
 import { LogoFull } from '@/components/ui/Brand';
 import { LockBar, LockLegend, LockTypeChip } from '@/components/ui/LockBar';
 import { faDigits, money, percent } from '@/lib/format';
+import { HOURGLASS } from '@/lib/locks';
 
 const TOTAL = 202_500_000;
 const LOCKED = 71_600_000;
@@ -47,14 +48,14 @@ export function PhoneFrame({ active, label, children }: { active: number; label:
 
 const Toman = () => <span style={{ fontSize: 10.5, color: 'var(--text-secondary)' }}>تومان</span>;
 
-/** «دارایی‌ها»: total with free/locked split and two funds. */
+/** «دارایی‌ها»: total with free/reserved split and two funds. */
 export function AssetsScreen() {
   const wallets = [
-    { name: 'صندوق طلا', dot: 'var(--warning-main)', value: 98_000_000, free: 56_000_000, locked: 42_000_000, delta: 1.2 },
-    { name: 'صندوق درآمد ثابت', dot: 'var(--secondary-main)', value: 64_000_000, free: 44_000_000, locked: 20_000_000, delta: 0.08 },
+    { name: 'طلا', dot: 'var(--warning-main)', value: 98_000_000, free: 56_000_000, locked: 42_000_000, delta: 1.2 },
+    { name: 'درآمد ثابت', dot: 'var(--secondary-main)', value: 64_000_000, free: 44_000_000, locked: 20_000_000, delta: 0.08 },
   ];
   return (
-    <PhoneFrame active={0} label="اپ نمادنو: دارایی کل با بخش آزاد و قفل‌شده">
+    <PhoneFrame active={0} label="اپ نمادنو: دارایی کل با بخش آزاد و رزروشده">
       <div className="card" style={{ position: 'relative', overflow: 'hidden', padding: '12px 12px 14px', borderRadius: 18, display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--bg-paper) linear-gradient(135deg, rgb(var(--primary-main-rgb) / .14), transparent 60%)' }}>
         <div className="s-row" style={{ gap: 6 }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--primary-main)' }} />
@@ -65,7 +66,7 @@ export function AssetsScreen() {
         <LockBar free={FREE} locked={LOCKED} />
         <div style={{ fontSize: 10.5 }}><LockLegend free={FREE} locked={LOCKED} /></div>
       </div>
-      <span style={{ fontSize: 12.5, fontWeight: 700, marginTop: 4 }}>کیف پول‌ها و صندوق‌ها</span>
+      <span style={{ fontSize: 12.5, fontWeight: 700, marginTop: 4 }}>کیف پول و دارایی‌ها</span>
       {wallets.map((w) => (
         <div key={w.name} className="card" style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div className="s-row" style={{ gap: 6 }}>
@@ -77,7 +78,7 @@ export function AssetsScreen() {
           <LockBar free={w.free} locked={w.locked} height={4} />
           <div className="lkleg" style={{ fontSize: 10, gap: 8 }}>
             <span><span className="lkdot" style={{ width: 6, height: 6 }} />آزاد <b>{money(w.free)}</b></span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon name="lock" size={10} />قفل <b>{money(w.locked)}</b></span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon d={HOURGLASS} size={10} />رزرو <b>{money(w.locked)}</b></span>
           </div>
         </div>
       ))}
@@ -88,7 +89,7 @@ export function AssetsScreen() {
 /** «دریافتی‌ها»: an incoming package with the allocation choice. */
 export function InboxScreen() {
   const opts = [
-    { label: 'صندوق طلا', sub: '۱۰۰٪ طلا', on: false },
+    { label: 'طلا', sub: '۱۰۰٪ طلا', on: false },
     { label: 'ترکیبی ۵۰/۵۰', sub: '۵۰٪ طلا · ۵۰٪ درآمد ثابت', on: true },
     { label: 'درآمد ثابت', sub: '۱۰۰٪ درآمد ثابت', on: false },
   ];
@@ -172,7 +173,7 @@ const DOCK: { icon: IconName; label: string; on?: boolean }[] = [
 /** Organization panel (OS-style shell with dock) sending a package. */
 export function OrgWindow() {
   return (
-    <div className="s-win" role="img" aria-label="پنل سازمانی نمادنو: ارسال بسته پاداش برای کارکنان">
+    <div className="s-win" role="img" aria-label="پنل سازمانی نمادنو: ارسال بسته پاداش برای همکاران">
       <div className="s-win-bar"><i /><i /><i /><span className="s-win-url">org.namadno.ir</span></div>
       <div style={{ position: 'relative', padding: '16px 18px 84px', display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--bg-aurora), var(--bg-default)', fontSize: 12, lineHeight: 1.5 }}>
         <div className="s-row" style={{ gap: 8 }}>
@@ -193,7 +194,7 @@ export function OrgWindow() {
             {[
               { k: 'گیرندگان', v: faDigits(120) + ' نفر' },
               { k: 'تخصیص', v: 'آزاد · طلا / درآمد ثابت' },
-              { k: 'سیاست قفل', v: 'زمانی تا ۱۴۰۵/۱۰/۱۵' },
+              { k: 'شیوه‌ی دریافت', v: 'پس‌انداز تا ۱۴۰۵/۱۰/۱۵' },
             ].map((x) => (
               <span key={x.k} className="s-col" style={{ padding: '8px 10px', borderRadius: 12, border: '1px solid var(--line)', lineHeight: 1.45 }}>
                 <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{x.k}</span>
@@ -202,14 +203,14 @@ export function OrgWindow() {
             ))}
           </div>
           <div className="s-row" style={{ gap: 8 }}>
-            <span style={{ flex: 1, fontSize: 10.5, color: 'var(--text-secondary)' }}>کارکنان پس از تأیید، سهم هر صندوق را خودشان انتخاب می‌کنند.</span>
+            <span style={{ flex: 1, fontSize: 10.5, color: 'var(--text-secondary)' }}>همکاران پس از تأیید، سهم هر دارایی را خودشان انتخاب می‌کنند.</span>
             <span style={{ height: 34, padding: '0 14px', borderRadius: 10, background: 'var(--primary-main)', color: '#FFFFFF', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}><Icon name="send" size={14} />ارسال برای ۱۲۰ نفر</span>
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8 }}>
           {[
             { k: 'پذیرش بسته‌های امسال', v: '۸۹٪' },
-            { k: 'دارایی قفل‌شده پرسنل', v: '۲۷۹ میلیون' },
+            { k: 'پس‌انداز همکاران', v: '۲۷۹ میلیون' },
             { k: 'در انتظار تأیید', v: '۵ بسته' },
           ].map((x) => (
             <span key={x.k} className="card s-col" style={{ padding: '10px 12px', borderRadius: 14, lineHeight: 1.45 }}>
@@ -249,18 +250,18 @@ export function NamadnoCard() {
   );
 }
 
-/** «خرید صندوق»: rial → gold fund, with NAV, units and fee shown before confirming. */
+/** «خرید طلا»: rial → gold, with price per share, shares and fee shown before confirming. */
 export function ConvertScreen() {
   const rows = [
-    { k: 'قیمت هر واحد (NAV)', v: `${money(3_015_000)} تومان` },
-    { k: 'تعداد واحد', v: '≈ ۳٫۳۱' },
+    { k: 'قیمت هر سهم', v: `${money(3_015_000)} تومان` },
+    { k: 'تعداد سهم', v: '≈ ۳٫۳۱' },
     { k: 'کارمزد', v: `${money(10_000)} تومان` },
   ];
   return (
-    <PhoneFrame active={0} label="اپ نمادنو: خرید صندوق طلا از کیف پول ریالی">
-      <span style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>خرید صندوق طلا</span>
+    <PhoneFrame active={0} label="اپ نمادنو: خرید طلا از کیف پول ریالی">
+      <span style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>خرید طلا</span>
       <div className="s-row" style={{ gap: 6 }}>
-        {['طلا', 'درآمد ثابت', 'سهامی'].map((t, i) => (
+        {['طلا', 'درآمد ثابت', 'سهام'].map((t, i) => (
           <span key={t} style={{ height: 28, padding: '0 12px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 700, background: i === 0 ? 'var(--text-primary)' : 'var(--action-hover)', color: i === 0 ? 'var(--bg-default)' : 'var(--text-secondary)' }}>{t}</span>
         ))}
       </div>
@@ -279,7 +280,7 @@ export function ConvertScreen() {
           </div>
         ))}
       </div>
-      <span style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'center' }}>بازده یک‌ساله صندوق طلا: ۴۲٪ · بازدهی گذشته تضمین آینده نیست</span>
+      <span style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'center' }}>بازده یک‌ساله طلا: ۴۲٪ · بازدهی گذشته تضمین آینده نیست</span>
       <span style={{ height: 42, borderRadius: 13, background: 'var(--primary-main)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12.5, fontWeight: 700 }}>
         <Icon name="check" size={16} strokeWidth={2} />تأیید و خرید
       </span>

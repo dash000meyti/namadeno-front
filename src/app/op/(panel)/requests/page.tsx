@@ -24,7 +24,7 @@ import { now } from '@/lib/clock';
 import { routes } from '@/lib/routes';
 
 const KIND: Record<RequestKind, string> = {
-  loan: 'وام', installment: 'خرید اقساطی', cash_withdrawal: 'برداشت', profile_change: 'KYC', credit_increase: 'افزایش اعتبار', milestone_release: 'آزادسازی مرحله',
+  loan: 'وام', installment: 'خرید اقساطی', cash_withdrawal: 'برداشت', profile_change: 'KYC', credit_increase: 'افزایش اعتبار', milestone_release: 'دریافت مرحله',
 };
 type TabKey = 'all' | 'loan' | 'bnpl' | 'wd' | 'kyc' | 'other';
 const TABS: { key: TabKey; label: string; kinds: RequestKind[] | null }[] = [
@@ -33,12 +33,12 @@ const TABS: { key: TabKey; label: string; kinds: RequestKind[] | null }[] = [
   { key: 'bnpl', label: 'خرید اقساطی', kinds: ['installment'] },
   { key: 'wd', label: 'برداشت', kinds: ['cash_withdrawal'] },
   { key: 'kyc', label: 'KYC', kinds: ['profile_change'] },
-  { key: 'other', label: 'سایر', kinds: ['credit_increase', 'milestone_release'] },
+  { key: 'other', label: 'سایر', kinds: ['credit_increase'] },
 ];
 const CHECKS: Record<RequestKind, string[]> = {
-  loan: ['هویت با KYC تطابق دارد', 'بخش آزاد برای قفل وثیقه کافی است', 'سقف قرارداد سازمان رعایت شده', 'وام فعال همزمان ندارد', 'قسط کمتر از ۴۰٪ ورودی ماهانه'],
-  installment: ['فروشگاه طرف قرارداد و فعال است', 'فاکتور کالا با مبلغ تطابق دارد', 'بخش آزاد برای قفل اقساطی کافی است', 'سقف خرید اقساطی سازمان رعایت شده'],
-  cash_withdrawal: ['شبای مقصد به نام کاربر است', 'مبلغ فقط از بخش آزاد است (بدون قفل یا مسدودی)', 'الگوی برداشت غیرعادی نیست', 'دستگاه و IP شناخته‌شده است'],
+  loan: ['هویت با KYC تطابق دارد', 'بخش آزاد برای رزرو پشتوانه کافی است', 'سقف قرارداد سازمان رعایت شده', 'وام فعال همزمان ندارد', 'قسط کمتر از ۴۰٪ ورودی ماهانه'],
+  installment: ['فروشگاه طرف قرارداد و فعال است', 'فاکتور کالا با مبلغ تطابق دارد', 'بخش آزاد برای رزرو اقساطی کافی است', 'سقف خرید اقساطی سازمان رعایت شده'],
+  cash_withdrawal: ['شبای مقصد به نام کاربر است', 'مبلغ فقط از بخش آزاد است (نه رزروشده یا مسدود)', 'الگوی برداشت غیرعادی نیست', 'دستگاه و IP شناخته‌شده است'],
   profile_change: ['تصویر کارت ملی خوانا است', 'تطابق چهره بالای ۸۵٪', 'استعلام شاهکار موفق', 'کد پرسنلی در لیست سازمان است'],
   credit_increase: ['هویت با KYC تطابق دارد', 'بخش آزاد برای رزرو اعتبار کافی است', 'سقف قرارداد سازمان رعایت شده', 'سابقه بازپرداخت کارت سالم است'],
   milestone_release: ['تحویل مرحله توسط سازمان تأیید شده', 'مستندات تحویل پیوست شده', 'مبلغ با سهم مرحله در قرارداد تطابق دارد'],

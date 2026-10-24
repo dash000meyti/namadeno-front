@@ -8,6 +8,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { useBankAccounts, useFunds, useInstallments, useLoans, usePortfolio } from '@/api/app';
 import { usePayDebt, type InstallmentPurchaseX, type PaySource } from '@/api/app-credit-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, money } from '@/lib/format';
 import { CI } from '@/components/app/credit/icons';
@@ -67,27 +68,28 @@ function PayInstallment() {
   const insufficient = payTotal > sourceFree(src, pf.data);
 
   // collateral after payment
+  const relTag = LOCK_META[isLoan ? 'collateral' : 'installment'];
   let rel: { title: string; sub: string; ok: boolean } | undefined;
   if (K && isLoan && activeLoan) {
     const locks = allLocks.filter((l) => l.sourceId === activeLoan.id || l.id === activeLoan.collateral.lockId);
     const sum = locks.reduce((s, l) => s + l.amount, 0);
     const names = Array.from(new Set(locks.map((l) => pf.data?.holdings.find((h) => h.kind === l.holdingKind)?.name ?? ''))).filter(Boolean).join('، ');
     rel = after === 0
-      ? { title: `آزادسازی: ${money(sum)} از وثیقه آزاد شد`, sub: `پس از این پرداخت وام تسویه می‌شود و قفل ${names} برداشته می‌شود.`, ok: true }
-      : { title: `وثیقه ${money(sum)} ${names} قفل می‌ماند`, sub: `آزاد با تسویه کامل وام · پس از این پرداخت ${faDigits(after)} قسط مانده`, ok: false };
+      ? { title: `${money(sum)} تومان از پشتوانه آزاد می‌شود`, sub: `با این پرداخت وام تسویه می‌شود و پشتوانه‌ی ${names} آزاد می‌شود.`, ok: true }
+      : { title: `${money(sum)} تومان پشتوانه در ${names} رزرو می‌ماند`, sub: `آزاد با تسویه کامل وام · پس از این پرداخت ${faDigits(after)} قسط مانده`, ok: false };
   } else if (K && activeInst) {
     const lock = allLocks.find((l) => l.id === activeInst.lockId);
     const lockAmt = lock?.amount ?? 0;
     const freed = after === 0 ? lockAmt : Math.round((lockAmt / Math.max(1, remainN)) * n);
     const hName = lock ? pf.data?.holdings.find((h) => h.kind === lock.holdingKind)?.name ?? '' : '';
-    rel = { title: `آزادسازی: ${money(freed)} از وثیقه آزاد شد`, sub: `پس از پرداخت · ${hName} · قفل باقی‌مانده ${money(lockAmt - freed)}${after > 0 ? ` تا ${faDigits(after)} قسط دیگر` : ''}`, ok: true };
+    rel = { title: `${money(freed)} تومان از پشتوانه آزاد می‌شود`, sub: `پس از پرداخت · ${hName} · رزرو باقی‌مانده ${money(lockAmt - freed)}${after > 0 ? ` تا ${faDigits(after)} قسط دیگر` : ''}`, ok: true };
   }
 
   const submit = () => {
     if (!K || insufficient) return;
     pay.mutate({ kind, id: K.id, count: n, source: src }, {
       onSuccess: (tx) => {
-        toast(after === 0 ? 'پرداخت انجام شد و وثیقه آزاد شد' : 'قسط با موفقیت پرداخت شد');
+        toast(after === 0 ? 'پرداخت انجام شد و پشتوانه آزاد شد' : 'قسط با موفقیت پرداخت شد');
         router.push(routes.app.receipt(tx.id));
       },
     });
@@ -164,7 +166,7 @@ function PayInstallment() {
             {rel && (
               <div className="card" style={{ boxSizing: 'border-box', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 'none', background: rel.ok ? 'rgb(var(--success-main-rgb) / .08)' : 'var(--card-bg)' }}>
                 <div className="row" style={{ minHeight: 22, gap: 8 }}>
-                  <span className="lktype" style={{ background: isLoan ? 'var(--soft-info)' : 'var(--soft-secondary)', color: isLoan ? 'var(--info-text)' : 'var(--secondary-text)' }}><Icon d={CI.lock} size={12} />{isLoan ? 'وثیقه' : 'اقساطی'}</span>
+                  <span className="lktype" style={{ background: relTag.bg, color: relTag.fg }}><Icon d={relTag.d} size={12} />{relTag.short}</span>
                   <span className="num" style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: rel.ok ? 'var(--success-text)' : 'var(--text-primary)', lineHeight: 1.4 }}>{rel.title}</span>
                 </div>
                 <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{rel.sub}</span>

@@ -38,7 +38,7 @@ export function LockTag({ pkg, style }: { pkg: InboxPackage; style?: React.CSSPr
 /** Collapsed pending package row (64px). */
 export function CollapsedPackage({ pkg, above }: { pkg: InboxPackage; above: boolean }) {
   const desc = pkg.allocationMode === 'free'
-    ? `تخصیص آزاد · ${pkg.cashAllowed ? 'برداشت مجاز' : 'برداشت غیرمجاز'}`
+    ? `تخصیص آزاد · ${pkg.cashAllowed ? 'برداشت مجاز' : 'فقط صندوق'}`
     : `تخصیص ثابت ${splitDesc(pkg.fixedSplit)}`;
   return (
     <Link href={routes.app.inbox(pkg.id)} replace scroll={false} className="card" aria-label={`باز کردن ${pkg.title}`} style={{ boxSizing: 'border-box', height: 64, padding: '0 14px', display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-primary)', textDecoration: 'none', flex: 'none' }}>
@@ -110,7 +110,7 @@ function Actions({ onAccept, busy, laterHref }: { onAccept: () => void; busy: bo
   );
 }
 
-/** Free/locked outcome of a split under the package's lock policy. Rial always lands free. */
+/** Free/reserved outcome of a split under the package's lock policy. Rial always lands free. */
 export function outcome(pkg: InboxPackage, s: AllocationSplit) {
   let free = 0;
   let locked = 0;
@@ -122,7 +122,7 @@ export function outcome(pkg: InboxPackage, s: AllocationSplit) {
     if (p.key !== 'rial' && pkg.lockPolicy.type !== 'none') { locked += v; lockN.push(p.short); } else { free += v; freeN.push(p.short); }
   }
   const lp = pkg.lockPolicy;
-  const until = lp.type === 'vesting' ? ' · تا ' + jDate(lp.releaseAt) : lp.type === 'milestone' ? ' · آزادسازی مرحله‌ای' : '';
+  const until = lp.type === 'vesting' ? ' · آزاد در ' + jDate(lp.releaseAt) : lp.type === 'milestone' ? ' · دریافت مرحله‌ای' : '';
   return { free, locked, freeNote: `${freeN.join(' و ') || '—'} · قابل برداشت`, lockNote: `${lockN.join(' و ') || '—'}${until}` };
 }
 
@@ -169,7 +169,7 @@ export function FreePackage({ pkg, onAccept, busy, error }: { pkg: InboxPackage;
   const rules = [
     cash
       ? { k: 'برداشت نقدی:', v: 'مجاز', d: P.checkCircle, c: 'var(--success-text)' }
-      : { k: 'برداشت نقدی:', v: 'غیرمجاز — فقط صندوق', d: P.ban, c: 'var(--error-text)' },
+      : { k: 'برداشت نقدی:', v: 'ندارد · کل مبلغ در صندوق‌ها', d: P.info, c: 'var(--text-secondary)' },
     { k: 'تخصیص:', v: cash ? 'آزاد بین طلا / درآمد ثابت / ریال' : 'آزاد بین طلا / درآمد ثابت', d: P.sliders, c: 'var(--primary-text)' },
   ];
   const out = outcome(pkg, split);

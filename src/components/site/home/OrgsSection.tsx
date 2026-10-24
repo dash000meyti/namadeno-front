@@ -7,8 +7,8 @@ import { Section } from '../Section';
 
 export const ORG_FEATURES = [
   'پرداخت پاداش به یک نفر، یک واحد یا همه‌ی همکاران در چند دقیقه',
-  'قفل زمانی یا آزادسازی مرحله‌ای برای ماندگاری و قراردادهای پروژه‌ای',
-  'صندوق‌های مجاز، امکان برداشت نقدی و سقف اعتبار همکاران، مطابق سیاست شما',
+  'پس‌انداز سازمانی برای ماندگاری و دریافت مرحله‌ای برای قراردادهای پروژه‌ای',
+  'دارایی‌های مجاز، امکان برداشت نقدی و سقف اعتبار همکاران، مطابق سیاست شما',
   'اعتبار و وام همکاران بدون ضمانت سازمان و بدون کسر از حقوق',
   'گزارش لحظه‌ای بودجه، پذیرش پاداش‌ها و درخواست‌ها',
 ];
@@ -69,14 +69,14 @@ export function OrgsSection() {
       <div className="s-split">
         <div className="s-col" style={{ gap: 16 }}>
           <span className="s-eyebrow"><span className="dot" />برای سازمان‌ها</span>
-          <h2 id="orgs-title" className="s-h2">مزایای کارکنان را به دارایی ماندگار تبدیل کنید</h2>
-          <p className="s-lead">پنل سازمانی نمادنو به منابع انسانی کمک می‌کند پاداش، رفاهی و پرداخت قراردادهای پروژه‌ای را شفاف، سریع و با سیاست دلخواه مدیریت کند.</p>
+          <h2 id="orgs-title" className="s-h2">مزایای همکاران‌تان را به دارایی ماندگار تبدیل کنید</h2>
+          <p className="s-lead">نمادنو برای سازمان‌ها به منابع انسانی کمک می‌کند پاداش، رفاهی و پرداخت قراردادهای پروژه‌ای را شفاف، سریع و با سیاست دلخواه مدیریت کند.</p>
           <ul className="s-check">
             {ORG_FEATURES.map((f) => <li key={f}><Icon name="check" />{f}</li>)}
           </ul>
           <div className="s-actions" style={{ marginTop: 6 }}>
             <Link href={`${routes.site.business}#demo`} className="btn lg contained c-primary">رزرو جلسه‌ی معرفی</Link>
-            <Link href={routes.org.login} className="btn lg outlined c-primary"><Icon name="building" />ورود به پنل سازمان</Link>
+            <Link href={routes.org.login} className="btn lg outlined c-primary"><Icon name="building" />ورود سازمان‌ها</Link>
           </div>
         </div>
         <OrgPanelMock />

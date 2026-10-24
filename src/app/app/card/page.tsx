@@ -8,11 +8,14 @@ import { useToast } from '@/components/ui/Toast';
 import { useCard, useFreezeCard, usePortfolio, useTransactions } from '@/api/app';
 import { useCreditExtra } from '@/api/app-credit-extra';
 import { ApiRequestError } from '@/api/client';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDayMonth, money } from '@/lib/format';
 import { CI } from '@/components/app/credit/icons';
 import { CardFace, cardTxIcon, cardTxTitle } from '@/components/app/credit/CardVisual';
 import { Chev, daysUntil, pct1 } from '@/components/app/credit/ui';
+
+const PAUSE = 'M9 6v12M15 6v12';
 
 export default function CardPage() {
   const toast = useToast();
@@ -38,7 +41,7 @@ export default function CardPage() {
   const toggleFreeze = () => {
     if (!c || permanent) return;
     freeze.mutate(!blocked, {
-      onSuccess: (r) => toast(r.status === 'frozen' ? 'کارت موقتاً مسدود شد' : 'مسدودی کارت برداشته شد', r.status === 'frozen' ? 'info' : 'success'),
+      onSuccess: (r) => toast(r.status === 'frozen' ? 'کارت موقتاً متوقف شد' : 'کارت دوباره فعال شد', r.status === 'frozen' ? 'info' : 'success'),
       onError: (e) => toast(e instanceof ApiRequestError ? e.message : 'خطا در ارتباط با سرور', 'error'),
     });
   };
@@ -46,7 +49,7 @@ export default function CardPage() {
   const actions = [
     { label: 'شارژ از اعتبار', d: CI.bolt, href: routes.app.cardCharge },
     { label: 'رمز پویا', d: CI.key, href: routes.app.cardOtp },
-    { label: blocked ? 'رفع مسدودی' : 'مسدودسازی', d: CI.ban, toggle: true },
+    { label: permanent ? 'باطل‌شده' : blocked ? 'فعال‌سازی دوباره' : 'توقف موقت', d: permanent ? CI.ban : blocked ? CI.refresh : PAUSE, toggle: true },
     { label: 'تنظیمات', d: CI.sliders, href: routes.app.cardSettings },
   ];
 
@@ -57,7 +60,7 @@ export default function CardPage() {
         {noCard && (
           <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', textAlign: 'center', flex: 'none' }}>
             <Icon d={CI.card} size={28} style={{ color: 'var(--text-secondary)' }} />
-            <span style={{ fontSize: 14, fontWeight: 700 }}>کارتی برای شما صادر نشده است</span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>هنوز کارتی برای شما صادر نشده است</span>
             <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>برای صدور کارت اعتباری نمادنو با پشتیبانی تماس بگیرید.</span>
           </div>
         )}
@@ -76,19 +79,19 @@ export default function CardPage() {
               <span className="num" style={{ fontSize: 22, lineHeight: 1.1, whiteSpace: 'nowrap' }}>{money(avail)} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-secondary)' }}>تومان</span></span>
               <div dir="ltr" style={{ height: 6, borderRadius: 999, background: 'var(--progress-track)', overflow: 'hidden' }}><span style={{ display: 'block', width: `${usedPct}%`, height: '100%', borderRadius: 999, background: 'var(--primary-main)' }} /></div>
               {blocked
-                ? <span style={{ fontSize: 11, color: 'var(--error-text)', fontWeight: 600, lineHeight: 1.3, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}><Icon d={CI.ban} size={14} />کارت مسدود است · خرید با کارت ممکن نیست</span>
+                ? <span style={{ fontSize: 11, color: permanent ? 'var(--error-text)' : 'var(--warning-text)', fontWeight: 600, lineHeight: 1.3, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}><Icon d={permanent ? CI.ban : CI.clock} size={14} />{permanent ? 'کارت باطل شده است · خرید با این کارت انجام نمی‌شود' : 'کارت موقتاً متوقف است · برای خرید دوباره فعالش کنید'}</span>
                 : <span style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.3, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}><Icon d={CI.refresh} size={14} />تسویه خودکار از کیف پول ریالی: {jDayMonth(c.statementDue)}</span>}
             </div>
 
-            {/* credit backing: collateral lock */}
+            {/* credit backing: collateral reserve */}
             <Link href={routes.app.asset(lockHoldings[0] ?? 'rial')} className="card" style={{ boxSizing: 'border-box', height: 58, padding: '0 12px 0 14px', display: 'flex', alignItems: 'center', gap: 10, flex: 'none', color: 'var(--text-primary)', textDecoration: 'none' }}>
-              <span className="lktype" style={{ background: 'var(--soft-info)', color: 'var(--info-text)' }}><Icon d={CI.lock} size={12} />وثیقه</span>
+              <span className="lktype" style={{ background: LOCK_META.collateral.bg, color: LOCK_META.collateral.fg }} title={LOCK_META.collateral.label}><Icon d={LOCK_META.collateral.d} size={12} />{LOCK_META.collateral.short}</span>
               <span className="col" style={{ flex: 1, gap: 2, lineHeight: 1.3 }}>
                 <span className="num" style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {lockedSum > 0 ? `پشتوانه: ${money(lockedSum)} قفل در ${lockHoldings.map(holdingName).join('، ')}` : 'پشتوانه: فعلاً قفلی ندارد'}
+                  {lockedSum > 0 ? `${money(lockedSum)} رزرو در ${lockHoldings.map(holdingName).join('، ')}` : 'فعلاً چیزی رزرو نشده'}
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {lockedSum > 0 ? locks[0].condition : `تا ${money(extra.data?.cardUnsecuredLimit ?? 0)} تومان مصرف بدون وثیقه`}
+                  {lockedSum > 0 ? locks[0].condition : `تا ${money(extra.data?.cardUnsecuredLimit ?? 0)} تومان مصرف بدون نیاز به پشتوانه`}
                 </span>
               </span>
               <Chev />
@@ -102,9 +105,9 @@ export default function CardPage() {
                   <span style={{ fontSize: 11, lineHeight: 1.3, fontWeight: 500, whiteSpace: 'nowrap' }}>{a.label}</span>
                 </Link>
               ) : (
-                <button key={a.label} type="button" onClick={toggleFreeze} aria-pressed={blocked} disabled={permanent || freeze.isPending} title={permanent ? 'کارت مسدود دائم است' : undefined}
+                <button key={a.label} type="button" onClick={toggleFreeze} aria-pressed={blocked} disabled={permanent || freeze.isPending} title={permanent ? 'این کارت باطل شده است' : undefined}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, border: 0, background: 'transparent', padding: 0, color: 'var(--text-primary)', fontFamily: 'inherit', cursor: permanent ? 'default' : 'pointer', opacity: permanent ? 0.5 : 1 }}>
-                  <span style={{ width: 40, height: 40, borderRadius: '50%', background: blocked ? 'var(--soft-error)' : 'var(--bg-paper)', boxShadow: 'var(--shadow-card)', color: blocked ? 'var(--error-text)' : 'var(--primary-text)', display: 'grid', placeItems: 'center' }}><Icon d={a.d} size={20} /></span>
+                  <span style={{ width: 40, height: 40, borderRadius: '50%', background: blocked ? 'var(--soft-warning)' : 'var(--bg-paper)', boxShadow: 'var(--shadow-card)', color: blocked ? 'var(--warning-text)' : 'var(--primary-text)', display: 'grid', placeItems: 'center' }}><Icon d={a.d} size={20} /></span>
                   <span style={{ fontSize: 11, lineHeight: 1.3, fontWeight: 500, whiteSpace: 'nowrap' }}>{a.label}</span>
                 </button>
               ))}

@@ -36,7 +36,7 @@ const SURFACES: Surface[] = [
       { name: 'ورود و داشبورد', items: [L(o.login, 'ورود'), L(o.dashboard, 'داشبورد')] },
       { name: 'کارکنان', items: [L(o.employees, 'کارکنان'), L(o.employee('u-1001'), 'پروفایل کارمند'), L(o.employeeNew, 'افزودن کارمند')] },
       { name: 'بسته‌های دارایی', items: [L(o.packages, 'بسته‌ها'), L(o.newRecipients(), '۱ · گیرندگان'), L(o.newSettings('pkg-draft-yalda'), '۲ · تنظیمات'), L(o.newReview('pkg-draft-yalda'), '۳ · بررسی'), L(o.newSent('pkg-mehr'), 'ارسال شد'), L(o.package('pkg-mehr'), 'جزئیات بسته')] },
-      { name: 'تسهیلات و مدیریت', items: [L(o.credit, 'تسهیلات و اعتبار'), L(o.requests, 'درخواست‌ها'), L(o.reports, 'گزارش‌ها'), L(o.contract, 'تنظیمات قرارداد')] },
+      { name: 'تسهیلات و مدیریت', items: [L(o.credit, 'تسهیلات و اعتبار'), L(o.requests, 'درخواست‌ها'), L(o.departments, 'واحدها'), L(o.notifications, 'اعلان‌ها'), L(o.contract, 'تنظیمات قرارداد')] },
     ],
   },
   {
@@ -51,7 +51,7 @@ const SURFACES: Surface[] = [
 ];
 
 const SITE: Group[] = [
-  { name: 'سایت عمومی', items: [L(s.home, 'خانه'), L(s.business, 'برای سازمان‌ها'), L(s.about, 'درباره ما'), L(s.security, 'امنیت'), L(s.careers, 'فرصت‌های شغلی'), L(s.contact, 'تماس با ما'), L(s.faq, 'سوالات متداول')] },
+  { name: 'سایت عمومی', items: [L(s.home, 'خانه'), L(s.business, 'برای سازمان‌ها'), L(s.about, 'درباره ما'), L(s.security, 'امنیت'), L(s.contact, 'تماس با ما'), L(s.faq, 'سوالات متداول')] },
   { name: 'وبلاگ', items: [L(s.blog, 'فهرست مطالب'), L(s.post('free-vs-locked-assets'), 'یک مطلب')] },
   { name: 'قوانین و مرجع', items: [L(s.terms, 'شرایط استفاده'), L(s.privacy, 'حریم خصوصی'), L(s.designSystem, 'سیستم طراحی')] },
 ];
@@ -60,7 +60,7 @@ const FLOW = [
   { b: '۱ · بهره‌بردار', t: 'قرارداد و محدودیت‌ها را تعریف می‌کند' },
   { b: '۲ · سازمان', t: 'بسته دارایی برای پرسنل می‌فرستد' },
   { b: '۳ · کاربر', t: 'در «دریافتی‌ها» تأیید و تخصیص می‌دهد' },
-  { b: '۴ · استفاده', t: 'اعتبار کارت · وام با وثیقه · خرید اقساطی' },
+  { b: '۴ · استفاده', t: 'اعتبار کارت · وام با پشتوانه · خرید اقساطی' },
 ];
 
 const count = (gs: Group[]) => gs.reduce((n, g) => n + g.items.length, 0);

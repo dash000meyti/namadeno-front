@@ -1,7 +1,7 @@
 'use client';
 /**
  * Employee inspector of the employees list (kit Inspector — replaces the old fixed side panel):
- * identity → key numbers → pending milestone → assets with the free/locked split → mix → latest packages; actions in the footer.
+ * identity → key numbers → pending milestone → assets with the free/reserved split → mix → latest packages; actions in the footer.
  * Also exports the employee status tones and the per-employee package status used by the employee screens.
  */
 import Link from 'next/link';
@@ -11,6 +11,7 @@ import type { Employee, OrgPackage } from '@/types/domain';
 import { Allocation, Ava, BigNum, Empty, FreeLocked, Inspector, KV, KeyStats, List, ListRow, Note, Pill, Section, Tile, Who, type Tone } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { LockTypeChip } from '@/components/ui/LockBar';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDayMonth, jMonthYear, money } from '@/lib/format';
 import { EMP_STATUS, I, KIND_COLOR, million } from './shared';
@@ -23,7 +24,7 @@ export function pkgStatusFor(p: OrgPackage, employeeId: string): { label: string
   const r = p.recipients.find((x) => x.employeeId === employeeId);
   if (p.lockPolicy.type === 'milestone' && r?.status === 'accepted') {
     const steps = p.milestoneProgress ?? [];
-    return { label: 'مرحله‌ای', tone: 'primary', meta: `${money(r.amount)} تومان · ${faDigits(steps.filter((s) => s.status === 'released').length)} از ${faDigits(steps.length)} مرحله آزاد` };
+    return { label: LOCK_META.milestone.label, tone: 'primary', meta: `${money(r.amount)} تومان · ${faDigits(steps.filter((s) => s.status === 'released').length)} از ${faDigits(steps.length)} مرحله آزاد` };
   }
   const date = p.sentAt ? jDayMonth(p.sentAt) : '';
   if (r?.status === 'pending') return { label: 'در انتظار تأیید', tone: 'warning', meta: `${money(r.amount)} تومان · ${date}` };
@@ -35,8 +36,8 @@ export function pkgStatusFor(p: OrgPackage, employeeId: string): { label: string
 export function SuspendNotice() {
   return (
     <>
-      <span className="mute">با تعلیق، دسترسی کارمند به اپ محدود می‌شود، بسته‌های تأیید‌نشده به حساب سازمان بازمی‌گردند و درخواست‌های وام و اعتبار جدید مسدود می‌شوند. دارایی‌های فعلی او دست‌نخورده می‌ماند.</span>
-      <Note tone="warn">تسهیلات فعال کارمند طبق قرارداد ادامه می‌یابد؛ در صورت ۲ قسط معوق، وثیقه نقد می‌شود.</Note>
+      <span className="mute">با تعلیق، دسترسی کارمند به اپ نمادنو محدود می‌شود، بسته‌هایی که هنوز نپذیرفته است به حساب سازمان برمی‌گردند و درخواست تازه‌ی وام و اعتبار ثبت نمی‌شود. دارایی‌های فعلی او دست‌نخورده و متعلق به خود او می‌ماند و هر زمان می‌توانید حساب را دوباره فعال کنید.</span>
+      <Note tone="warn">تسهیلات فعال کارمند طبق قرارداد ادامه می‌یابد؛ اگر ۲ قسط معوق شود، پشتوانه‌ی وام برای تسویه نقد می‌شود.</Note>
     </>
   );
 }
@@ -65,7 +66,7 @@ export function EmployeeInspector({ emp, facts, onClose, onSuspend, onReactivate
           <button type="button" className="nm-btn" disabled={sending || inactive} onClick={onSendPackage}><Icon d={I.pkg} size={17} />{sending ? 'در حال آماده‌سازی…' : 'ارسال بسته'}</button>
           {!inactive
             ? <button type="button" className="nm-btn line danger" onClick={onSuspend}><Icon d={I.ban} size={17} />تعلیق حساب</button>
-            : <button type="button" className="nm-btn line ok" disabled={busy} onClick={onReactivate}><Icon d={I.check} size={17} />رفع تعلیق</button>}
+            : <button type="button" className="nm-btn line ok" disabled={busy} onClick={onReactivate}><Icon d={I.check} size={17} />فعال‌سازی دوباره</button>}
         </>
       )}
     >

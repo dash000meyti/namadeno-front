@@ -135,7 +135,7 @@ export const appHandlers = [
     const split: AllocationSplit = pkg.allocationMode === 'fixed' ? pkg.fixedSplit! : b.split ?? { gold: 50, fixed: 50 };
     const sum = (split.gold ?? 0) + (split.fixed ?? 0) + (split.rial ?? 0);
     if (Math.round(sum) !== 100) return fail(422, 'bad_split', 'جمع تخصیص باید ۱۰۰٪ باشد.');
-    if ((split.rial ?? 0) > 0 && !pkg.cashAllowed) return fail(422, 'cash_not_allowed', 'برداشت نقدی برای این بسته مجاز نیست.');
+    if ((split.rial ?? 0) > 0 && !pkg.cashAllowed) return fail(422, 'cash_not_allowed', 'این بسته فقط به صندوق‌ها تخصیص داده می‌شود و سهم ریالی ندارد.');
     const parts: [AssetKind, number][] = [['gold', split.gold], ['fixed', split.fixed], ['rial', split.rial ?? 0]];
     for (const [kind, pct] of parts) {
       if (!pct) continue;
@@ -148,7 +148,7 @@ export const appHandlers = [
       if (kind !== 'rial' && lp.type === 'milestone') {
         addLock(ud, kind, {
           type: 'milestone', amount: amt, title: pkg.title, condition: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود', sourceId: pkg.packageId, contractTotal: amt,
-          steps: lp.steps.map((s, i) => ({ id: `ms-${i + 1}`, title: s.title, sharePct: s.sharePct, dueDate: s.dueDate, status: i === 0 ? 'pending_approval' : 'future' })),
+          steps: lp.steps.map((s, i) => ({ id: `ms-${i + 1}`, title: s.title, sharePct: s.sharePct, dueDate: s.dueDate, requiresApproval: s.requiresApproval !== false, status: i === 0 ? 'pending_approval' : 'future' })),
         });
       }
     }
@@ -294,12 +294,12 @@ export const appHandlers = [
     if (b.amount > loanCapacity(ud)) return fail(422, 'over_limit', 'مبلغ از سقف وام بیشتر است.');
     const kind = b.collateralKind ?? 'gold';
     const h = holding(ud, kind);
-    if (h.free < b.amount) return fail(422, 'insufficient_collateral', 'بخش آزاد این دارایی برای وثیقه کافی نیست.');
+    if (h.free < b.amount) return fail(422, 'insufficient_collateral', 'بخش آزاد این دارایی برای پشتوانه‌ی این مبلغ کافی نیست؛ دارایی دیگری انتخاب کنید یا مبلغ را کمتر کنید.');
     const rate = b.months <= 6 ? 16 : b.months <= 12 ? 18 : 21;
     const r = rate / 1200;
     const monthly = Math.round((b.amount * r) / (1 - Math.pow(1 + r, -b.months)) / 1000) * 1000;
     const id = newId('loan');
-    const lock = addLock(ud, kind, { type: 'collateral', amount: b.amount, title: 'وثیقه وام', condition: 'آزاد با تسویه وام', sourceId: id, paidCount: 0, totalCount: b.months });
+    const lock = addLock(ud, kind, { type: 'collateral', amount: b.amount, title: 'پشتوانه‌ی وام', condition: 'آزاد با تسویه وام', sourceId: id, paidCount: 0, totalCount: b.months });
     const start = now();
     const loan = {
       id, principal: b.amount, months: b.months, ratePct: rate, monthlyPayment: monthly, startedAt: start.toISOString(),
@@ -309,7 +309,7 @@ export const appHandlers = [
     ud.loans.unshift(loan);
     credit(ud, 'rial', b.amount);
     addTx(ud, { category: 'loan', title: 'واریز وام', subtitle: `${b.months} ماهه · کیف پول ریالی`, amount: b.amount, holdingKind: 'rial' });
-    addTx(ud, { category: 'lock', title: 'قفل وثیقه وام — ' + h.name, subtitle: 'آزاد با تسویه وام', amount: b.amount, holdingKind: kind, lockType: 'collateral', lockEvent: 'locked' });
+    addTx(ud, { category: 'lock', title: 'رزرو پشتوانه‌ی وام — ' + h.name, subtitle: 'آزاد با تسویه وام', amount: b.amount, holdingKind: kind, lockType: 'collateral', lockEvent: 'locked' });
     ud.credit.activeLoanId = id;
     notify(ud, { title: 'وام شما فعال شد', body: `${money(b.amount)} تومان به کیف پول ریالی واریز شد`, tone: 'success', icon: 'check', href: '/app/credit' });
     return ok(loan);
@@ -337,8 +337,8 @@ export const appHandlers = [
       ud.credit.activeLoanId = undefined;
       for (const h of ud.holdings) h.locks = h.locks.filter((l) => l.id !== loan.collateral.lockId);
       recalcHoldings(ud);
-      addTx(ud, { category: 'lock', title: 'آزادسازی وثیقه وام', subtitle: 'تسویه کامل وام', amount: loan.collateral.amount, holdingKind: loan.collateral.holdingKind, lockType: 'collateral', lockEvent: 'released' });
-      notify(ud, { title: 'وام تسویه شد', body: `${money(loan.collateral.amount)} تومان وثیقه آزاد شد`, tone: 'success', icon: 'unlock', href: '/app/history' });
+      addTx(ud, { category: 'lock', title: 'آزادسازی پشتوانه‌ی وام', subtitle: 'تسویه کامل وام', amount: loan.collateral.amount, holdingKind: loan.collateral.holdingKind, lockType: 'collateral', lockEvent: 'released' });
+      notify(ud, { title: 'وام تسویه شد', body: `${money(loan.collateral.amount)} تومان از پشتوانه‌ی وام آزاد شد`, tone: 'success', icon: 'unlock', href: '/app/history' });
     }
     return ok(tx);
   }),
@@ -423,15 +423,15 @@ export const appHandlers = [
     if (!s) return fail(404, 'not_found', 'فروشگاه پیدا نشد.');
     const kind = b.collateralKind ?? 'gold';
     const lockAmt = b.price - (b.prepayment ?? 0);
-    if (holding(ud, kind).free < lockAmt) return fail(422, 'insufficient_collateral', 'بخش آزاد این دارایی برای وثیقه کافی نیست.');
+    if (holding(ud, kind).free < lockAmt) return fail(422, 'insufficient_collateral', 'بخش آزاد این دارایی برای پشتوانه‌ی این مبلغ کافی نیست؛ دارایی دیگری انتخاب کنید یا مبلغ را کمتر کنید.');
     if (b.prepayment && !debit(ud, 'rial', b.prepayment)) return fail(422, 'insufficient_free', 'موجودی آزاد کیف پول ریالی برای پیش‌پرداخت کافی نیست.');
     const id = newId('inst');
     const lock = addLock(ud, kind, { type: 'installment', amount: lockAmt, title: 'خرید اقساطی ' + s.name, condition: 'با پرداخت هر قسط، بخشی آزاد می‌شود', sourceId: id, paidCount: 0, totalCount: b.months });
     const code = 'BN-' + Math.floor(10000 + Math.random() * 89999);
     const purchase = { id, storeId: s.id, storeName: s.name, title: b.title, price: b.price, months: b.months, monthly: b.monthly, paidCount: 0, purchaseCode: code, createdAt: nowIso(), lockId: lock.id };
     ud.installments.unshift(purchase);
-    addTx(ud, { category: 'installment', title: 'خرید اقساطی — ' + s.name, subtitle: `${b.months} قسط · وثیقه ${holding(ud, kind).name}`, amount: -(b.prepayment ?? 0) });
-    addTx(ud, { category: 'lock', title: 'قفل وثیقه خرید اقساطی', subtitle: holding(ud, kind).name, amount: lockAmt, holdingKind: kind, lockType: 'installment', lockEvent: 'locked' });
+    addTx(ud, { category: 'installment', title: 'خرید اقساطی — ' + s.name, subtitle: `${b.months} قسط · پشتوانه‌ی ${holding(ud, kind).name}`, amount: -(b.prepayment ?? 0) });
+    addTx(ud, { category: 'lock', title: 'رزرو پشتوانه‌ی خرید اقساطی', subtitle: holding(ud, kind).name, amount: lockAmt, holdingKind: kind, lockType: 'installment', lockEvent: 'locked' });
     return ok(purchase);
   }),
 

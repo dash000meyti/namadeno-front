@@ -32,6 +32,8 @@ export interface Session {
   userId: ID;
   orgId?: ID;
   expiresAt: ISODate;
+  /** Signed in with a temporary password: the panel asks for a new password before anything else. */
+  mustChangePassword?: boolean;
 }
 
 /** KYC levels: 1 = Shahkar (mobile ↔ national ID), 2 = civil registry (birth date), 3 = SEJAM. */
@@ -98,9 +100,28 @@ export interface MilestoneStep {
   id: ID;
   title: string;
   sharePct: number; // of the contract total
-  status: 'released' | 'pending_approval' | 'future';
+  /**
+   * Steps run in order; exactly one open step is 'pending_approval' (the current step).
+   * With `requiresApproval: false` the current step only waits for its due date.
+   * 'reclaimed' («بازپس‌گیری»): the organization decided not to pay the step — its share left the employee's assets
+   * and went back to the organization (POST /org/packages/:id/milestones/:stepId/reclaim). Final, like 'released'.
+   */
+  status: 'released' | 'pending_approval' | 'future' | 'reclaimed';
   releasedAt?: ISODate;
+  /** reclaimed only: when, and the organization's explanation shown to the employee. */
+  reclaimedAt?: ISODate;
+  reclaimNote?: string;
+  /**
+   * Due date («سررسید»). Required for new milestone packages (create / draft PATCH → 422 bad_steps) and editable
+   * until the step is released (PATCH /org/packages/:id/milestones/:stepId). Older data may not have it.
+   */
   dueDate?: ISODate;
+  /**
+   * «نیاز به تأیید». Missing = true.
+   * true: at the due date the step opens a `milestone_release` request for the organization and is released when it is approved.
+   * false: the step is released automatically at its due date.
+   */
+  requiresApproval?: boolean;
 }
 
 export interface Lock {
@@ -108,7 +129,7 @@ export interface Lock {
   type: LockType;
   holdingKind: AssetKind; // which wallet/fund is locked
   amount: Toman; // currently locked value
-  title: string; // e.g. «وثیقه وام»
+  title: string; // e.g. «پشتوانه‌ی وام»
   condition: string; // release condition, user-facing
   createdAt: ISODate;
   releaseAt?: ISODate; // vesting
@@ -152,7 +173,8 @@ export type AllocationMode = 'free' | 'fixed'; // free = employee chooses the sp
 export type LockPolicy =
   | { type: 'none' }
   | { type: 'vesting'; releaseAt: ISODate }
-  | { type: 'milestone'; steps: Omit<MilestoneStep, 'id' | 'status' | 'releasedAt'>[] };
+  /** steps: title, sharePct, dueDate (required for new packages), requiresApproval (missing = true). */
+  | { type: 'milestone'; steps: Omit<MilestoneStep, 'id' | 'status' | 'releasedAt' | 'reclaimedAt' | 'reclaimNote'>[] };
 
 export interface AllocationSplit {
   gold: number; // percent
@@ -355,7 +377,28 @@ export interface Organization {
     cardEnabled: boolean;
     installmentEnabled: boolean;
   };
-  admins: { id: ID; name: string; role: string; email: string }[];
+  /** People who can sign in to the organization panel. `role` is the job title shown in the panel; `panelRole` sets what they may do. */
+  admins: { id: ID; name: string; role: string; email: string; panelRole?: OrgPanelRole; /** Has a temporary password set by the operator; changed on first login. */ mustChangePassword?: boolean }[];
+}
+
+/**
+ * Role in the organization panel: «مدیر» (`admin`, full access incl. departments and panel users),
+ * «تأییدکننده» (`approver`, final approval of packages) and «کارشناس» (`specialist`, prepares packages).
+ * Only `admin` may create, rename or delete departments. Missing = `specialist`.
+ */
+export type OrgPanelRole = 'admin' | 'approver' | 'specialist';
+
+/** A unit (department) of an organization. Employees reference it by name (`Employee.department`). */
+export interface OrgDepartment {
+  id: ID;
+  name: string;
+  /** Full name of the unit head (optional). */
+  head?: string;
+  /** Number of employees whose `department` equals `name`. */
+  employees: number;
+  createdAt: ISODate;
+  /** The organization's default unit «سایر» (exists from creation; employees without a unit land here; cannot be renamed or deleted). */
+  isDefault?: boolean;
 }
 
 export interface Employee {
@@ -383,7 +426,10 @@ export interface OrgPackage {
   sentAt?: ISODate;
   status: 'draft' | 'sent' | 'completed' | 'cancelled';
   recipients: { employeeId: ID; name: string; amount: Toman; status: 'pending' | 'accepted' | 'expired'; acceptedAt?: ISODate }[];
+  /** Same amount for everyone. 0 when the amounts come from a file (`amountSource: 'file'`) — then read `recipients[].amount`. */
   amountPerPerson: Toman;
+  /** Where the recipients' amounts come from: one amount for everyone (default) or a per-person Excel file. */
+  amountSource?: 'uniform' | 'file';
   total: Toman;
   allocationMode: AllocationMode;
   fixedSplit?: AllocationSplit;
@@ -410,6 +456,14 @@ export interface ApprovalRequest {
   note?: string;
   decidedAt?: ISODate;
   decidedBy?: string;
+  /** milestone_release only: the package and the step under review (older requests may not have them). */
+  packageId?: ID;
+  stepId?: ID;
+  /**
+   * milestone_release only: what opened the request — the employee's completion report (default) or the step's due date.
+   * A milestone_release request is never «rejected» in the usual sense: 'rejected' means the step was reclaimed («بازپس گرفته شد»).
+   */
+  trigger?: 'employee' | 'due_date';
 }
 
 // ───────────────────────── Operator panel ─────────────────────────

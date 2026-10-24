@@ -1,9 +1,9 @@
 /**
- * Free/locked split — the product-wide component (user-approved «نوار دو‌بخشی + دو عدد»).
- * Free part solid, locked part hatched. Amounts in Toman.
+ * Free/reserved split — the product-wide component (user-approved «نوار دو‌بخشی + دو عدد»).
+ * Free part solid, reserved part hatched. Customer wording: «آزاد» / «رزرو» (docs/WORDING.md). Amounts in Toman.
  */
 import { money } from '@/lib/format';
-import { LOCK_META } from '@/lib/locks';
+import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import type { LockType } from '@/types/domain';
 import { Icon } from './Icon';
 
@@ -11,7 +11,7 @@ export function LockBar({ free, locked, height = 6 }: { free: number; locked: nu
   const total = free + locked;
   const freePct = total ? Math.round((free / total) * 1000) / 10 : 100;
   return (
-    <div className="lkbar" role="img" aria-label={`آزاد ${money(free)} · قفل ${money(locked)}`} style={{ height }}>
+    <div className="lkbar" role="img" aria-label={`آزاد ${money(free)} · رزرو ${money(locked)}`} style={{ height }}>
       {free > 0 && <span className="f" style={{ width: locked > 0 ? `${freePct}%` : '100%' }} />}
       {locked > 0 && <span className="l" style={{ flex: 1 }} />}
     </div>
@@ -23,7 +23,7 @@ export function LockLegend({ free, locked }: { free: number; locked: number }) {
   return (
     <div className="lkleg">
       <span><span className="lkdot" />آزاد <b>{money(free)}</b></span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="lock" size={12} />قفل <b>{money(locked)}</b></span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={HOURGLASS} size={12} />رزرو <b>{money(locked)}</b></span>
     </div>
   );
 }

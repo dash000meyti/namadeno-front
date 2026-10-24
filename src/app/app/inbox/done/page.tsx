@@ -13,6 +13,7 @@ import { outcome } from '@/components/app/core/inbox';
 import { P, PARTS, policyTag, splitPct } from '@/components/app/core/meta';
 import { FreeLockedBlock } from '@/components/app/core/ui';
 import { money, units } from '@/lib/format';
+import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 
 export default function InboxDonePage() {
@@ -61,7 +62,7 @@ function DoneContent() {
       tlabel: locked ? tag.label : 'آزاد',
       tbg: locked ? tag.bg : 'var(--soft-success)',
       tfg: locked ? tag.fg : 'var(--success-text)',
-      td: locked ? tag.d : P.unlock,
+      td: locked ? tag.d : LOCK_META.none.d,
     };
   });
   const out = outcome(pkg, split);
@@ -103,7 +104,7 @@ function DoneContent() {
         </div>
       </div>
 
-      {/* free vs locked of this package */}
+      {/* free vs reserved of this package */}
       <div className="card" style={{ boxSizing: 'border-box', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none' }}>
         <span style={{ fontSize: 13, fontWeight: 700 }}>از این بسته</span>
         <FreeLockedBlock free={out.free} locked={out.locked} freeNote={out.freeNote} lockNote={out.lockNote} fmt={money} />
@@ -119,7 +120,7 @@ function DoneContent() {
           <LockBar free={pf.data.free} locked={pf.data.locked} />
           <div className="lkleg">
             <span><span className="lkdot" />آزاد <b>{money(pf.data.free)}</b></span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={P.lock} size={12} />قفل <b>{money(pf.data.locked)}</b></span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={HOURGLASS} size={12} />رزرو <b>{money(pf.data.locked)}</b></span>
           </div>
         </div>
       )}

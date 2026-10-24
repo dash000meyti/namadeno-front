@@ -8,7 +8,7 @@ const COLS: { title: string; links: { label: string; href: string }[] }[] = [
     title: 'نمادنو',
     links: [
       { label: 'اپ نمادنو', href: '/#product' },
-      { label: 'صندوق‌ها', href: '/#namadno' },
+      { label: 'دارایی‌ها', href: '/#namadno' },
       { label: 'اعتبار نمادنو', href: '/#credit' },
       { label: 'افتتاح حساب', href: routes.app.signup },
       { label: 'ورود', href: routes.app.login },
@@ -26,7 +26,6 @@ const COLS: { title: string; links: { label: string; href: string }[] }[] = [
     title: 'شرکت',
     links: [
       { label: 'درباره ما', href: routes.site.about },
-      { label: 'فرصت‌های شغلی', href: routes.site.careers },
       { label: 'وبلاگ', href: routes.site.blog },
       { label: 'تماس با ما', href: routes.site.contact },
     ],
@@ -42,13 +41,6 @@ const COLS: { title: string; links: { label: string; href: string }[] }[] = [
   },
 ];
 
-/** Prototype-only shortcuts (not part of the marketing site). */
-const PROTO = [
-  { label: 'نقشه محصول', href: routes.site.map },
-  { label: 'سیستم طراحی', href: routes.site.designSystem },
-  { label: 'کنسول بهره‌بردار', href: routes.op.login },
-];
-
 export function SiteFooter() {
   return (
     <footer className="s-ftr">
@@ -58,7 +50,7 @@ export function SiteFooter() {
             <SiteLogo height={30} />
             <p style={{ fontSize: 14, lineHeight: 2, color: 'var(--text-secondary)' }}>
               ارزشی که می‌ماند.
-              <br />نمادنو، خانه‌ی دارایی‌های ماندگار؛ از گروه صندوق‌های بورسی.
+              <br />نمادنو، خانه‌ی دارایی‌های ماندگار.
             </p>
           </div>
           {COLS.map((c) => (
@@ -74,8 +66,6 @@ export function SiteFooter() {
         </div>
         <div className="s-ftr-bottom">
           <span>© ۱۴۰۵ نمادنو. همه حقوق محفوظ است.</span>
-          <span className="s-ftr-proto">نسخه نمایشی: {PROTO.map((l, i) => <span key={l.href}>{i > 0 && ' · '}<Link href={l.href}>{l.label}</Link></span>)}</span>
-          <span>سرمایه‌گذاری در صندوق‌ها با ریسک همراه است؛ بازدهی گذشته تضمینی برای آینده نیست.</span>
         </div>
       </div>
       <div className="s-ftr-mark" aria-hidden="true"><Logotype height={220} /></div>

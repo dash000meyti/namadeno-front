@@ -1,7 +1,7 @@
 /** Helpers shared by the app-money screens (asset pages, history, receipt, convert …). */
-import type { AssetKind, Fund, Lock, LockType, RiskLevel, Transaction, TxCategory } from '@/types/domain';
+import type { AssetKind, Fund, Lock, LockType, MilestoneStep, RiskLevel, Transaction, TxCategory } from '@/types/domain';
 import { ICONS } from '@/components/ui/Icon';
-import { ASSET_META, LOCK_META } from '@/lib/locks';
+import { ASSET_META, HOURGLASS, LOCK_META } from '@/lib/locks';
 import { enDigits, faDigits, jDate, jDateTime, jDayMonth, money, signedMoney, units as fmtUnits } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import { now } from '@/lib/clock';
@@ -88,7 +88,7 @@ export function milestoneProgress(l: Lock) {
   return { releasedPct, releasedCount, count: steps.length, total, released };
 }
 
-/** Progress of a lock toward release, 0..100 (paid installments, elapsed vesting time or released milestones). */
+/** Progress of a reserve toward release, 0..100 (paid installments, elapsed vesting time or released milestones). */
 export function lockProgress(l: Lock): number {
   if (l.type === 'milestone') return milestoneProgress(l).releasedPct;
   if (l.totalCount) return Math.round(((l.paidCount ?? 0) / l.totalCount) * 100);
@@ -111,24 +111,33 @@ export function lockSub(l: Lock): string {
   return l.condition;
 }
 
-export function stepView(s: { status: 'released' | 'pending_approval' | 'future'; releasedAt?: string }) {
+/**
+ * Look of a milestone step in the app. The current step waits for the organization's approval, or only for its
+ * due date when `requiresApproval` is false. A reclaimed step («بازپس‌گیری») is shown calmly, without alarm colors.
+ */
+export function stepView(s: { status: MilestoneStep['status']; releasedAt?: string; dueDate?: string; requiresApproval?: boolean }) {
   const done = s.status === 'released';
   const pend = s.status === 'pending_approval';
+  const back = s.status === 'reclaimed';
+  const auto = pend && s.requiresApproval === false;
   return {
     seg: done ? 'var(--primary-main)' : pend ? 'transparent' : 'var(--progress-track)',
-    ring: pend ? 'inset 0 0 0 1.5px var(--warning-main)' : 'none',
-    nBg: done ? 'var(--primary-main)' : pend ? 'var(--soft-warning)' : 'var(--soft-default)',
-    nFg: done ? '#FFFFFF' : pend ? 'var(--warning-text)' : 'var(--text-secondary)',
-    tc: s.status === 'future' ? 'var(--text-secondary)' : 'var(--text-primary)',
-    status: done ? 'آزاد شده' + (s.releasedAt ? ' · ' + jDayMonth(s.releasedAt) : '') : pend ? 'در انتظار تأیید سازمان' : 'آینده',
-    sBg: done ? 'var(--soft-success)' : pend ? 'var(--soft-warning)' : 'var(--soft-default)',
-    sFg: done ? 'var(--success-text)' : pend ? 'var(--warning-text)' : 'var(--default-text)',
+    ring: pend ? `inset 0 0 0 1.5px ${auto ? 'var(--info-main)' : 'var(--warning-main)'}` : 'none',
+    nBg: done ? 'var(--primary-main)' : pend ? (auto ? 'var(--soft-info)' : 'var(--soft-warning)') : 'var(--soft-default)',
+    nFg: done ? '#FFFFFF' : pend ? (auto ? 'var(--info-text)' : 'var(--warning-text)') : 'var(--text-secondary)',
+    tc: s.status === 'future' || back ? 'var(--text-secondary)' : 'var(--text-primary)',
+    status: done ? 'دریافت شد' + (s.releasedAt ? ' · ' + jDayMonth(s.releasedAt) : '')
+      : back ? 'بازپس گرفته شد'
+      : auto ? (s.dueDate ? 'آزاد در ' + jDayMonth(s.dueDate) : 'آزاد در سررسید')
+      : pend ? 'در انتظار تأیید سازمان' : 'آینده',
+    sBg: done ? 'var(--soft-success)' : auto ? 'var(--soft-info)' : pend ? 'var(--soft-warning)' : 'var(--soft-default)',
+    sFg: done ? 'var(--success-text)' : auto ? 'var(--info-text)' : pend ? 'var(--warning-text)' : 'var(--default-text)',
   };
 }
 
 // ───────────── transactions ─────────────
 export const CATEGORY_LABEL: Record<TxCategory, string> = {
-  inbox: 'دریافتی', trade: 'خرید/فروش', rial: 'کیف پول ریالی', card: 'کارت', loan: 'وام', installment: 'خرید اقساطی', fund: 'سود صندوق', lock: 'قفل و آزادسازی',
+  inbox: 'دریافتی', trade: 'خرید/فروش', rial: 'کیف پول ریالی', card: 'کارت', loan: 'وام', installment: 'خرید اقساطی', fund: 'سود صندوق', lock: 'رزرو و آزادسازی',
 };
 
 export const STATUS_LABEL: Record<Transaction['status'], { label: string; tone: ToneKey }> = {
@@ -170,16 +179,16 @@ export function txVisual(tx: Transaction): TxVisual {
   if (tx.lockEvent && tx.category !== 'inbox') {
     if (tx.lockEvent === 'released') {
       tone = 'success';
-      d = ICONS.unlock;
+      d = LOCK_META.none.d;
       amount = '+' + money(Math.abs(tx.amount));
       amountColor = 'var(--success-text)';
       sub2 = 'آزاد شد';
     } else {
       tone = tx.lockType ? LOCK_TONE[tx.lockType] : 'info';
-      d = tx.lockType === 'milestone' ? ICONS.flag : ICONS.lock;
+      d = tx.lockType ? LOCK_META[tx.lockType].d : HOURGLASS;
       amount = money(Math.abs(tx.amount));
       amountColor = 'var(--text-secondary)';
-      sub2 = 'قفل شد';
+      sub2 = 'رزرو شد';
     }
   } else {
     switch (tx.category) {
@@ -187,7 +196,7 @@ export function txVisual(tx: Transaction): TxVisual {
         if (tx.lockEvent === 'locked') {
           tone = 'primary';
           d = tx.lockType === 'milestone' ? ICONS.flag : ICONS.gift;
-          sub2 = tx.lockType === 'milestone' ? 'همه قفل' : 'با قفل';
+          sub2 = tx.lockType === 'milestone' ? 'دریافت مرحله‌ای' : tx.lockType === 'vesting' ? 'با پس‌انداز' : 'بخشی رزرو';
         } else {
           tone = 'success';
           d = ICONS.gift;

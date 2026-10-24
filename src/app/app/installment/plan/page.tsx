@@ -7,6 +7,7 @@ import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
 import { Icon } from '@/components/ui/Icon';
 import { useFunds, usePortfolio, useStore } from '@/api/app';
 import { useInstallmentQuoteX, type StoreX } from '@/api/app-credit-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDate, jDayMonth, money, units } from '@/lib/format';
 import { now } from '@/lib/clock';
@@ -129,10 +130,10 @@ function Plan() {
             {/* collateral */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 'none' }}>
               <div className="row" style={{ height: 18, gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>وثیقه</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>پشتوانه</span>
                 <span className="num" style={{ marginRight: 'auto', fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>لازم: {money(coll)} تومان (۵۰٪ مبلغ اقساطی)</span>
               </div>
-              <div role="radiogroup" aria-label="وثیقه" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div role="radiogroup" aria-label="پشتوانه" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {holdings.map((h) => {
                   const f = funds.data?.find((x) => x.id === h.fundId);
                   const nav = f?.nav ?? (h.units ? h.value / h.units : 0);
@@ -140,7 +141,7 @@ function Plan() {
                   const enough = h.free >= coll;
                   return (
                     <RadioCard key={h.kind} on={h.kind === col} onClick={() => setCol(h.kind)} d={KIND_ICON[h.kind] ?? CI.trend} tone={KIND_TONE[h.kind] ?? 'def'} title={h.name}
-                      sub={enough ? `آزاد ${money(h.free)} · قفل ${nav ? units(coll / nav, calm ? 1 : 2) : '—'} واحد` : `آزاد ${money(h.free)} · برای این وثیقه کافی نیست`}
+                      sub={enough ? `آزاد ${money(h.free)} · رزرو ${nav ? units(coll / nav, calm ? 1 : 2) : '—'} واحد` : `آزاد ${money(h.free)} · برای این پشتوانه کافی نیست`}
                       disabled={!enough}
                       trailing={<span className="lbl" style={{ height: 22, background: calm ? 'var(--soft-success)' : 'var(--soft-warning)', color: calm ? 'var(--success-text)' : 'var(--warning-text)', fontWeight: 600 }}>{calm ? 'کم‌نوسان' : 'پرنوسان'}</span>} />
                   );
@@ -148,20 +149,20 @@ function Plan() {
               </div>
             </div>
 
-            {/* what becomes locked */}
+            {/* what becomes reserved */}
             {CF && (
               <div className="card" style={{ boxSizing: 'border-box', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 6, flex: 'none', background: 'rgb(var(--secondary-main-rgb) / .06)' }}>
                 <div className="row" style={{ height: 22, gap: 8 }}>
-                  <span className="lktype" style={{ background: 'var(--soft-secondary)', color: 'var(--secondary-text)' }}><Icon d={CI.lock} size={12} />وثیقه خرید اقساطی</span>
+                  <span className="lktype" style={{ background: LOCK_META.installment.bg, color: LOCK_META.installment.fg }}><Icon d={LOCK_META.installment.d} size={12} />{LOCK_META.installment.label}</span>
                   <span className="num" style={{ marginRight: 'auto', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{money(coll)} <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>از {CF.name}</span></span>
                 </div>
                 <LockSplit free={Math.max(0, CF.free - coll)} locked={CF.locked + Math.min(coll, CF.free)} freeLabel="آزاد پس از خرید" />
                 {short
-                  ? <span className="num" style={{ fontSize: 12, color: 'var(--error-text)', fontWeight: 600, lineHeight: 1.5 }}>بخش آزاد {CF.name} کافی نیست؛ پیش‌پرداخت را بیشتر کنید یا وثیقه دیگری انتخاب کنید.</span>
-                  : <span className="num" style={{ fontSize: 11, color: 'var(--secondary-text)', fontWeight: 500, lineHeight: 1.5 }}>با پرداخت هر قسط، {money(coll / Math.max(1, months))} از وثیقه آزاد می‌شود · {faDigits(months)} قسط</span>}
+                  ? <span className="num" style={{ fontSize: 12, color: 'var(--error-text)', fontWeight: 600, lineHeight: 1.5 }}>بخش آزاد {CF.name} کافی نیست؛ پیش‌پرداخت را بیشتر کنید یا پشتوانه‌ی دیگری انتخاب کنید.</span>
+                  : <span className="num" style={{ fontSize: 11, color: 'var(--secondary-text)', fontWeight: 500, lineHeight: 1.5 }}>با پرداخت هر قسط، {money(coll / Math.max(1, months))} از پشتوانه آزاد می‌شود · {faDigits(months)} قسط</span>}
               </div>
             )}
-            <div role="status" style={{ minHeight: 44, boxSizing: 'border-box', padding: '6px 12px', borderRadius: 12, background: 'var(--soft-info)', color: 'var(--info-text)', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}><Icon d={CI.info} size={18} /><span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>بخش قفل‌شده بازده می‌گیرد ولی تا آزادسازی قابل فروش یا برداشت نیست.</span></div>
+            <div role="status" style={{ minHeight: 44, boxSizing: 'border-box', padding: '6px 12px', borderRadius: 12, background: 'var(--soft-info)', color: 'var(--info-text)', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}><Icon d={CI.info} size={18} /><span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>بخش رزروشده همچنان بازده می‌گیرد و با پرداخت هر قسط، کم‌کم آزاد و قابل فروش می‌شود.</span></div>
 
             <button type="button" onClick={next} disabled={!CF || short || !months} style={{ height: 48, width: '100%', border: 0, boxSizing: 'border-box', borderRadius: 8, background: 'var(--primary-main)', color: 'var(--primary-contrast)', boxShadow: 'var(--shadow-primary)', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: !CF || short ? 0.45 : 1 }}>
               <Icon d={CI.chevL} size={18} />ادامه

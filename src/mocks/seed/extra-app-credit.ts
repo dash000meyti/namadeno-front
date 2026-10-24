@@ -88,7 +88,7 @@ export function seed_appCredit(db: MockDB) {
     for (const p of x.products ?? []) if (!s.products.some((q) => q.id === p.id)) s.products.push({ ...p });
   }
 
-  // plan fields of the seeded purchase (لپ‌تاپ · دیجی‌کالا · ۶ قسط · وثیقه صندوق مختلط)
+  // plan fields of the seeded purchase (لپ‌تاپ · دیجی‌کالا · ۶ قسط · پشتوانه‌ی صندوق مختلط)
   for (const u of Object.values(db.users)) {
     for (const ip of u.installments) {
       const rec = ip as unknown as Record<string, unknown>;

@@ -2,8 +2,12 @@
 /**
  * Organization — requests (approval inbox). Kit list page: key numbers → list card (status tabs, type filter, search,
  * table, pager) → inspector with the employee, request details, contract-rule checks, milestone steps and the decision
- * (approve / reject or «needs changes», with a note) plus undo.
+ * (approve / reject with a note) plus undo. For a contract step the opposite of approval is «بازپس‌گیری»: the step is
+ * not paid, its share leaves the employee's assets and returns to the organization (decision endpoint with
+ * approve: false + a required note → the mock reclaims the step). Milestone decisions are irreversible.
  * Deep links: `?id=RQ-…` opens that request (dashboard), `?type=loan` preselects the type filter (credit page).
+ * Only the kinds the organization approves are listed (ORG_REQUEST_KINDS): contract milestones, and loans once
+ * «تسهیلات و اعتبار» is live. Other requests (withdrawal, credit, installments, profile) are the operator console's.
  */
 import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
@@ -19,6 +23,9 @@ import { useToast } from '@/components/ui/Toast';
 import { useDecideOrgRequest } from '@/api/org';
 import { useOrgPeopleRequests, useReopenOrgRequest, type RequestRow } from '@/api/org-people-extra';
 import type { MilestoneStep, RequestKind } from '@/types/domain';
+import { HOURGLASS } from '@/lib/locks';
+import { ORG_REQUEST_KINDS } from '@/lib/org';
+import { FEATURES } from '@/lib/features';
 import { routes } from '@/lib/routes';
 import { enDigits, faDigits, jDate, jDateTime, jDayMonth, money, pct } from '@/lib/format';
 import { I, REQ_KIND, compactParts, downloadCsv, errMsg } from '@/components/org/people/shared';
@@ -27,14 +34,14 @@ type St = 'all' | 'pending' | 'approved' | 'rejected';
 type Kind = 'all' | RequestKind;
 type Milestone = NonNullable<RequestRow['milestone']>;
 const PER_PAGE = 8;
-/** Types always offered in the filter (deep links use them); the other kinds appear when such requests exist. */
-const BASE_KINDS: RequestKind[] = ['loan', 'cash_withdrawal', 'credit_increase', 'milestone_release'];
-const isKind = (v: string | null): v is RequestKind => !!v && Object.prototype.hasOwnProperty.call(REQ_KIND, v);
+/** Kinds this page lists; the type filter appears only when there is more than one. */
+const KINDS = ORG_REQUEST_KINDS;
+const isKind = (v: string | null): v is RequestKind => !!v && (KINDS as string[]).includes(v);
 const CLOCK = 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3 2';
 
 function statusOf(r: RequestRow): { label: string; tone: Tone } {
   if (r.status === 'approved') return { label: 'تأیید شد', tone: 'success' };
-  if (r.status === 'rejected') return { label: 'رد شد', tone: 'error' };
+  if (r.status === 'rejected') return r.kind === 'milestone_release' ? { label: 'بازپس گرفته شد', tone: 'error' } : { label: 'رد شد', tone: 'error' };
   return r.checks.some((c) => !c.ok) ? { label: 'نیاز به بررسی', tone: 'error' } : { label: 'در انتظار', tone: 'warning' };
 }
 const msText = (m: Milestone) => {
@@ -44,7 +51,7 @@ const msText = (m: Milestone) => {
 function decidedText(r: RequestRow) {
   const ms = r.kind === 'milestone_release';
   if (r.status === 'approved') return ms && r.milestone ? `مرحله ${faDigits(r.milestone.stepIndex)} تأیید شد · ${money(r.milestone.amount)} آزاد شد` : 'درخواست تأیید شد و به کارمند اطلاع داده شد';
-  return ms ? 'درخواست اصلاح برای کارمند ارسال شد' : 'درخواست رد شد';
+  return ms ? `سهم ${r.milestone ? `مرحله‌ی ${faDigits(r.milestone.stepIndex)}` : 'این مرحله'} بازپس گرفته شد و به سازمان برگشت` : 'درخواست رد شد';
 }
 
 function Requests() {
@@ -97,21 +104,21 @@ function Requests() {
   // counts: status tabs within the chosen type, type options within the chosen status
   const countSt = (s: St) => items.filter((r) => (kind === 'all' || r.kind === kind) && (s === 'all' || r.status === s)).length;
   const countKind = (k: Kind) => items.filter((r) => (st === 'all' || r.status === st) && (k === 'all' || r.kind === k)).length;
-  const kinds = [...BASE_KINDS, ...(Object.keys(REQ_KIND) as RequestKind[]).filter((k) => !BASE_KINDS.includes(k) && (k === kind || items.some((r) => r.kind === k)))];
 
   const open = (r: RequestRow, approve: boolean) => { setNote(''); setNoteErr(''); setDlg({ r, approve }); };
   const confirm = () => {
     if (!dlg) return;
     const { r, approve } = dlg;
     const text = note.trim();
-    if (!approve && text.length < 3) { setNoteErr(r.kind === 'milestone_release' ? 'موارد نیازمند اصلاح را بنویسید' : 'دلیل رد را بنویسید'); return; }
+    if (!approve && text.length < 3) { setNoteErr(r.kind === 'milestone_release' ? 'توضیح برای کارمند را بنویسید' : 'دلیل رد را بنویسید'); return; }
     const ms = r.kind === 'milestone_release';
     decide.mutate({ id: r.id, approve, note: text || undefined }, {
       onSuccess: () => {
         setDlg(null);
         if (approve && ms && r.milestone) toast(`مرحله ${faDigits(r.milestone.stepIndex)} تأیید شد · ${money(r.milestone.amount)} تومان آزاد شد · ${r.requesterName}`);
         else if (approve) toast(`درخواست ${r.requesterName} تأیید شد`);
-        else toast(ms ? `درخواست اصلاح برای ${r.requesterName} ارسال شد` : `درخواست ${r.requesterName} رد شد`, 'info');
+        else if (ms) toast(`مرحله‌ی ${r.milestone ? faDigits(r.milestone.stepIndex) : ''} بازپس گرفته شد · ${money(r.milestone?.amount ?? r.amount ?? 0)} تومان به سازمان برگشت`);
+        else toast(`درخواست ${r.requesterName} رد شد`, 'info');
       },
       onError: (e) => toast(errMsg(e), 'error'),
     });
@@ -120,7 +127,7 @@ function Requests() {
 
   const exportList = () => {
     downloadCsv('namadno-requests.csv', [
-      ['شناسه', 'کارمند', 'واحد', 'نوع', 'عنوان', 'مبلغ (تومان)', 'منبع / قفل', 'تاریخ', 'وضعیت', 'توضیح'],
+      ['شناسه', 'کارمند', 'واحد', 'نوع', 'عنوان', 'مبلغ (تومان)', 'منبع / پشتوانه', 'تاریخ', 'وضعیت', 'توضیح'],
       ...rows.map((r) => [r.id, r.requesterName, r.employee?.department ?? '', REQ_KIND[r.kind].label, r.title, r.amount ?? '', r.source, jDate(r.createdAt), statusOf(r).label, r.note ?? '']),
     ]);
     toast('خروجی اکسل درخواست‌ها آماده شد');
@@ -149,7 +156,7 @@ function Requests() {
     { key: 'kind', label: 'نوع', width: '104px', render: (r) => <span className="el">{REQ_KIND[r.kind].label}</span> },
     { key: 'amount', label: 'مبلغ (تومان)', width: '120px', render: (r) => (r.amount ? <span className="num">{money(r.amount)}</span> : <span style={{ color: 'var(--text-disabled)' }}>—</span>) },
     {
-      key: 'src', label: 'منبع / قفل', width: 'minmax(0, 1.2fr)', render: (r) => (
+      key: 'src', label: 'منبع / پشتوانه', width: 'minmax(0, 1.2fr)', render: (r) => (
         <>
           <i aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 3, background: r.sourceColor, flex: 'none' }} />
           <span className="el mute" style={{ fontSize: 12.5 }}>{r.source}</span>
@@ -165,7 +172,7 @@ function Requests() {
 
   return (
     <>
-      <PageHeading title="درخواست‌ها" crumbs={[{ label: 'عملیات' }]} sub="درخواست‌های وام، برداشت نقدی، اعتبار و مراحل قرارداد کارکنان">
+      <PageHeading title="درخواست‌ها" crumbs={[{ label: 'عملیات' }]} sub={FEATURES.orgCredit ? 'تأیید مراحل قرارداد و درخواست‌های وام کارکنان' : 'تأیید مراحل قرارداد کارکنان'}>
         <button type="button" className="nm-btn ghost" onClick={exportList} disabled={!rows.length}><Icon d={I.download} size={17} />خروجی Excel</button>
       </PageHeading>
 
@@ -177,11 +184,15 @@ function Requests() {
             { key: 'all', label: 'همه', count: countSt('all') },
             { key: 'pending', label: 'در انتظار', count: countSt('pending'), hot: true },
             { key: 'approved', label: 'تأییدشده', count: countSt('approved') },
-            { key: 'rejected', label: 'ردشده', count: countSt('rejected') },
+            { key: 'rejected', label: KINDS.length === 1 && KINDS[0] === 'milestone_release' ? 'بازپس‌گرفته' : 'ردشده', count: countSt('rejected') },
           ]} />
           <span className="grow" />
-          <Select label="نوع درخواست" prefix="نوع" value={kind} onChange={setKind} align="end"
-            options={[{ key: 'all', label: 'همه‌ی انواع', count: countKind('all') }, ...kinds.map((k) => ({ key: k as Kind, label: REQ_KIND[k].label, count: countKind(k) }))]} />
+          {KINDS.length > 1 ? (
+            <Select label="نوع درخواست" prefix="نوع" value={kind} onChange={setKind} align="end"
+              options={[{ key: 'all', label: 'همه‌ی انواع', count: countKind('all') }, ...KINDS.map((k) => ({ key: k as Kind, label: REQ_KIND[k].label, count: countKind(k) }))]} />
+          ) : (
+            <span title="درخواست‌های وام به‌زودی به این بخش اضافه می‌شود"><Pill icon={CLOCK}>درخواست وام · به‌زودی</Pill></span>
+          )}
           <SearchField value={search} onChange={setSearch} placeholder="نام، واحد یا شناسه" label="جستجوی درخواست" width={220} />
         </Toolbar>
         <Table
@@ -202,31 +213,31 @@ function Requests() {
         const { r, approve } = dlg;
         const ms = r.kind === 'milestone_release';
         const failed = r.checks.filter((c) => !c.ok);
-        const title = approve ? (ms ? 'تأیید و آزادسازی مرحله' : 'تأیید درخواست') : ms ? 'درخواست اصلاح' : 'رد درخواست';
+        const title = approve ? (ms ? 'تأیید و آزادسازی مرحله' : 'تأیید درخواست') : ms ? `بازپس‌گیری مرحله‌ی ${r.milestone ? faDigits(r.milestone.stepIndex) : ''}` : 'رد درخواست';
         const effect = approve
-          ? (ms && r.milestone ? `با تأیید، ${money(r.milestone.amount)} تومان از قفل مرحله‌ای ${r.milestone.holdingName} کارمند آزاد می‌شود و قابل فروش یا برداشت خواهد بود.` : 'نتیجه برای کارمند در اپ اعلان می‌شود.')
-          : (ms ? 'مبلغ مرحله قفل می‌ماند و کارمند باید گزارش را اصلاح و دوباره ارسال کند.' : 'کارمند از رد درخواست و دلیل آن مطلع می‌شود.');
+          ? (ms && r.milestone ? `با تأیید، سهم این مرحله (${money(r.milestone.amount)} تومان) در ${r.milestone.holdingName} کارمند آزاد می‌شود و او می‌تواند آن را بفروشد یا برداشت کند.` : 'نتیجه برای کارمند در اپ اعلان می‌شود.')
+          : (ms ? `سهم این مرحله (${money(r.milestone?.amount ?? r.amount ?? 0)} تومان) از دارایی کارمند برداشته می‌شود و به سازمان برمی‌گردد. این کار بازگشت ندارد.` : 'کارمند از رد درخواست و دلیل آن مطلع می‌شود.');
         return (
           <Dialog
             open onClose={() => setDlg(null)} title={title}
             sub={`${REQ_KIND[r.kind].title} ${r.requesterName}${r.amount ? ` · ${money(r.amount)} تومان` : ''}`}
-            icon={<Tile d={approve ? I.check : ms ? I.warn : I.x} tone={approve ? 'success' : ms ? 'warning' : 'error'} size="lg" />}
+            icon={<Tile d={approve ? I.check : I.x} tone={approve ? 'success' : 'error'} size="lg" />}
             footer={(
               <>
                 <button type="button" className="nm-btn ghost" onClick={() => setDlg(null)}>انصراف</button>
                 <button type="button" className={approve ? 'nm-btn' : 'nm-btn danger'} disabled={decide.isPending} onClick={confirm}>
-                  {decide.isPending ? 'در حال ثبت…' : approve ? (ms && r.milestone ? `تأیید و آزادسازی ${pct(r.milestone.sharePct)}` : 'تأیید درخواست') : ms ? 'ارسال درخواست اصلاح' : 'رد درخواست'}
+                  {decide.isPending ? 'در حال ثبت…' : approve ? (ms && r.milestone ? `تأیید و آزادسازی ${pct(r.milestone.sharePct)}` : 'تأیید درخواست') : ms ? 'بازپس‌گیری' : 'رد درخواست'}
                 </button>
               </>
             )}
           >
             <span className="mute">{effect}</span>
             {approve && failed.length > 0 && <Note tone="warn">این درخواست با {faDigits(failed.length)} مورد از قوانین قرارداد مغایرت دارد: {failed.map((c) => c.label).join('، ')}.</Note>}
-            <Field label={approve ? 'یادداشت (اختیاری)' : ms ? 'موارد نیازمند اصلاح' : 'دلیل رد'} htmlFor="rq-note" error={noteErr || undefined}>
+            <Field label={approve ? 'یادداشت (اختیاری)' : ms ? 'توضیح برای کارمند' : 'دلیل رد'} htmlFor="rq-note" help={!approve && ms ? 'این توضیح در اعلان کارمند نمایش داده می‌شود.' : undefined} error={noteErr || undefined}>
               <textarea
                 id="rq-note" className="nm-ta" rows={3} value={note} autoFocus aria-label="یادداشت تصمیم" aria-invalid={!!noteErr}
                 onChange={(e) => { setNote(e.target.value); setNoteErr(''); }}
-                placeholder={approve ? 'مثلاً: تأیید طبق صورت‌جلسه پروژه' : 'توضیح برای کارمند…'}
+                placeholder={approve ? 'مثلاً: تأیید طبق صورت‌جلسه پروژه' : ms ? 'مثلاً: این بخش از پروژه به زمان دیگری منتقل شد.' : 'توضیح برای کارمند…'}
                 style={noteErr ? { borderColor: 'var(--error-main)' } : undefined}
               />
             </Field>
@@ -237,10 +248,12 @@ function Requests() {
   );
 }
 
-function stepState(s: MilestoneStep, current: boolean): { lead: ReactNode; sub: string } {
+function stepState(s: MilestoneStep, current: boolean): { lead: ReactNode; sub: string; reclaimed?: boolean } {
   if (s.status === 'released') return { lead: <Tile d={I.check} tone="success" size="sm" />, sub: `آزاد شده${s.releasedAt ? ` · ${jDayMonth(s.releasedAt)}` : ''}` };
+  if (s.status === 'reclaimed') return { lead: <Tile d={I.x} tone="error" size="sm" />, sub: `${s.reclaimedAt ? jDayMonth(s.reclaimedAt) : ''}${s.reclaimNote ? ` · ${s.reclaimNote}` : ''}`, reclaimed: true };
+  if (s.status === 'pending_approval' && s.requiresApproval === false) return { lead: <Tile d={CLOCK} tone="info" size="sm" />, sub: `خودکار در سررسید${s.dueDate ? ` · ${jDayMonth(s.dueDate)}` : ''}` };
   if (s.status === 'pending_approval') return { lead: <Tile d={CLOCK} tone="warning" size="sm" />, sub: current ? 'در انتظار تأیید · همین درخواست' : 'در انتظار تأیید' };
-  return { lead: <Tile d={I.lock} tone="neutral" size="sm" />, sub: `قفل${s.dueDate ? ` · سررسید ${jDayMonth(s.dueDate)}` : ''}` };
+  return { lead: <Tile d={HOURGLASS} tone="neutral" size="sm" />, sub: `رزرو تا سررسید${s.dueDate ? ` · ${jDayMonth(s.dueDate)}` : ''}` };
 }
 
 function RequestInspector({ r, busy, onClose, onDecide, onUndo }: { r: RequestRow; busy: boolean; onClose: () => void; onDecide: (r: RequestRow, approve: boolean) => void; onUndo: (r: RequestRow) => void }) {
@@ -249,12 +262,13 @@ function RequestInspector({ r, busy, onClose, onDecide, onUndo }: { r: RequestRo
   const ms = r.kind === 'milestone_release';
   const m = r.milestone;
   const failed = r.checks.filter((c) => !c.ok);
-  const reversible = r.status !== 'pending' && !(ms && r.status === 'approved');
+  // milestone decisions are final: an approved step was paid, a reclaimed one went back to the organization
+  const reversible = r.status !== 'pending' && !ms;
   const relPct = m ? m.steps.filter((s) => s.status === 'released').reduce((a, s) => a + s.sharePct, 0) : 0;
 
   const footer = r.status === 'pending' ? (
     <>
-      <button type="button" className="nm-btn line danger" disabled={busy} onClick={() => onDecide(r, false)}><Icon d={I.x} size={17} strokeWidth={2.2} />{ms ? 'نیاز به اصلاح' : 'رد'}</button>
+      <button type="button" className="nm-btn line danger" disabled={busy} onClick={() => onDecide(r, false)}><Icon d={I.x} size={17} strokeWidth={2.2} />{ms ? 'بازپس‌گیری' : 'رد'}</button>
       <button type="button" className="nm-btn" disabled={busy} onClick={() => onDecide(r, true)}><Icon d={I.check} size={17} strokeWidth={2.2} />{ms && m ? `تأیید و آزادسازی ${pct(m.sharePct)}` : 'تأیید'}</button>
     </>
   ) : reversible ? (
@@ -278,7 +292,7 @@ function RequestInspector({ r, busy, onClose, onDecide, onUndo }: { r: RequestRo
         <KV rows={[
           ...(r.amount ? [] : [['موضوع', <span key="t" title={r.title}>{r.title}</span>] as [ReactNode, ReactNode]]),
           ['تاریخ ثبت', <span key="d" className="num">{jDateTime(r.createdAt)}</span>],
-          ['منبع / قفل', <span key="s" title={r.source}>{r.source}</span>],
+          ['منبع / پشتوانه', <span key="s" title={r.source}>{r.source}</span>],
           ...r.details.map((d) => [d.label, <span key={d.label} className="num" title={d.value}>{d.value}</span>] as [ReactNode, ReactNode]),
         ]} />
       </Section>
@@ -293,7 +307,7 @@ function RequestInspector({ r, busy, onClose, onDecide, onUndo }: { r: RequestRo
           <List>
             {m.steps.map((s, i) => {
               const x = stepState(s, r.status === 'pending' && i + 1 === m.stepIndex);
-              return <ListRow key={s.id} lead={x.lead} title={s.title} sub={x.sub} trail={<span className="num mute">{pct(s.sharePct)}</span>} />;
+              return <ListRow key={s.id} lead={x.lead} title={s.title} sub={x.sub} trail={x.reclaimed ? <Pill tone="error">بازپس گرفته شد</Pill> : <span className="num mute">{pct(s.sharePct)}</span>} />;
             })}
           </List>
         </Section>

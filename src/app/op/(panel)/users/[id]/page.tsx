@@ -19,7 +19,7 @@ import { useToast } from '@/components/ui/Toast';
 import { ICON, LOCK_COL, errMsg, fm, pctFa } from '@/components/op/core/ui';
 import { enDigits, faDigits, jDate, jDayMonth, money, relTime, signedMoney, time, units } from '@/lib/format';
 import { now } from '@/lib/clock';
-import { ASSET_META, LOCK_META } from '@/lib/locks';
+import { ASSET_META, HOURGLASS, LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 
 type Tab = 'assets' | 'locks' | 'tx' | 'credit' | 'risk' | 'log';
@@ -28,7 +28,7 @@ const KIND_TONE: Partial<Record<AssetKind, Tone>> = { rial: 'neutral', gold: 'wa
 const LH_REASONS = ['دستور مرجع قضایی', 'بررسی ریسک و تقلب', 'درخواست نهاد ناظر'];
 const NOTE_TAGS: [UserNote['tag'], string][] = [['security', 'امنیت'], ['credit', 'اعتبار'], ['support', 'پشتیبانی']];
 const SEVERITY: Record<RiskAlert['severity'], [string, Tone]> = { low: ['کم', 'warning'], medium: ['متوسط', 'warning'], high: ['زیاد', 'error'], critical: ['بحرانی', 'error'] };
-const FAC_STATUS: Record<Facility['status'], [string, Tone]> = { current: ['جاری', 'success'], late: ['معوق', 'error'], blocked: ['مسدود', 'error'], settled: ['تسویه‌شده', 'neutral'] };
+const FAC_STATUS: Record<Facility['status'], [string, Tone]> = { current: ['جاری', 'success'], late: ['معوق', 'error'], blocked: ['متوقف', 'neutral'], settled: ['تسویه‌شده', 'neutral'] };
 
 const band = (s: number) => (!s ? 'بدون امتیاز' : s >= 740 ? 'عالی' : s >= 670 ? 'خوب' : s >= 580 ? 'متوسط' : 'ضعیف');
 const kycOf = (u: PlatformUser) => (u.flags.includes('kyc_rejected') ? 'rejected' : u.kycLevel < 2 ? 'pending' : 'ok');
@@ -42,7 +42,7 @@ function txType(t: Transaction): [string, Tone] {
     case 'loan': case 'installment': return ['قسط', 'neutral'];
     case 'rial': return t.amount < 0 ? ['برداشت', 'error'] : ['واریز', 'success'];
     case 'fund': return ['سود', 'success'];
-    case 'lock': return t.lockEvent === 'released' ? ['آزادسازی', 'primary'] : ['قفل', 'warning'];
+    case 'lock': return t.lockEvent === 'released' ? ['آزادسازی', 'primary'] : ['رزرو', 'warning'];
     default: return ['سایر', 'neutral'];
   }
 }
@@ -52,7 +52,7 @@ function lockBy(l: Lock, orgName: string): [string, string] {
   if (l.type === 'legal') return ['بهره‌بردار', l.reference ? 'مرجع ' + faDigits(l.reference) : 'دستور مرجع'];
   if (l.type === 'installment') return ['سیستم', 'خرید اقساطی'];
   const src = l.sourceId ?? '';
-  return ['سیستم', src.startsWith('card') ? 'اعتبار کارت نمادنو' : src ? 'وام ' + src.toUpperCase() : 'وثیقه'];
+  return ['سیستم', src.startsWith('card') ? 'اعتبار کارت نمادنو' : src ? 'وام ' + src.toUpperCase() : 'پشتوانه'];
 }
 
 export default function OpUserPage() {
@@ -148,7 +148,7 @@ export default function OpUserPage() {
   const flags: { title: string; sub: string; when: string; level: string; tone: Tone; d: string }[] = [
     ...alerts.map((a) => ({ title: a.title, sub: `${a.id}${a.amount ? ' · ' + money(a.amount) + ' تومان' : ''} · امتیاز ${faDigits(a.score)}`, when: relTime(a.createdAt, now()), level: SEVERITY[a.severity][0], tone: SEVERITY[a.severity][1], d: ICON.alert })),
     ...(x?.devices.newDevice ? [{ title: 'ورود از دستگاه جدید', sub: `${x.devices.city} · تأیید با OTP`, when: relTime(x.devices.lastLoginAt, now()), level: 'کم', tone: 'warning' as Tone, d: ICON.alert }] : []),
-    ...(loanF && coll ? [{ title: 'نسبت وثیقه', sub: `LTV ${pctFa((loanF.used / Math.max(1, coll.value)) * 100)} از سقف ۷۰٪ ${coll.name}`, when: 'لحظه‌ای', level: 'سالم', tone: 'success' as Tone, d: ICON.shield }] : []),
+    ...(loanF && coll ? [{ title: 'نسبت پشتوانه', sub: `LTV ${pctFa((loanF.used / Math.max(1, coll.value)) * 100)} از سقف ۷۰٪ ${coll.name}`, when: 'لحظه‌ای', level: 'سالم', tone: 'success' as Tone, d: ICON.shield }] : []),
     ...(loanF ? [{ title: 'پرداخت اقساط', sub: `${faDigits(loanF.paidCount ?? 0)} قسط پرداخت‌شده${loanF.status === 'late' ? ' · دارای تأخیر' : ' · بدون تأخیر'}`, when: `${faDigits(loanF.paidCount ?? 0)} ماه`, level: loanF.status === 'late' ? 'منفی' : 'مثبت', tone: (loanF.status === 'late' ? 'error' : 'primary') as Tone, d: ICON.clock }] : []),
   ];
 
@@ -162,14 +162,14 @@ export default function OpUserPage() {
     },
     { key: 'total', label: 'کل', width: '112px', render: (h) => <span className="num" style={{ fontWeight: 600 }}>{money(h.value)}</span> },
     { key: 'free', label: 'آزاد', width: '112px', render: (h) => <span className="num" style={{ color: h.free > 0 ? undefined : 'var(--text-disabled)' }}>{money(h.free)}</span> },
-    { key: 'locked', label: 'قفل', width: '112px', render: (h) => <span className="num" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: h.locked ? undefined : 'var(--text-disabled)' }}>{h.locked > 0 && <Icon d={ICON.lock} size={12} />}{h.locked ? money(h.locked) : '—'}</span> },
-    { key: 'split', label: 'آزاد / قفل', width: '104px', col: true, render: (h) => <><span style={{ width: '100%' }}><LockBar free={h.free} locked={h.locked} height={5} /></span><span className="sm el">{h.locked ? Array.from(new Set(h.locks.map((l) => LOCK_META[l.type].short))).join(' + ') : 'همه آزاد'}</span></> },
+    { key: 'locked', label: 'رزرو', width: '112px', render: (h) => <span className="num" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: h.locked ? undefined : 'var(--text-disabled)' }}>{h.locked > 0 && <Icon d={HOURGLASS} size={12} />}{h.locked ? money(h.locked) : '—'}</span> },
+    { key: 'split', label: 'آزاد / رزرو', width: '104px', col: true, render: (h) => <><span style={{ width: '100%' }}><LockBar free={h.free} locked={h.locked} height={5} /></span><span className="sm el">{h.locked ? Array.from(new Set(h.locks.map((l) => LOCK_META[l.type].short))).join(' + ') : 'همه آزاد'}</span></> },
   ];
   type LockRow = { l: Lock; h: Holding };
   const lockCols: Column<LockRow>[] = [
     { key: 'type', label: 'نوع', width: '96px', render: ({ l }) => <LockTypeChip type={l.type} /> },
     { key: 'asset', label: 'دارایی', width: '128px', col: true, render: ({ l, h }) => { const nav = h.units ? h.value / h.units : 0; return <><b className="el" style={{ fontWeight: 600 }}>{h.name}</b><span className="sm">{h.kind === 'rial' || !nav ? 'تومان' : `${units(l.amount / nav)} واحد`}</span></>; } },
-    { key: 'amount', label: 'مبلغ قفل', width: '108px', render: ({ l }) => <span className="num" style={{ fontWeight: 600 }}>{money(l.amount)}</span> },
+    { key: 'amount', label: 'مبلغ رزرو', width: '108px', render: ({ l }) => <span className="num" style={{ fontWeight: 600 }}>{money(l.amount)}</span> },
     { key: 'by', label: 'ایجادکننده', width: '112px', col: true, render: ({ l }) => { const [by, role] = lockBy(l, user.orgName); return <><b className="el" style={{ fontWeight: 600, fontSize: 12.5 }}>{by}</b><span className="sm el">{role}</span></>; } },
     {
       key: 'cond', label: 'شرط آزادسازی', width: 'minmax(0, 1.6fr)', col: true, render: ({ l }) => {
@@ -221,15 +221,15 @@ export default function OpUserPage() {
       </PageHeading>
 
       <StatStrip items={[
-        { label: 'دارایی کل', value: fm(total), unit: 'میلیون تومان', note: `آزاد ${pctFa(freePct)} · قفل ${pctFa(100 - freePct)}` },
+        { label: 'دارایی کل', value: fm(total), unit: 'میلیون تومان', note: `آزاد ${pctFa(freePct)} · رزرو ${pctFa(100 - freePct)}` },
         { label: 'دارایی آزاد', value: fm(free), unit: 'میلیون', note: 'قابل فروش و برداشت' },
-        { label: 'قفل‌شده', value: fm(locked), unit: 'میلیون', note: pf ? `${faDigits(lockRows.length)} قلم در ${faDigits(lockedHoldings)} دارایی` : 'جزئیات در دسترس نیست' },
+        { label: 'رزروشده', value: fm(locked), unit: 'میلیون', note: pf ? `${faDigits(lockRows.length)} قلم در ${faDigits(lockedHoldings)} دارایی` : 'جزئیات در دسترس نیست' },
         { label: 'تسهیلات فعال', value: fm(loanSum + cardSum + bnplSum), unit: 'میلیون', note: [loanSum && `وام ${fm(loanSum)} م`, cardSum && `کارت ${fm(cardSum)} م`, bnplSum && `اقساطی ${fm(bnplSum)} م`].filter(Boolean).join(' · ') || 'بدون تسهیلات' },
       ]} />
 
       <Tabs label="بخش‌های پروفایل" size="lg" value={tab} onChange={setTab} items={[
         { key: 'assets', label: 'دارایی' },
-        { key: 'locks', label: 'قفل‌ها', count: lockRows.length, hot: legalOn },
+        { key: 'locks', label: 'رزروها', count: lockRows.length, hot: legalOn },
         { key: 'tx', label: 'تراکنش‌ها', count: transactions.length },
         { key: 'credit', label: 'تسهیلات', count: facilities.length },
         { key: 'risk', label: 'ریسک', count: alerts.length || undefined, hot: alerts.length > 0 },
@@ -238,7 +238,7 @@ export default function OpUserPage() {
 
       {tab === 'assets' && (
         <div className="nm-grid side">
-          <Card flush title="دارایی‌ها" count={holdings.length} actions={lockRows.length > 0 && <button type="button" className="nm-more" onClick={() => setTab('locks')}>{faDigits(lockRows.length)} قلم قفل<Icon d={ICON.chevL} size={14} /></button>}>
+          <Card flush title="دارایی‌ها" count={holdings.length} actions={lockRows.length > 0 && <button type="button" className="nm-more" onClick={() => setTab('locks')}>{faDigits(lockRows.length)} قلم رزرو<Icon d={ICON.chevL} size={14} /></button>}>
             <Table columns={holdCols} rows={holdings} rowKey={(h) => h.kind} empty={<Empty title="دارایی ثبت نشده" sub="جزئیات کیف پول‌های این کاربر در دسترس نیست؛ خلاصه از رکورد کاربر پلتفرم نمایش داده می‌شود." />} />
             <div style={{ padding: '14px 20px 18px', borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}><b style={{ fontSize: 13 }}>جمع دارایی</b><BigNum value={money(total)} unit="تومان" style={{ marginRight: 'auto' }} /></div>
@@ -246,7 +246,7 @@ export default function OpUserPage() {
             </div>
           </Card>
           <div className="nm-stack">
-            <Card title="ترکیب دارایی" actions={<Pill tone="warning">قفل {pctFa(100 - freePct)}</Pill>}>
+            <Card title="ترکیب دارایی" actions={<Pill tone="warning">رزرو {pctFa(100 - freePct)}</Pill>}>
               {groups.length ? <Allocation items={groups} /> : <Empty title="دارایی ثبت نشده" />}
             </Card>
             <Card title="اعتبار و دسترسی">
@@ -270,10 +270,10 @@ export default function OpUserPage() {
       )}
 
       {tab === 'locks' && (
-        <Card flush title="اقلام قفل" count={lockRows.length} sub="آزادسازی فقط با تحقق شرط یا دستور مرجع"
+        <Card flush title="اقلام رزرو" count={lockRows.length} sub="آزادسازی فقط با تحقق شرط یا دستور مرجع"
           actions={pf && <button type="button" className="nm-btn sm line danger" onClick={openLegal} disabled={!lhOptions.length}><Icon d={ICON.lock} size={15} />اعمال مسدودی قانونی</button>}>
           <Table columns={lockCols} rows={lockRows} rowKey={({ l }) => l.id} dimRow={() => false} minWidth={860}
-            empty={<Empty icon={ICON.unlock} tone="success" title={pf ? 'همه دارایی‌های این کاربر آزاد است' : 'جزئیات قفل‌ها در دسترس نیست'} />} />
+            empty={<Empty icon={LOCK_META.none.d} tone="success" title={pf ? 'همه دارایی‌های این کاربر آزاد است' : 'جزئیات رزروها در دسترس نیست'} />} />
           {lockRows.length > 0 && (
             <div className="nm-tfoot">
               <b style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{faDigits(lockRows.length)} قلم · جمع {money(locked)}</b>
@@ -300,8 +300,8 @@ export default function OpUserPage() {
               const kind: [string, Tone, string] = f.kind === 'loan' ? ['وام', 'info', ICON.percent] : card ? ['اعتبار کارت', 'primary', ICON.card] : ['خرید اقساطی', 'success', ICON.bag];
               const pct = card ? (f.amount ? f.used / f.amount : 0) : tot ? paid / tot : 0;
               const rows: [string, string][] = card
-                ? [['استفاده‌شده', money(f.used)], ['تسویه خودکار', f.nextDue ? `${jDayMonth(f.nextDue.at)} · کیف پول ریالی` : '—'], ['رزرو قفل‌شده', reserve ? `${reserve.h.name} · ${money(reserve.l.amount)}` : '—']]
-                : [['پرداخت‌شده', `${faDigits(paid)} از ${faDigits(tot)} · ${faDigits(tot - paid)} قسط مانده`], ['قسط بعدی', f.nextDue ? `${money(f.nextDue.amount)} · ${jDayMonth(f.nextDue.at)}` : `مانده ${money(f.used)}`], ['وثیقه (قفل)', f.collateral ? `${assetName(f.collateral.holdingKind)} · ${money(f.collateral.amount)}` : '—']];
+                ? [['استفاده‌شده', money(f.used)], ['تسویه خودکار', f.nextDue ? `${jDayMonth(f.nextDue.at)} · کیف پول ریالی` : '—'], ['رزرو تسویه', reserve ? `${reserve.h.name} · ${money(reserve.l.amount)}` : '—']]
+                : [['پرداخت‌شده', `${faDigits(paid)} از ${faDigits(tot)} · ${faDigits(tot - paid)} قسط مانده`], ['قسط بعدی', f.nextDue ? `${money(f.nextDue.amount)} · ${jDayMonth(f.nextDue.at)}` : `مانده ${money(f.used)}`], ['پشتوانه', f.collateral ? `${assetName(f.collateral.holdingKind)} · ${money(f.collateral.amount)}` : '—']];
               return (
                 <Card key={f.id} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Tile d={kind[2]} tone={kind[1]} />{f.title}</span>} actions={<Pill tone={s[1]} dot>{s[0]}</Pill>}>
                   <BigNum value={money(f.amount)} unit={card ? `تومان سقف · ${pctFa(cardPct)} دارایی` : f.kind === 'loan' ? `تومان · ${faDigits(f.months ?? tot)} ماهه` : `تومان · ${faDigits(tot)} قسط`} />
@@ -376,7 +376,7 @@ export default function OpUserPage() {
               </Field>
             </div>
             <Field label="دلیل"><Chips label="دلیل مسدودی" value={lhReason} onChange={setLhReason} options={LH_REASONS.map((r, i) => ({ key: i, label: r }))} /></Field>
-            <Note tone="err">مبلغ از بخش آزاد «{lhH.name}» کسر و قفل می‌شود؛ تا رفع دستور مرجع قابل فروش یا برداشت نیست. کاربر اعلان «مسدودی قانونی» می‌بیند.</Note>
+            <Note tone="err">مبلغ از بخش آزاد «{lhH.name}» کسر و مسدود می‌شود؛ تا رفع دستور مرجع قابل فروش یا برداشت نیست. کاربر اعلان «مسدودی قانونی» می‌بیند.</Note>
             {lhErr && <span role="alert" style={{ fontSize: 12, color: 'var(--error-text)', fontWeight: 600 }}>{lhErr}</span>}
           </>
         ) : <span className="mute">این کاربر دارایی آزادی برای مسدودسازی ندارد.</span>}

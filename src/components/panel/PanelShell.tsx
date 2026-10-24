@@ -24,7 +24,7 @@ import { faDigits } from '@/lib/format';
 export { PageHeading } from './kit';
 
 export type AppTone = 'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'ink';
-export interface NavItem { label: string; href: string; d: string; badge?: number; match?: (path: string) => boolean; /** Short name (dock label). */ short?: string; /** Icon tile color. */ tone?: AppTone }
+export interface NavItem { label: string; href: string; d: string; badge?: number; match?: (path: string) => boolean; /** Short name (dock label). */ short?: string; /** Icon tile color. */ tone?: AppTone; /** Not ready yet: shown greyed out with «به‌زودی», not clickable. */ soon?: boolean }
 export interface NavGroup { title: string; items: NavItem[] }
 export interface SearchItem { title: string; sub: string; kind: string; d: string; href: string; tone?: [string, string] }
 
@@ -209,6 +209,15 @@ export function PanelShell(p: Props) {
               <div key={g.title} className="nm-grp" role="group" aria-label={g.title}>
                 <span className="nm-grp-t">{g.title}</span>
                 {g.items.map((it) => {
+                  if (it.soon) {
+                    return (
+                      <span key={it.href} className="nm-item soon" aria-disabled="true" title="به‌زودی">
+                        <span className={`nm-tile soft ${toneClass(toneOf(it))}`}><Icon d={it.d} size={15} strokeWidth={1.8} /></span>
+                        <span className="nm-lb">{it.label}</span>
+                        <span className="nm-soon">به‌زودی</span>
+                      </span>
+                    );
+                  }
                   const on = isActive(it);
                   return (
                     <Link key={it.href} href={it.href} className={'nm-item' + (on ? ' on' : '')} aria-current={on ? 'page' : undefined}>
@@ -276,6 +285,13 @@ export function PanelShell(p: Props) {
             {p.groups.map((g) => (
               <div key={g.title} className="nm-dock-grp" role="group" aria-label={g.title}>
                 {g.items.map((it) => {
+                  if (it.soon) {
+                    return (
+                      <span key={it.href} className="nm-di soon" data-mag data-label={`${it.label} · به‌زودی`} role="img" aria-label={`${it.label} (به‌زودی)`}>
+                        <span className={`nm-di-t ${toneClass(toneOf(it))}`}><Icon d={it.d} strokeWidth={1.8} /></span>
+                      </span>
+                    );
+                  }
                   const on = isActive(it);
                   return (
                     <Link key={it.href} href={it.href} className={'nm-di' + (on ? ' on' : '')} data-mag data-label={it.label} aria-label={it.label} aria-current={on ? 'page' : undefined}>

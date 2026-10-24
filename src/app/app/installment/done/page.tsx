@@ -8,6 +8,7 @@ import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
 import { Icon } from '@/components/ui/Icon';
 import { useInstallments, usePortfolio } from '@/api/app';
 import type { InstallmentPurchaseX } from '@/api/app-credit-extra';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDate, jDayMonth, money, time } from '@/lib/format';
 import { CI } from '@/components/app/credit/icons';
@@ -78,17 +79,17 @@ function Done() {
               ]} />
             </div>
 
-            {/* new lock */}
+            {/* new reserve */}
             {h && lock && (
               <Link href={routes.app.asset(h.kind)} className="card" style={{ boxSizing: 'border-box', padding: '10px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none', color: 'var(--text-primary)', textDecoration: 'none' }}>
                 <div className="row" style={{ height: 22, gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>قفل جدید</span>
-                  <span className="lktype" style={{ background: 'var(--soft-secondary)', color: 'var(--secondary-text)' }}><Icon d={CI.lock} size={12} />وثیقه خرید اقساطی</span>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>رزرو جدید</span>
+                  <span className="lktype" style={{ background: LOCK_META.installment.bg, color: LOCK_META.installment.fg }}><Icon d={LOCK_META.installment.d} size={12} />{LOCK_META.installment.label}</span>
                   <Icon d={CI.chevL} size={16} style={{ marginRight: 'auto', color: 'var(--text-disabled)' }} />
                 </div>
-                <span className="num" style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>{money(lockAmt)} <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>از {h.name} قفل شد</span></span>
+                <span className="num" style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>{money(lockAmt)} <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>از {h.name} رزرو شد</span></span>
                 <LockSplit free={h.free} locked={h.locked} />
-                <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>با پرداخت هر قسط {money(lockAmt / Math.max(1, ip.months))} آزاد می‌شود · اگر کد تا {jDayMonth(expires)} استفاده نشود، کل وثیقه آزاد می‌شود.</span>
+                <span className="num" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>با پرداخت هر قسط {money(lockAmt / Math.max(1, ip.months))} آزاد می‌شود · اگر کد تا {jDayMonth(expires)} استفاده نشود، کل پشتوانه آزاد می‌شود.</span>
               </Link>
             )}
 

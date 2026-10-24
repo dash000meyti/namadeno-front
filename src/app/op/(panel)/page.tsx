@@ -112,7 +112,7 @@ export default function OpOverviewPage() {
         { label: 'بسته‌های تأییدنشده', value: x ? money(x.unaccepted.count) : '…', unit: 'بسته', href: routes.op.requests, note: x ? `نیاز به پیگیری · ${money(x.unaccepted.older7d)} مورد بیش از ۷ روز` : '…', trend: 'warn' },
       ]} />
 
-      <Card title="ارزش دارایی قفل‌شده" actions={<Pill tone="warning">{pctFa(lockedPct)} از AUM</Pill>} more={{ label: 'به تفکیک صندوق', href: routes.op.funds }}>
+      <Card title="ارزش دارایی رزروشده" actions={<Pill tone="warning">{pctFa(lockedPct)} از AUM</Pill>} more={{ label: 'به تفکیک صندوق', href: routes.op.funds }}>
         <div className="nm-grid side-s" style={{ alignItems: 'center' }}>
           <div className="nm-stack" style={{ gap: 12 }}>
             <BigNum value={fb(lockedTotal)} unit="میلیارد تومان" />
@@ -127,7 +127,7 @@ export default function OpOverviewPage() {
                   lead={<span style={{ width: 84, flex: 'none' }}><LockTypeChip type={k} /></span>}
                   title={<span className="num" style={{ fontWeight: 500 }}>{bn((lockedTotal * share) / 100)}</span>}
                   sub={count !== undefined ? `${money(count)} ${LOCK_UNIT[k]}` : undefined}
-                  trail={<><Meter value={share / 100} tone={LOCK_TONE[k]} width={120} label={`${LOCK_META[k].label}: ${pctFa(share)} دارایی قفل‌شده`} /><span className="num mute" style={{ width: 36, textAlign: 'left', fontSize: 12.5 }}>{pctFa(share)}</span></>}
+                  trail={<><Meter value={share / 100} tone={LOCK_TONE[k]} width={120} label={`${LOCK_META[k].label}: ${pctFa(share)} دارایی رزروشده`} /><span className="num mute" style={{ width: 36, textAlign: 'left', fontSize: 12.5 }}>{pctFa(share)}</span></>}
                 />
               );
             })}

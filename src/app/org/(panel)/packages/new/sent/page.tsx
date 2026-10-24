@@ -6,11 +6,11 @@ import { useSearchParams } from 'next/navigation';
 import { useOrgEmployees, useOrgPackage } from '@/api/org';
 import { BigNum, Card, Empty, ErrorBlock, KV, Note, SkeletonCard } from '@/components/panel/kit';
 import { LockTag, WizardHeader } from '@/components/org/packages/Stepper';
-import { I, allocationText, splitCompact } from '@/components/org/packages/meta';
+import { I, allocationText, perPersonText, splitCompact } from '@/components/org/packages/meta';
+import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDateTime, jDate, money } from '@/lib/format';
 
-const LOCK_D = 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2';
 const CARD = { width: '100%', maxWidth: 640, alignSelf: 'center' } as const;
 
 function SentStep() {
@@ -37,7 +37,7 @@ function SentStep() {
           icon={sent ? I.check : I.warn}
           tone={sent ? 'success' : 'warning'}
           title={sent ? 'بسته برای کارکنان ارسال شد' : 'این بسته هنوز ارسال نشده است'}
-          sub={<>{pkg.title} · {faDigits(n)} نفر · {money(pkg.amountPerPerson)} تومان هر نفر · {sent ? 'در صندوق ورودی اپلیکیشن کارکنان قرار گرفت و منتظر تأیید آن‌هاست.' : 'برای ارسال، مرحله بررسی را تکمیل کنید.'}</>}
+          sub={<>{pkg.title} · {faDigits(n)} نفر · {perPersonText(pkg, money) || '—'} تومان هر نفر · {sent ? 'در صندوق ورودی کارکنان در اپ نمادنو قرار گرفت و منتظر پذیرش آن‌هاست.' : 'برای ارسال، مرحله بررسی را تکمیل کنید.'}</>}
           action={<BigNum value={money(pkg.total)} unit="تومان" />}
         />
         <KV rows={[
@@ -45,12 +45,12 @@ function SentStep() {
           ['گیرندگان', `${faDigits(n)} نفر${units ? ` · ${faDigits(units)} واحد` : ''}`],
           ['جمع کل', [total.value, total.unit, 'تومان'].filter(Boolean).join(' ')],
           ['تخصیص', allocationText(pkg)],
-          ['سیاست قفل', <span key="l" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LockTag type={lp.type} /><span className="num">{lp.type === 'vesting' ? 'تا ' + jDate(lp.releaseAt) : lp.type === 'milestone' ? `${faDigits(lp.steps.length)} مرحله` : 'همه آزاد'}</span></span>],
+          ['شیوه‌ی دریافت', <span key="l" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LockTag type={lp.type} /><span className="num">{lp.type === 'vesting' ? 'تا ' + jDate(lp.releaseAt) : lp.type === 'milestone' ? `${faDigits(lp.steps.length)} مرحله` : 'پس از پذیرش'}</span></span>],
           ['زمان ارسال', <span key="t" className="num">{pkg.sentAt ? jDateTime(pkg.sentAt) : '—'}</span>],
         ]} />
-        <Note tone="mute" icon={lp.type === 'milestone' ? I.flag : LOCK_D}>
-          {lp.type === 'vesting' && <>پس از تأیید هر کارمند، بخش صندوقی بسته‌اش تا <span className="num">{jDate(lp.releaseAt)}</span> قفل می‌شود؛ بخش ریالی آزاد است.</>}
-          {lp.type === 'milestone' && <>پس از تأیید کارمند، مبلغ در صندوق طلای او قفل و با تأیید هر مرحله در صفحهٔ بسته آزاد می‌شود.</>}
+        <Note tone="mute" icon={LOCK_META[lp.type].d}>
+          {lp.type === 'vesting' && <>پس از تأیید هر کارمند، بخش صندوقی بسته‌اش تا <span className="num">{jDate(lp.releaseAt)}</span> به‌عنوان {LOCK_META.vesting.label} در دارایی او رزرو می‌شود و بازده می‌گیرد؛ بخش ریالی از ابتدا آزاد است.</>}
+          {lp.type === 'milestone' && <>پس از تأیید کارمند، مبلغ در صندوق طلای او رزرو می‌شود و سهم هر مرحله با تأیید شما در صفحهٔ بسته آزاد می‌شود.</>}
           {lp.type === 'none' && <>کل بسته پس از تأیید کارمند آزاد است و قابل فروش{pkg.cashAllowed ? ' و برداشت' : ''} است.</>}
         </Note>
         {sent && (

@@ -58,7 +58,7 @@ ActionBar (اختیاری)    نوار ذخیره‌ی چسبان پایین ف�
 6. **تأیید عملیات حساس = `Confirm`**، فرم کوچک = `Dialog`. هیچ مودال دست‌ساز.
 7. **پیام = `useToast()`** از `@/components/ui/Toast` (در پنل‌ها پایین چپ نمایش داده می‌شود). `usePanelToast`/`useFlash` هم به همین وصل‌اند.
 8. **حالت‌ها:** بارگذاری = `StatStrip loading` / `SkeletonCard` / `Table loading`؛ خطا = `ErrorBlock` (با «تلاش دوباره»)؛ خالی = `Empty` (آیکون، عنوان، توضیح، اقدام).
-9. **قانون آزاد/قفل:** هر عدد دارایی کنار سهم آزاد و قفل: `FreeLocked` (نوار + دو عدد) یا `LockBar` کوچک در جدول؛ نوع قفل با `LockTypeChip` از `@/components/ui/LockBar`.
+9. **قانون آزاد/رزرو:** هر عدد دارایی کنار سهم آزاد و رزرو (واژه‌ها طبق `docs/WORDING.md`؛ «قفل» به مشتری نشان داده نمی‌شود): `FreeLocked` (نوار + دو عدد) یا `LockBar` کوچک در جدول؛ نوع رزرو با `LockTypeChip` از `@/components/ui/LockBar`.
 
 ## ۳. زبان بصری
 
@@ -82,6 +82,7 @@ ActionBar (اختیاری)    نوار ذخیره‌ی چسبان پایین ف�
 | `TableFoot({ shown, total, unit, page, pages, onPage })` + `usePaging(rows, size, resetKey)` | صفحه‌بندی |
 | `BulkBar({ count, onClear, children })` | جایگزین Toolbar وقتی ردیف‌ها انتخاب شده‌اند |
 | `Inspector({ open, onClose, title, label, href?, hrefLabel?, footer?, children })` | بدنه: `Who` → `KeyStats` → `Section`ها (`KV`, `List`/`ListRow`, `FreeLocked`) |
+| `ListRow({ …, onClick, pressed })` | ردیف انتخابی با چک‌باکس در انتها (انتخاب چندتایی داخل `Dialog`، مثل افزودن همکار به واحد) |
 | `SettingsGroup({ title, action?, footer? })` + `SettingRow({ label, desc?, stack?, lead? })` | کنترل‌ها: `Switch`، `NumberInput` (عدد)، `NumInput` (متن/عدد رشته‌ای؛ `full` برای تمام‌عرض)، `Chips`، `Select`؛ `lead` برای آواتار/کاشی/نقطه کنار عنوان |
 | `Field({ label, htmlFor?, help?, error? })` + `.nm-ctl` / `.nm-in` / `.nm-ta` | فرم‌ها در کارت و دیالوگ |
 | `Dialog({ open, onClose, title, sub?, icon?, width?, footer })` · `Confirm(...)` | مودال‌ها؛ دکمه‌ی اصلی آخرین دکمه‌ی footer |

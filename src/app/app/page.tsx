@@ -2,7 +2,7 @@
 /**
  * Home — «دارایی‌ها» (design: app-assets).
  * Sticky hero card deck (total + one card per holding), pending packages, wallets with
- * withdrawable/locked split, and recent activity in a sheet that scrolls over the hero.
+ * withdrawable/reserved split, and recent activity in a sheet that scrolls over the hero.
  */
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -13,10 +13,12 @@ import { BottomNav } from '@/components/app/BottomNav';
 import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
 import { Icon } from '@/components/ui/Icon';
 import { LogoMark } from '@/components/ui/Brand';
-import { HERO_COLORS, P, TONE, txVisual, walletDot } from '@/components/app/core/meta';
-import { faDigits, jDate, money, percent, relTime, signedMoney } from '@/lib/format';
+import { HERO_COLORS, P } from '@/components/app/core/meta';
+import { faDigits, jDate, jDayMonth, money, percent, signedMoney, time } from '@/lib/format';
 import { now } from '@/lib/clock';
+import { ASSET_ICON, HOURGLASS } from '@/lib/locks';
 import { routes } from '@/lib/routes';
+import { txVisual } from '@/components/app/money/lib';
 import type { Holding, InboxPackage, Portfolio, Transaction } from '@/types/domain';
 
 const HIDE_KEY = 'nm-hide-balance';
@@ -51,11 +53,11 @@ export default function HomePage() {
             <HeroDeck portfolio={pf.data} pendingCount={pendingList.length} hidden={hidden} onToggleHidden={toggleHidden} />
 
             {/* sheet: scrolls up over the pinned hero card */}
-            <section className="home-sheet" aria-label="کیف پول‌ها، دریافتی‌ها و فعالیت‌ها">
+            <section className="home-sheet" aria-label="کیف پول‌ها، دریافتی‌ها و تراکنش‌ها">
               <span className="grab" aria-hidden="true" />
               {pendingList.length > 0 && <PendingBlock list={pendingList} m={m} />}
               <WalletList holdings={pf.data.holdings} m={m} />
-              <Activity list={txs.data} loading={txs.isLoading} />
+              <Transactions list={txs.data} loading={txs.isLoading} />
             </section>
           </>
         )}
@@ -81,32 +83,30 @@ export default function HomePage() {
 
 // ───────────────────────── Hero: wallet stack ─────────────────────────
 // Apple-Wallet-like stack: one card in front, the next cards peek above it (name + value);
-// tapping a peek brings it forward. The front «دارایی کل» is the black Namadno card. Actions live
-// in one quiet row under the stack and follow the card in front.
+// tapping a peek brings it forward, the dots under the stack show where you are.
+// All cards are white with a faint tint of their asset color; actions sit inside the card.
 
 type HeroCard =
   | { k: 'total' }
-  | { k: 'asset'; h: Holding; g1: string; g2: string };
+  | { k: 'asset'; h: Holding; g1: string };
 
-const PEEK = 28; // visible height of each card peeking behind the front one
+const PEEK = 30; // visible height of each card peeking behind the front one
 const MAX_PEEKS = 2;
+const CARD_H = 218;
 
 function HeroDeck({ portfolio, pendingCount, hidden, onToggleHidden }: { portfolio: Portfolio; pendingCount: number; hidden: boolean; onToggleHidden: () => void }) {
   const cards: HeroCard[] = [
     { k: 'total' },
     ...portfolio.holdings
       .filter((h) => h.value > 0 || h.kind === 'rial')
-      .map((h) => {
-        const [g1, g2] = HERO_COLORS[h.kind] ?? ['#434A62', '#6B7390'];
-        return { k: 'asset' as const, h, g1, g2 };
-      }),
+      .map((h) => ({ k: 'asset' as const, h, g1: (HERO_COLORS[h.kind] ?? ['#434A62'])[0] })),
   ];
   const n = cards.length;
   const peeks = Math.min(MAX_PEEKS, n - 1);
   const [cur, setCur] = useState(0);
-  const front = cards[Math.min(cur, n - 1)];
+  const at = Math.min(cur, n - 1);
 
-  // live price ticks: every ~3.5s the total moves; a rise glows, then settles
+  // live price ticks: every ~3.5s the total moves; a rise flashes green, then settles
   const [gain, setGain] = useState(0);
   const [flash, setFlash] = useState<'' | 'up' | 'down'>('');
   const fade = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -129,11 +129,12 @@ function HeroDeck({ portfolio, pendingCount, hidden, onToggleHidden }: { portfol
   const m = (v: number) => (hidden ? MASK : money(v));
 
   return (
-    <div className="hd" style={{ '--peeks': peeks } as React.CSSProperties}>
-      <div className="hd-stack" role="region" aria-roledescription="carousel" aria-label="دارایی کل و دارایی‌ها" style={{ height: peeks * PEEK + 180 }}>
+    <div className="hd">
+      <div className="hd-stack" role="region" aria-roledescription="carousel" aria-label="دارایی کل و دارایی‌ها" style={{ height: peeks * PEEK + CARD_H }}>
         {cards.map((c, i) => {
-          const rel = (i - cur + n) % n; // 0 = front, 1..peeks = peeking behind
+          const rel = (i - at + n) % n; // 0 = front, 1..peeks = peeking behind
           const shown = rel <= peeks;
+          const front = rel === 0;
           const isTotal = c.k === 'total';
           const name = isTotal ? 'دارایی کل' : c.h.name;
           const value = isTotal ? total : c.h.value;
@@ -142,47 +143,46 @@ function HeroDeck({ portfolio, pendingCount, hidden, onToggleHidden }: { portfol
           const free = isTotal ? portfolio.free : c.h.free;
           const locked = isTotal ? portfolio.locked : c.h.locked;
           const up = change >= 0;
-          const top = rel === 0 ? peeks * PEEK : Math.max(0, (peeks - rel) * PEEK);
+          const tint = isTotal ? 'var(--primary-main)' : c.g1;
           return (
             <article
               key={isTotal ? 'total' : c.h.kind}
-              className={'hd-card' + (isTotal ? ' total' : '') + (rel === 0 ? ' front' : '')}
-              aria-hidden={rel !== 0}
+              className={'hd-card' + (front ? ' front' : '')}
+              aria-hidden={!front}
               style={{
-                top,
-                transform: rel === 0 ? 'none' : `scale(${1 - rel * 0.045})`,
+                top: front ? peeks * PEEK : Math.max(0, (peeks - rel) * PEEK),
+                height: CARD_H,
+                transform: front ? 'none' : `scale(${1 - rel * 0.045})`,
                 opacity: shown ? 1 : 0,
                 zIndex: 10 - rel,
-                background: isTotal ? undefined : `linear-gradient(150deg, ${c.g2} -20%, ${c.g1} 55%, color-mix(in srgb, ${c.g1} 70%, #000) 120%)`,
-              }}
+                '--tint': tint,
+              } as React.CSSProperties}
             >
-              <LogoMark size={210} className="hd-wm" />
-              {rel !== 0 && shown && (
-                <button type="button" className="hd-peek" onClick={() => setCur(i)} aria-label={'نمایش ' + name} tabIndex={0}>
+              <LogoMark size={190} className="hd-wm" />
+              {!front && shown && (
+                <button type="button" className="hd-peek" onClick={() => setCur(i)} aria-label={'نمایش ' + name}>
+                  {isTotal ? <LogoMark size={12} className="hd-logo" /> : <AssetIc kind={c.h.kind} size="sm" />}
                   <span>{name}</span>
                   <b className="num">{m(value)}</b>
-                  {rel === peeks && n - 1 > peeks && <i className="num">+{faDigits(n - 1 - peeks)}</i>}
                 </button>
               )}
               <header className="hd-head">
-                {isTotal ? <LogoMark size={16} /> : <span className="hd-dot" />}
+                {isTotal ? <LogoMark size={16} className="hd-logo" /> : <AssetIc kind={c.h.kind} />}
                 <span className="hd-name">{name}</span>
-                {isTotal ? (
-                  <button type="button" className="hd-ghost" onClick={onToggleHidden} tabIndex={rel === 0 ? 0 : -1} aria-label={hidden ? 'نمایش موجودی' : 'پنهان کردن موجودی'} aria-pressed={hidden}>
+                {isTotal && (
+                  <button type="button" className="hd-ghost" onClick={onToggleHidden} tabIndex={front ? 0 : -1} aria-label={hidden ? 'نمایش موجودی' : 'پنهان کردن موجودی'} aria-pressed={hidden}>
                     <Icon d={hidden ? P.eyeOff : P.eye} size={18} />
                   </button>
-                ) : (
-                  <Link href={routes.app.asset(c.h.kind)} className="hd-ghost pill" tabIndex={rel === 0 ? 0 : -1}>جزئیات<Icon d={P.chevLeft} size={14} /></Link>
                 )}
               </header>
-              <div className={'hd-value num' + (isTotal && flash ? ' ' + flash : '')} aria-live={isTotal && rel === 0 ? 'polite' : undefined}>
-                {m(value)}<small>تومان</small>
-              </div>
-              <div className={'hd-change' + (up ? ' up' : ' down')}>
-                <Icon d={up ? 'M6 14l6-6 6 6' : 'M6 10l6 6 6-6'} size={14} strokeWidth={2.2} />
-                <span dir="ltr" className="num">{hidden ? '••••' : signedMoney(change)}</span>
-                <span dir="ltr" className="num">({percent(changePct, 2, true)})</span>
-                <span>{isTotal || c.h.kind !== 'rial' ? 'امروز' : 'این ماه'}</span>
+              <div className="hd-row">
+                <div className={'hd-value num' + (isTotal && flash ? ' ' + flash : '')} aria-live={isTotal && front ? 'polite' : undefined}>
+                  {m(value)}<small>تومان</small>
+                </div>
+                <div className={'hd-change' + (up ? ' up' : ' down')}>
+                  <span dir="ltr" className="num">{hidden ? '••••' : signedMoney(change)}</span>
+                  <span><span dir="ltr" className="num">{percent(changePct, 2, true)}</span> {isTotal || c.h.kind !== 'rial' ? 'امروز' : 'این ماه'}</span>
+                </div>
               </div>
               <div className="hd-split">
                 <span className="hd-bar" aria-hidden="true">
@@ -191,53 +191,79 @@ function HeroDeck({ portfolio, pendingCount, hidden, onToggleHidden }: { portfol
                 </span>
                 <span className="hd-leg num">
                   <span>آزاد {m(free)}</span>
-                  {locked > 0 ? <span><Icon d={P.lock} size={11} />قفل {m(locked)}</span> : <span>بدون قفل</span>}
+                  {locked > 0 ? <span><Icon d={HOURGLASS} size={11} />رزرو {m(locked)}</span> : <span>همه آزاد</span>}
                 </span>
               </div>
+              {isTotal ? <TotalActions pendingCount={pendingCount} front={front} /> : <AssetActions h={c.h} front={front} />}
             </article>
           );
         })}
       </div>
-      <HeroActions card={front} pendingCount={pendingCount} />
+      {n > 1 && (
+        <div className="hd-dots" role="group" aria-label="انتخاب کارت">
+          {cards.map((c, i) => (
+            <button key={i} type="button" onClick={() => setCur(i)} aria-label={c.k === 'total' ? 'دارایی کل' : c.h.name} aria-current={i === at} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-/** One quiet row of round actions under the stack; follows the card in front. */
-function HeroActions({ card, pendingCount }: { card: HeroCard; pendingCount: number }) {
-  let items: { label: string; href: string; d: string; badge?: number; primary?: boolean }[];
-  if (card.k === 'total') {
-    items = [
-      { label: 'دریافتی‌ها', href: routes.app.inbox(), d: P.inbox, badge: pendingCount, primary: pendingCount > 0 },
-      { label: 'واریز', href: routes.app.deposit(), d: P.deposit, primary: pendingCount === 0 },
-      { label: 'برداشت', href: routes.app.withdraw, d: P.withdraw },
-      { label: 'اعتبار', href: routes.app.credit, d: P.credit },
-    ];
-  } else if (card.h.kind === 'rial') {
-    items = [
-      { label: 'واریز', href: routes.app.deposit(), d: P.deposit, primary: true },
-      { label: 'برداشت', href: routes.app.withdraw, d: P.withdraw },
-      { label: 'جزئیات', href: routes.app.asset('rial'), d: P.chevLeft },
-    ];
-  } else {
-    const fundId = card.h.fundId ?? card.h.kind;
-    items = [
-      { label: 'خرید', href: routes.app.convert('buy', fundId), d: P.plus, primary: true },
-      { label: 'فروش', href: routes.app.convert('sell', fundId), d: P.minus },
-      { label: 'جزئیات', href: routes.app.asset(card.h.kind), d: P.chevLeft },
-    ];
-  }
+/** Symbol tile of a wallet / fund: faint tint of its color with the icon in that color. */
+function AssetIc({ kind, size = 'md' }: { kind: Holding['kind']; size?: 'sm' | 'md' | 'lg' }) {
+  const px = size === 'sm' ? 11 : size === 'lg' ? 18 : 15;
   return (
-    <nav className="hd-actions" aria-label="اکشن‌های سریع" key={card.k === 'total' ? 'total' : card.h.kind}>
-      {items.map((a) => (
-        <Link key={a.label} href={a.href} className={'hd-act' + (a.primary ? ' primary' : '')} aria-label={a.badge ? `${a.label} — ${faDigits(a.badge)} مورد جدید` : a.label}>
-          <span className="ic">
-            <Icon d={a.d} size={20} strokeWidth={1.8} />
-            {!!a.badge && <span className="b num">{faDigits(a.badge)}</span>}
-          </span>
-          <span className="lb">{a.label}</span>
+    <span className={'ak ' + size} style={{ '--tint': (HERO_COLORS[kind] ?? ['#434A62'])[0] } as React.CSSProperties} aria-hidden="true">
+      <Icon d={ASSET_ICON[kind] ?? ASSET_ICON.equity} size={px} strokeWidth={1.8} />
+    </span>
+  );
+}
+
+/** «دارایی کل» actions inside the card: one main action and three quick ones. */
+function TotalActions({ pendingCount, front }: { pendingCount: number; front: boolean }) {
+  const t = front ? 0 : -1;
+  return (
+    <nav className="hd-acts" aria-label="اکشن‌های سریع">
+      {pendingCount > 0 ? (
+        <Link href={routes.app.inbox()} tabIndex={t} className="hd-main" aria-label={`دریافتی‌ها — ${faDigits(pendingCount)} دریافتی جدید`}>
+          <Icon d={P.inbox} size={19} strokeWidth={1.8} />دریافتی‌ها<span className="b num">{faDigits(pendingCount)}</span>
         </Link>
-      ))}
+      ) : (
+        <Link href={routes.app.deposit()} tabIndex={t} className="hd-main" aria-label="افزایش دارایی — واریز از کارت بانکی">
+          <Icon d={P.plus} size={19} strokeWidth={1.8} />افزایش دارایی
+        </Link>
+      )}
+      {pendingCount > 0
+        ? <Quick href={routes.app.deposit()} label="واریز" d={P.deposit} t={t} />
+        : <Quick href={routes.app.inbox()} label="دریافتی‌ها" d={P.inbox} t={t} />}
+      <Quick href={routes.app.withdraw} label="برداشت" d={P.withdraw} t={t} />
+      <Quick href={routes.app.credit} label="اعتبار" d={P.credit} t={t} />
+    </nav>
+  );
+}
+
+function Quick({ href, label, d, t }: { href: string; label: string; d: string; t: number }) {
+  return (
+    <Link href={href} tabIndex={t} className="hd-quick" aria-label={label}>
+      <span className="ic"><Icon d={d} size={19} strokeWidth={1.8} /></span>
+      <span className="lb">{label}</span>
+    </Link>
+  );
+}
+
+/** Asset card actions inside the card: buy / sell (wallet: deposit / withdraw) and «مشاهده» (the asset page). */
+function AssetActions({ h, front }: { h: Holding; front: boolean }) {
+  const isRial = h.kind === 'rial';
+  const fundId = h.fundId ?? h.kind;
+  const a1 = isRial ? { label: 'واریز', href: routes.app.deposit(), d: P.deposit } : { label: 'خرید', href: routes.app.convert('buy', fundId), d: P.plus };
+  const a2 = isRial ? { label: 'برداشت', href: routes.app.withdraw, d: P.withdraw } : { label: 'فروش', href: routes.app.convert('sell', fundId), d: P.minus };
+  const t = front ? 0 : -1;
+  return (
+    <nav className="hd-acts" aria-label={'اکشن‌های ' + h.name}>
+      <Link href={a1.href} tabIndex={t} className="hd-main tinted"><Icon d={a1.d} size={19} strokeWidth={1.8} />{a1.label}</Link>
+      <Link href={a2.href} tabIndex={t} className="hd-main soft"><Icon d={a2.d} size={19} strokeWidth={1.8} />{a2.label}</Link>
+      <Quick href={routes.app.asset(h.kind)} label="مشاهده" d={P.eye} t={t} />
     </nav>
   );
 }
@@ -296,8 +322,8 @@ function WalletList({ holdings, m }: { holdings: Holding[]; m: (n: number) => st
           const down = h.changePct < 0;
           return (
             <Link key={h.kind} href={routes.app.asset(h.kind)} className="card" style={{ boxSizing: 'border-box', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 4, color: 'var(--text-primary)', textDecoration: 'none' }}>
-              <div style={{ height: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: walletDot(h.kind), flex: 'none' }} />
+              <div style={{ height: 30, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <AssetIc kind={h.kind} size="lg" />
                 <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>{h.name}</span>
                 <Icon d={P.chevLeft} size={18} style={{ marginRight: 'auto', color: 'var(--text-disabled)' }} />
               </div>
@@ -313,9 +339,9 @@ function WalletList({ holdings, m }: { holdings: Holding[]; m: (n: number) => st
               <div className="lkleg" style={{ height: 20, borderTop: '1px dashed var(--divider)', paddingTop: 6, marginTop: 2 }}>
                 <span><span className="lkdot" />قابل برداشت <b>{m(h.free)}</b></span>
                 {h.locked > 0 ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={P.lock} size={12} />قفل‌شده <b>{m(h.locked)}</b></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={HOURGLASS} size={12} />رزروشده <b>{m(h.locked)}</b></span>
                 ) : (
-                  <span>بدون قفل</span>
+                  <span>همه آزاد</span>
                 )}
               </div>
             </Link>
@@ -347,38 +373,61 @@ function Spark({ fundId }: { fundId: string }) {
   );
 }
 
-function Activity({ list, loading }: { list?: Transaction[]; loading: boolean }) {
+/** Tehran calendar day of a moment, for grouping. */
+const dayKey = (d: string | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran' }).format(new Date(d));
+
+/** Recent transactions grouped by day: icon, title, time · source, lock/status, signed amount. */
+function Transactions({ list, loading }: { list?: Transaction[]; loading: boolean }) {
   const items = list ?? [];
-  const at = now();
+  const today = dayKey(now());
+  const yesterday = dayKey(new Date(now().getTime() - 86400000));
+  const groups: { key: string; label: string; rows: Transaction[] }[] = [];
+  for (const t of items) {
+    const k = dayKey(t.at);
+    let g = groups.find((x) => x.key === k);
+    if (!g) {
+      g = { key: k, label: k === today ? 'امروز' : k === yesterday ? 'دیروز' : jDayMonth(t.at), rows: [] };
+      groups.push(g);
+    }
+    g.rows.push(t);
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 'none' }}>
-      <div style={{ height: 24, display: 'flex', alignItems: 'center' }}>
-        <span style={{ fontSize: 15, fontWeight: 700 }}>فعالیت اخیر</span>
-        <Link href={routes.app.history()} style={{ marginRight: 'auto', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 2 }}>همه<Icon d={P.chevLeft} size={16} /></Link>
-      </div>
+      <SectionHead title="تراکنش‌ها" href={routes.app.history()} />
       {loading ? (
         <Skeleton h={112} />
       ) : items.length === 0 ? (
-        <div className="card" style={{ padding: 16, fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>هنوز فعالیتی ثبت نشده است.</div>
+        <div className="card" style={{ padding: 16, fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>هنوز تراکنشی ثبت نشده است.</div>
       ) : (
-        <div className="card" style={{ padding: '0 14px', display: 'flex', flexDirection: 'column' }}>
-          {items.map((t, i) => {
-            const v = txVisual(t);
-            const [bg, fg] = TONE[v.tone];
-            const isLock = t.category === 'lock';
-            return (
-              <Link key={t.id} href={routes.app.transaction(t.id)} style={{ height: 56, display: 'flex', alignItems: 'center', gap: 12, borderBottom: `1px dashed ${i === items.length - 1 ? 'transparent' : 'var(--divider)'}`, color: 'var(--text-primary)', textDecoration: 'none' }}>
-                <span style={{ width: 36, height: 36, borderRadius: '50%', background: bg, color: fg, display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={v.d} size={18} /></span>
-                <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.3 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{relTime(t.at, at)}</span>
-                </span>
-                <span className="num" style={{ fontSize: 14, fontWeight: 400, color: !isLock && t.amount > 0 ? 'var(--success-text)' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                  {isLock ? money(t.amount) : signedMoney(t.amount)}
-                </span>
-              </Link>
-            );
-          })}
+        <div className="card tx-card">
+          {groups.map((g) => (
+            <section key={g.key} className="tx-day" aria-label={g.label}>
+              <h3 className="tx-day-t num">{g.label}</h3>
+              {g.rows.map((t) => {
+                const v = txVisual(t);
+                return (
+                  <Link key={t.id} href={routes.app.transaction(t.id)} className="tx-row">
+                    <span className="tx-ic" style={{ background: v.bg, color: v.fg }}><Icon d={v.d} size={19} /></span>
+                    <span className="tx-main">
+                      <b>{t.title}</b>
+                      <span className="tx-meta">
+                        {v.lock && <span className="lktype tx-lock" style={{ background: v.lock.bg, color: v.lock.fg }}><Icon d={v.lock.d} size={11} />{v.lock.label}</span>}
+                        <span className="num">{time(t.at)}</span>
+                        <span className="tx-sep" aria-hidden="true" />
+                        <span className="tx-src">{t.subtitle}</span>
+                      </span>
+                    </span>
+                    <span className="tx-amt">
+                      <span className="num v" style={{ color: v.amountColor }}>{v.amount}</span>
+                      {v.status
+                        ? <span className="lbl tx-st" style={{ background: v.status.bg, color: v.status.fg }}>{v.status.label}</span>
+                        : <small className="num">{v.sub2 ?? 'تومان'}</small>}
+                    </span>
+                  </Link>
+                );
+              })}
+            </section>
+          ))}
         </div>
       )}
     </div>

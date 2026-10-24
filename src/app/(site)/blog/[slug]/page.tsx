@@ -76,7 +76,7 @@ export default function BlogPostPage() {
             )}
             <div className="alert soft c-info" style={{ marginTop: 28 }}>
               <Icon name="info" />
-              <span>این مطلب جنبه آموزشی دارد و توصیه سرمایه‌گذاری نیست. پیش از تصمیم، امیدنامه و ریسک هر صندوق را مطالعه کنید.</span>
+              <span>این مطلب جنبه آموزشی دارد و توصیه سرمایه‌گذاری نیست. پیش از تصمیم، شرایط و ریسک هر دارایی را مطالعه کنید.</span>
             </div>
           </div>
         </div>

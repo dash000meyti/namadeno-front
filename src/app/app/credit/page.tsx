@@ -89,7 +89,7 @@ export default function CreditPage() {
         {p && c && (
           <Link href={routes.app.home} className="card" style={{ boxSizing: 'border-box', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none', color: 'var(--text-primary)', textDecoration: 'none' }}>
             <div className="row" style={{ height: 22, gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>ظرفیت وثیقه</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>ظرفیت پشتوانه</span>
               <span className="chip" style={{ height: 20 }}>فقط دارایی آزاد</span>
               <Chev style={{ marginRight: 'auto' }} />
             </div>
@@ -123,8 +123,8 @@ export default function CreditPage() {
           <span style={{ height: 24, display: 'flex', alignItems: 'center', fontSize: 15, fontWeight: 700 }}>محصولات اعتباری</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <Product href={routes.app.card} d={CI.card} tone="primary" title="اعتبار کارت نمادنو" sub="تا ۲۵٪ دارایی · شارژ آنی کارت" />
-            <Product href={routes.app.loan} d={CI.banknote} tone="secondary" title="وام با پشتوانه دارایی" sub="تا ۴۰٪ دارایی آزاد · با قفل وثیقه" active={!!activeLoan} />
-            <Product href={routes.app.installment} d={CI.cart} tone="info" title="خرید اقساطی" sub="از فروشگاه‌های طرف قرارداد با وثیقه دارایی" />
+            <Product href={routes.app.loan} d={CI.banknote} tone="secondary" title="وام با پشتوانه‌ی دارایی" sub="تا ۴۰٪ دارایی آزاد · بدون فروش دارایی" active={!!activeLoan} />
+            <Product href={routes.app.installment} d={CI.cart} tone="info" title="خرید اقساطی" sub="از فروشگاه‌های طرف قرارداد با پشتوانه‌ی دارایی" />
           </div>
         </div>
 
@@ -149,11 +149,11 @@ export default function CreditPage() {
           </div>
         )}
 
-        {/* locks created by credit products */}
+        {/* reserves created by credit products */}
         {p && creditLocks.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 'none' }}>
             <div className="row" style={{ height: 24, gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap' }}>دارایی‌های قفل‌شده برای اعتبار</span>
+              <span style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap' }}>دارایی‌های رزروشده برای اعتبار</span>
               <span className="num" style={{ marginRight: 'auto', fontSize: 12, fontWeight: 400, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>جمع {money(creditLockedSum)}</span>
             </div>
             <div className="card" style={{ boxSizing: 'border-box', padding: '2px 16px', display: 'flex', flexDirection: 'column' }}>
@@ -179,7 +179,7 @@ export default function CreditPage() {
             {otherLocked > 0 && (
               <Link href={routes.app.home} className="row" style={{ minHeight: 32, gap: 6, fontSize: 11, color: 'var(--text-secondary)', textDecoration: 'none', lineHeight: 1.5 }}>
                 <Icon d={CI.info} size={14} />
-                <span style={{ flex: 1 }}>{money(otherLocked)} تومان قفل دیگر (قفل زمانی و مرحله‌ای سازمان) در ظرفیت وثیقه حساب نمی‌شود</span>
+                <span style={{ flex: 1 }}>{money(otherLocked)} تومان دیگر برای پس‌انداز سازمانی یا دریافت مرحله‌ای رزرو است و در ظرفیت پشتوانه حساب نمی‌شود</span>
                 <Chev size={14} />
               </Link>
             )}

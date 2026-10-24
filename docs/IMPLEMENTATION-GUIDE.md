@@ -47,7 +47,7 @@ src/
 - همهٔ درخواست‌ها با `src/api/client.ts` به `NEXT_PUBLIC_API_BASE_URL` (پیش‌فرض `/api/v1`) می‌روند.
 - در توسعه `NEXT_PUBLIC_API_MOCKING=enabled` است و MSW در مرورگر پاسخ می‌دهد (`src/mocks/handlers`). دادهٔ ماک در localStorage می‌ماند؛ برای بازنشانی: `POST /api/v1/_mock/reset` (دکمه در «حساب من»).
 - قرارداد کامل API: `docs/API.md`. انواع: `src/types/domain.ts`.
-- قواعد کسب‌وکار ماک: آزاد = کل − مجموع قفل‌ها؛ «قابل برداشت/فروش/حداکثر» فقط از بخش آزاد؛ تبدیل فقط ریال ⇄ صندوق؛ سقف وام ۴۰٪ دارایی آزاد؛ خرید و فروش صندوق سطح ۳ احراز هویت، خدمات اعتباری سطح ۲.
+- قواعد کسب‌وکار ماک: آزاد = کل − مجموع قفل‌ها (در UI «رزرو»؛ `docs/WORDING.md`)؛ «قابل برداشت/فروش/حداکثر» فقط از بخش آزاد؛ تبدیل فقط ریال ⇄ صندوق؛ سقف وام ۴۰٪ دارایی آزاد؛ خرید و فروش صندوق سطح ۳ احراز هویت، خدمات اعتباری سطح ۲.
 - کاربر نمایشی: سارا محمدی (`u-1001`) در هلدینگ آرمان؛ ادمین سازمان: نیما رضایی؛ بهره‌بردار: علی نادری. کد OTP ماک همیشه `12345`.
 
 ### افزودن endpoint یا داده
@@ -79,7 +79,7 @@ src/
 | org-employees / org-employee / org-employee-new | `/org/employees` · `/org/employees/[id]` · `/org/employees/new` |
 | org-packages / org-package-detail | `/org/packages` · `/org/packages/[id]` |
 | org-package-recipients → org-package → org-package-review → org-package-sent | `/org/packages/new` → `/new/settings?draft=` → `/new/review?draft=` → `/new/sent?id=` |
-| org-credit / org-requests / org-reports / org-contract | `/org/credit` · `/org/requests` · `/org/reports` · `/org/contract` |
+| org-credit / org-requests / org-reports / org-contract | `/org/credit` · `/org/requests` · داشبورد `/org` (صفحه‌ی گزارش‌ها در داشبورد ادغام شد؛ گزارش‌های زمان‌بندی‌شده حذف شد) · `/org/contract` |
 | op-login / op-overview | `/op/login` · `/op` |
 | op-organizations / op-organization / op-org-new | `/op/organizations` · `/op/organizations/[id]` · `/op/organizations/new` |
 | op-users / op-user | `/op/users` · `/op/users/[id]` |

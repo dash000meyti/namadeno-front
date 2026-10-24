@@ -11,6 +11,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
 import { faDigits, money } from '@/lib/format';
+import { HOURGLASS } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { now } from '@/lib/clock';
 import type { BankAccount } from '@/types/domain';
@@ -138,9 +139,9 @@ export default function WithdrawPage() {
           )}
           {LOCKED > 0 && (
             <div style={{ minHeight: 28, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', marginTop: -8 }}>
-              <Icon name="lock" size={12} />
-              <span style={{ minWidth: 0 }}>قفل‌شده: <span className="num" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{money(LOCKED)}</span> — قابل برداشت نیست ·</span>
-              <Link href={routes.app.asset('rial')} style={{ height: 28, display: 'inline-flex', alignItems: 'center', padding: '0 4px', margin: '0 -4px', fontWeight: 600 }}>چرا؟</Link>
+              <Icon d={HOURGLASS} size={12} />
+              <span style={{ minWidth: 0 }}>رزروشده: <span className="num" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{money(LOCKED)}</span> · پس از آزاد شدن قابل برداشت است ·</span>
+              <Link href={routes.app.asset('rial')} style={{ height: 28, display: 'inline-flex', alignItems: 'center', padding: '0 4px', margin: '0 -4px', fontWeight: 600 }}>جزئیات</Link>
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
