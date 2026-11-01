@@ -87,10 +87,11 @@ export const MOVE_KIND: Record<StockMovement['kind'], { label: string; tone: Ton
   adjust: { label: 'اصلاح', tone: 'neutral' },
 };
 
+/** Actor groups shown in the console: the Namadno team and automatic actions are one group, «سامانه» (the data keeps both kinds). */
 export const ACTOR: Record<ActorKind, { label: string; one: string; d: string; tone: Tone }> = {
   user: { label: 'کاربران', one: 'کاربر', d: TI.user, tone: 'info' },
   org: { label: 'سازمان‌ها', one: 'سازمان', d: TI.org, tone: 'secondary' },
-  operator: { label: 'تیم نمادنو', one: 'تیم نمادنو', d: TI.team, tone: 'primary' },
+  operator: { label: 'سامانه', one: 'سامانه', d: TI.system, tone: 'neutral' },
   system: { label: 'سامانه', one: 'سامانه', d: TI.system, tone: 'neutral' },
 };
 

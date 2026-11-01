@@ -443,7 +443,7 @@ export const orgHandlers = [
     const o = org(orgOf(request));
     const b = await body<Partial<typeof o>>(request);
     if (b.settings) Object.assign(o.settings, b.settings);
-    if (b.admins) o.admins = b.admins;
+    // panel members are managed with /org/panel-users (one account per person; see org-people-extra)
     return ok(o);
   }),
 ];

@@ -27,17 +27,28 @@ export const useResetPassword = () =>
 export const useLogout = () =>
   useMutation({ mutationFn: () => post('/auth/logout'), onSettled: () => setSession(null, 'employee') });
 
+// Organization panel: the same Namadno account as the app (national ID + account password); only members with panel access may enter.
 // Panel sign-ins drop the cached data of the previous person (role, name and what they may see differ per account).
 export const useOrgLogin = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { email: string; password: string }) => post<Session>('/org/auth/login', v),
+    mutationFn: (v: { nationalId: string; password: string }) => post<Session>('/org/auth/login', v),
     onSuccess: (s) => { setSession(s, 'org_admin'); qc.removeQueries({ queryKey: qk.org.all }); },
   });
 };
 
-/** First login with a temporary password: set the user's own password. */
-export const useOrgSetPassword = () => useMutation({ mutationFn: (v: { password: string }) => post<{ ok: true }>('/org/auth/password', v) });
+/** «فراموشی رمز / فعال‌سازی»: a code goes to the mobile of the person's Namadno account. */
+export const useOrgRequestOtp = () =>
+  useMutation({ mutationFn: (v: { nationalId: string }) => post<{ sent: boolean; ttl: number; mobile: string; devCode?: string }>('/org/auth/otp', v) });
+
+/** Sets the Namadno account password (also used in the app), activates an invited panel member, and signs in. */
+export const useOrgResetPassword = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { nationalId: string; code: string; password: string }) => post<Session>('/org/auth/password/reset', v),
+    onSuccess: (s) => { setSession(s, 'org_admin'); qc.removeQueries({ queryKey: qk.org.all }); },
+  });
+};
 
 export const useOpLogin = () => {
   const qc = useQueryClient();

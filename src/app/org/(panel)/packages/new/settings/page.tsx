@@ -328,7 +328,7 @@ function SettingsStep() {
               actions={<Pill tone={msOk ? 'success' : 'error'}>{msOk ? '۱۰۰٪ · درست' : `${faDigits(msTotal)}٪ · باید ۱۰۰٪ باشد`}</Pill>}>
               <Table columns={msCols} rows={msRows} rowKey={(m) => String(m.key)} minWidth={540} empty={<Empty icon={I.flag} title="مرحله‌ای تعریف نشده است" />} />
               <div className="nm-tfoot">
-                <button type="button" className="nm-btn sm text" disabled={msRows.length >= 8} onClick={() => setMsRows((rows) => [...rows, { key: rowKey++, title: 'مرحله جدید', pct: '۰', due: nextDue(rows), approval: true }])}>
+                <button type="button" className="nm-btn sm text" disabled={msRows.length >= 20} title={msRows.length >= 20 ? 'هر مرحله حداقل ۵٪ است؛ بیش از ۲۰ مرحله ممکن نیست' : undefined} onClick={() => setMsRows((rows) => [...rows, { key: rowKey++, title: 'مرحله جدید', pct: '۰', due: nextDue(rows), approval: true }])}>
                   <Icon d={I.plus} size={16} strokeWidth={2} />افزودن مرحله
                 </button>
                 {errs.ms && <span className="nm-help err" role="alert" style={{ marginRight: 'auto' }}>{errs.ms}</span>}

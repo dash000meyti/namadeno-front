@@ -1,6 +1,6 @@
 'use client';
 /**
- * /op/activity — «فعالیت‌ها»: who did what across Namadno (users, organizations, the Namadno team, the system).
+ * /op/activity — «فعالیت‌ها»: who did what across Namadno (users, organizations, «سامانه» = the Namadno team and automatic actions).
  * Kit list page: 14-day trend (stacked by actor) → list card (actor tabs, category and organization selects, search,
  * server-paged table) → Inspector with details and links. Deep links: ?user=<id> (removable chip) and ?org=<id>
  * (pre-selects the organization filter). Data: useOpActivity (src/api/op-treasury-extra.ts).
@@ -8,14 +8,14 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useOpOrganizations, useOpUsers } from '@/api/op';
-import { useOpActivity, useTreasuryPositions, type ActivityCategory, type ActivityEvent, type ActivityPage, type ActorKind } from '@/api/op-treasury-extra';
+import { useOpActivity, useTreasuryPositions, type ActivityCategory, type ActivityEvent, type ActivityPage } from '@/api/op-treasury-extra';
 import {
   Bars, Card, Empty, Ident, Inspector, KV, KeyStats, Legend, List, ListRow, PageHeading, Pill, SearchField, Section, Select,
   SkeletonCard, Table, TableFoot, Tabs, Tile, Toolbar, Who, type Column,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { ACTOR, CATEGORY, TI, amt, fundUi, unitsText } from '@/components/op/treasury/ui';
-import { ACTOR_COL, ACTOR_KINDS, CAT_ICON, REF_META, actorHref, actorLead, actorSub } from '@/components/op/activity/meta';
+import { ACTOR_COL, ACTOR_GROUP, ACTOR_KINDS, CAT_ICON, REF_META, actorHref, actorLead, actorSub } from '@/components/op/activity/meta';
 import { dayTime } from '@/components/op/system/fmt';
 import { faDigits, jDate, jDayMonth, money, time } from '@/lib/format';
 import { routes } from '@/lib/routes';
@@ -24,6 +24,8 @@ const PAGE = 12;
 const HEAD = { title: 'فعالیت‌ها', crumbs: [{ label: 'پایش' }], sub: 'چه کسی چه کرد: کاربران، سازمان‌ها، تیم نمادنو و سامانه' };
 const CLOSE = 'M6 6l12 12M18 6L6 18';
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+/** Events of one actor group on a day (the «سامانه» group adds the Namadno team's and automatic events). */
+const inGroup = (d: ActivityPage['daily'][number], k: (typeof ACTOR_KINDS)[number]) => sum(ACTOR_GROUP[k].map((x) => d[x]));
 
 export default function OpActivityPage() {
   return (
@@ -38,7 +40,7 @@ function ActivityInner() {
   const router = useRouter();
   const userId = sp.get('user') ?? undefined;
   const org = sp.get('org') ?? 'all';
-  const [actor, setActor] = useState<ActorKind | 'all'>('all');
+  const [actor, setActor] = useState<(typeof ACTOR_KINDS)[number] | 'all'>('all');
   const [cat, setCat] = useState<ActivityCategory | 'all'>('all');
   const [q, setQ] = useState('');
   const [dq, setDq] = useState('');
@@ -50,7 +52,7 @@ function ActivityInner() {
   const page = pg.key === fkey ? pg.page : 1;
   const setPage = (p: number) => setPg({ key: fkey, page: p });
 
-  const act = useOpActivity({ actor, category: cat, orgId: org === 'all' ? undefined : org, userId, q: dq || undefined, limit: PAGE, offset: (page - 1) * PAGE });
+  const act = useOpActivity({ actor: actor === 'all' ? 'all' : ACTOR_GROUP[actor], category: cat, orgId: org === 'all' ? undefined : org, userId, q: dq || undefined, limit: PAGE, offset: (page - 1) * PAGE });
   const orgs = useOpOrganizations();
   const users = useOpUsers();
   const positions = useTreasuryPositions();
@@ -92,10 +94,10 @@ function ActivityInner() {
 
       <Card
         title="روند ۱۴ روز اخیر" sub="تعداد رویدادها به تفکیک انجام‌دهنده"
-        actions={<Legend items={ACTOR_KINDS.map((k) => ({ label: ACTOR[k].label, color: ACTOR_COL[k], value: faDigits(sum(daily.map((d) => d[k]))) }))} />}
+        actions={<Legend items={ACTOR_KINDS.map((k) => ({ label: ACTOR[k].label, color: ACTOR_COL[k], value: faDigits(sum(daily.map((d) => inGroup(d, k)))) }))} />}
       >
         {data
-          ? <Bars data={daily.map((d) => ({ label: jDayMonth(d.date), values: ACTOR_KINDS.map((k) => d[k]) }))} series={ACTOR_KINDS.map((k) => ({ name: ACTOR[k].label, color: ACTOR_COL[k] }))} height={150} label="تعداد رویدادهای ۱۴ روز اخیر به تفکیک انجام‌دهنده" />
+          ? <Bars data={daily.map((d) => ({ label: jDayMonth(d.date), values: ACTOR_KINDS.map((k) => inGroup(d, k)) }))} series={ACTOR_KINDS.map((k) => ({ name: ACTOR[k].label, color: ACTOR_COL[k] }))} height={150} label="تعداد رویدادهای ۱۴ روز اخیر به تفکیک انجام‌دهنده" />
           : <SkeletonCard h={150} />}
       </Card>
 
@@ -103,7 +105,7 @@ function ActivityInner() {
         <Toolbar>
           <Tabs label="انجام‌دهنده" value={actor} onChange={setActor} items={[
             { key: 'all' as const, label: 'همه', count: counts?.all },
-            ...ACTOR_KINDS.map((k) => ({ key: k, label: ACTOR[k].label, count: counts?.[k] })),
+            ...ACTOR_KINDS.map((k) => ({ key: k, label: ACTOR[k].label, count: counts ? sum(ACTOR_GROUP[k].map((x) => counts[x] ?? 0)) : undefined })),
           ]} />
           <span className="grow" />
           {userId && (

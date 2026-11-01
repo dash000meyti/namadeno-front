@@ -79,6 +79,11 @@
 .nm-auth-card h1{margin:0;font-size:22px;font-weight:700;line-height:1.35}
 .nm-auth-card .sub{margin:-10px 0 0;font-size:13.5px;line-height:1.7;color:var(--text-secondary)}
 .nm-auth-foot{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;font-size:12px;color:var(--text-secondary);text-align:center}
+.nm-auth .otpbox{height:54px;box-sizing:border-box;border-radius:12px;display:grid;place-items:center;font-size:24px;font-weight:400;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.nm-auth .nm-link{border:0;background:transparent;padding:0;font-family:inherit;font-size:13px;font-weight:600;line-height:1.6;color:var(--primary-text);cursor:pointer}
+.nm-auth .nm-link:hover{text-decoration:underline}
+.nm-auth .nm-note.warn .nm-link,.nm-auth .nm-note.err .nm-link{color:inherit;text-decoration:underline}
+.nm-auth .nm-field>.l .x[disabled]{opacity:.5;cursor:default}
 
 /* ── Date field + Jalali calendar (src/components/ui/DateInput.tsx) ── */
 .nm-dp-btn{flex:none;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-secondary);cursor:pointer;transition:background-color .12s,color .12s}

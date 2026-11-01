@@ -2,9 +2,7 @@
 import { PanelShell, type NavGroup, type SearchItem } from '@/components/panel/PanelShell';
 import { useOrgMe, useOrgRequests } from '@/api/org';
 import { useOrgNotifications } from '@/api/org-people-extra';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSession, setSession } from '@/api/client';
+import { setSession } from '@/api/client';
 import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { FEATURES } from '@/lib/features';
@@ -23,9 +21,6 @@ const I = {
 };
 
 export default function OrgPanelLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  // signed in with a temporary password → set a new password first (on the login page)
-  useEffect(() => { if (getSession('org_admin')?.mustChangePassword) router.replace(routes.org.login); }, [router]);
   const { data: me } = useOrgMe();
   const { data: pending } = useOrgRequests('pending');
   const count = pending?.length ?? 0;

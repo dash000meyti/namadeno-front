@@ -32,8 +32,6 @@ export interface Session {
   userId: ID;
   orgId?: ID;
   expiresAt: ISODate;
-  /** Signed in with a temporary password: the panel asks for a new password before anything else. */
-  mustChangePassword?: boolean;
 }
 
 /** KYC levels: 1 = Shahkar (mobile ↔ national ID), 2 = civil registry (birth date), 3 = SEJAM. */
@@ -56,6 +54,20 @@ export interface UserProfile {
   joinedAt: ISODate;
   avatarLetter: string;
   status: 'active' | 'suspended' | 'invited';
+  /**
+   * Organization-panel access of this account (the app and the panel share one account per person).
+   * Present only when the person is in `Organization.admins` of their organization.
+   */
+  panelAccess?: PanelAccess;
+}
+
+/** A person's access to their organization's panel (same account as the app; signs in with national ID + password). */
+export interface PanelAccess {
+  orgId: ID;
+  orgName: string;
+  panelRole: OrgPanelRole;
+  /** `invited` = the person has no active Namadno account yet (activation SMS sent); they cannot sign in until they set a password. */
+  status: 'active' | 'invited';
 }
 
 export interface BankAccount {
@@ -377,8 +389,27 @@ export interface Organization {
     cardEnabled: boolean;
     installmentEnabled: boolean;
   };
-  /** People who can sign in to the organization panel. `role` is the job title shown in the panel; `panelRole` sets what they may do. */
-  admins: { id: ID; name: string; role: string; email: string; panelRole?: OrgPanelRole; /** Has a temporary password set by the operator; changed on first login. */ mustChangePassword?: boolean }[];
+  /**
+   * Members with organization-panel access. There is one Namadno account per person for the app and the panel:
+   * `id` is that account's id (= `Employee.id` in this organization), and the person signs in to the panel with
+   * `nationalId` + their account password. `role` is the Persian label of `panelRole` («مدیر» / «تأییدکننده» / «کارشناس»).
+   */
+  admins: OrgPanelUser[];
+}
+
+/** One member of an organization with panel access (see `Organization.admins`). */
+export interface OrgPanelUser {
+  id: ID;
+  name: string;
+  /** Persian label of `panelRole`. */
+  role: string;
+  panelRole?: OrgPanelRole;
+  nationalId: string;
+  mobile: string;
+  /** `invited` = no active Namadno account yet; an activation SMS was sent and the person sets their own password. */
+  status: 'active' | 'invited';
+  /** Contact e-mail only (sign-in is by national ID). */
+  email?: string;
 }
 
 /**

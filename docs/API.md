@@ -5,7 +5,7 @@
 ## قراردادهای کلی
 
 - **Base URL:** `NEXT_PUBLIC_API_BASE_URL` (پیش‌فرض `/api/v1`).
-- **احراز هویت:** هدر `Authorization: Bearer <token>`. سه نقش: `employee` (اپ)، `org_admin` (پنل سازمان)، `operator` (کنسول بهره‌بردار). فرانت توکن هر نقش را جدا نگه می‌دارد (`src/api/client.ts`) و بر اساس پیشوند مسیر (`/org/…`، `/op/…`، بقیه) می‌فرستد.
+- **احراز هویت:** هدر `Authorization: Bearer <token>`. سه نقش: `employee` (اپ)، `org_admin` (پنل سازمان)، `operator` (کنسول بهره‌بردار). فرانت توکن هر نقش را جدا نگه می‌دارد (`src/api/client.ts`) و بر اساس پیشوند مسیر (`/org/…`، `/op/…`، بقیه) می‌فرستد. `employee` و `org_admin` **یک حساب** هستند (همان شخص، همان کد ملی و رمز)؛ فقط نشست‌ها جدا نگه داشته می‌شوند. بهره‌بردارها حساب‌های جدای تیم نمادنو هستند.
 - **پول:** عدد صحیح به **تومان**. **تاریخ:** رشته ISO-8601 (UTC)؛ نمایش شمسی در فرانت. **واحد صندوق:** عدد اعشاری.
 - **خطا:** وضعیت HTTP مناسب + بدنه `ApiError { code, message, details? }`. `message` فارسی و قابل نمایش به کاربر است. کدهای پرکاربرد: `kyc_required` (۴۰۳، `details.requiredLevel`)، `insufficient_free`، `over_limit`، `active_loan`، `not_found`، `bad_code`، `weak_password`، `over_budget`.
 - **انواع داده:** `src/types/domain.ts` منبع حقیقت شکل پاسخ‌هاست.
@@ -24,15 +24,16 @@
 | POST | `/auth/signup` | `{ nationalId, mobile, password }` | `Session` |
 | POST | `/auth/password/reset` | `{ mobile, code, password }` | `Session` |
 | POST | `/auth/logout` | — | `{ ok }` |
-| POST | `/org/auth/login` | `{ email, password }` — در ماک، ایمیل یکی از `admins` هر سازمان با همان شخص وارد می‌شود (مدیر / تأییدکننده / کارشناس)؛ ایمیل دیگر = کارشناس سازمان نمونه. کاربری که با رمز موقت ساخته شده `Session.mustChangePassword: true` می‌گیرد و پیش از ورود به پنل باید رمز تازه بسازد | `Session` (org_admin) |
-| POST | `/org/auth/password` | `{ password }` — اولین ورود با رمز موقت: رمز تازه (حداقل ۸ نویسه، حرف و عدد → وگرنه `422 weak_password`)؛ `mustChangePassword` پاک می‌شود | `{ ok }` |
+| POST | `/org/auth/login` | `{ nationalId, password }` — **همان حساب نمادنو** (کد ملی + رمز حساب، همان رمز اپ). فقط عضوی که در `Organization.admins` سازمانش است وارد می‌شود؛ `Session.userId` همان شناسه‌ی حساب (`UserProfile.id` = `Employee.id`) است. خطاها: `422 bad_national_id` · `401 bad_credentials` · `403 no_panel_access` (حساب هست ولی دسترسی پنل ندارد) · `403 not_activated` (عضو دعوت‌شده‌ای که هنوز رمز نساخته). در ماک هر رمز ۶+ نویسه پذیرفته می‌شود | `Session` (org_admin) |
+| POST | `/org/auth/otp` | `{ nationalId }` — «فراموشی رمز / فعال‌سازی»: کد به موبایل ثبت‌شده در حساب پیامک می‌شود · `403 no_panel_access` · `422 no_mobile` | `{ sent, ttl, mobile (پوشیده، مثل 0912•••4567), devCode? }` |
+| POST | `/org/auth/password/reset` | `{ nationalId, code, password }` — رمز **حساب نمادنو** را می‌سازد یا عوض می‌کند (در اپ هم همین رمز)؛ عضو دعوت‌شده فعال می‌شود (`admins[].status` و کارمند → `active`) و وارد پنل می‌شود · `422 bad_code` · `422 weak_password` (حداقل ۸ نویسه، حرف و عدد) | `Session` (org_admin) |
 | POST | `/op/auth/login` | `{ email, password, otp? }` | `Session` (operator) |
 
 ## اپ کارمند
 
 | روش | مسیر | توضیح / بدنه | پاسخ |
 |---|---|---|---|
-| GET | `/me` | پروفایل | `UserProfile` |
+| GET | `/me` | پروفایل؛ `panelAccess?: { orgId, orgName, panelRole, status }` وقتی همین حساب در پنل سازمانش دسترسی دارد (اپ ردیف «پنل سازمان» را در «حساب من» نشان می‌دهد) | `UserProfile` |
 | PATCH | `/me/profile` | `Partial<UserProfile>` | `UserProfile` |
 | POST | `/me/password` | `{ current?, next }` | `{ ok }` |
 | GET | `/me/portfolio` | کل دارایی، آزاد/قفل، هر کیف/صندوق با قفل‌ها | `Portfolio` |
@@ -66,7 +67,7 @@
 
 | روش | مسیر | توضیح | پاسخ |
 |---|---|---|---|
-| GET | `/org/me` | سازمان و ادمین جاری؛ `admin.panelRole` نقش است: `admin` «مدیر» · `approver` «تأییدکننده» · `specialist` «کارشناس» (نبودنش = `specialist`)؛ `admin.role` همان برچسب فارسی نقش است | `{ organization, admin }` |
+| GET | `/org/me` | سازمان و عضو واردشده؛ `admin` یکی از `organization.admins` است (`OrgPanelUser`: `id` = شناسه‌ی حساب، `nationalId`، `mobile`، `status`)؛ `admin.panelRole` نقش است: `admin` «مدیر» · `approver` «تأییدکننده» · `specialist` «کارشناس» (نبودنش = `specialist`)؛ `admin.role` همان برچسب فارسی نقش است | `{ organization, admin }` |
 | GET | `/org/dashboard` | KPIها، بسته‌ها و درخواست‌های اخیر | `OrgDashboard` |
 | GET | `/org/employees?q=&status=&department=` · `/org/employees/:id` | | `Employee[]` · `{ employee, packages, holdings?, requests, loans }` |
 | POST/PATCH | `/org/employees` · `/org/employees/:id` | ساخت: فقط `nationalId` الزامی است؛ `department` خالی = «سایر»؛ `fullName` خالی از ثبت احوال پر می‌شود. ویرایش: `department` خالی = «سایر» | `Employee` |
@@ -83,7 +84,7 @@
 | GET | `/org/credit` · `/org/reports` | `/org/reports` (ماهانه‌ی ارسال) و `/org/reports/overview` و خروجی‌ها در داشبورد سازمان نمایش داده می‌شوند؛ صفحه‌ی جدای گزارش‌ها حذف شد | |
 | GET/PATCH | `/org/contract` | تنظیمات قرارداد و کاربران پنل | `Organization` |
 
-> **مراحل قرارداد (دریافت مرحله‌ای):** هر مرحله سررسید (`dueDate`) **الزامی** دارد (ساخت و ویرایش پیش‌نویس: `422 bad_steps` «سررسید همه‌ی مراحل الزامی است.»؛ سررسید باید در آینده و هم‌زمان یا پس از مرحله‌ی قبل باشد) و `requiresApproval` اختیاری (نبودنش = `true`). مراحل به ترتیب پیش می‌روند و همیشه یک مرحله‌ی باز `pending_approval` (مرحله‌ی جاری) است. در سررسید مرحله‌ی جاری: اگر `requiresApproval: false` باشد خودکار آزاد می‌شود (درخواست‌های باز آن مرحله با `decidedBy: 'سامانه'` تأیید می‌شوند) و مرحله‌ی بعد بررسی می‌شود؛ اگر تأیید لازم باشد برای هر گیرنده‌ی پذیرفته یک درخواست `milestone_release` با `trigger: 'due_date'`، `packageId`، `stepId` و یادداشت «سررسید این مرحله رسیده است.» باز می‌شود (برای هر مرحله و گیرنده فقط یک بار). قرارداد تا پذیرش کارمند شروع نمی‌شود. **بک‌اند واقعی باید این پردازش را زمان‌بندی‌شده (مثلاً روزانه) اجرا کند**؛ ماک آن را پیش از هر درخواست API اجرا می‌کند (`processDueMilestones` در `src/mocks/handlers/org.ts`). وضعیت `reclaimed` («بازپس گرفته شد»، با `reclaimedAt` و `reclaimNote`) مثل `released` نهایی است.
+> **مراحل قرارداد (دریافت مرحله‌ای):** تعداد مراحل را سازمان برای هر بسته تعیین می‌کند (سقفی ندارد؛ حداقل یک مرحله، هر مرحله حداقل ۵٪ و جمع ۱۰۰٪ — پس عملاً حداکثر ۲۰ مرحله). هر مرحله سررسید (`dueDate`) **الزامی** دارد (ساخت و ویرایش پیش‌نویس: `422 bad_steps` «سررسید همه‌ی مراحل الزامی است.»؛ سررسید باید در آینده و هم‌زمان یا پس از مرحله‌ی قبل باشد) و `requiresApproval` اختیاری (نبودنش = `true`). مراحل به ترتیب پیش می‌روند و همیشه یک مرحله‌ی باز `pending_approval` (مرحله‌ی جاری) است. در سررسید مرحله‌ی جاری: اگر `requiresApproval: false` باشد خودکار آزاد می‌شود (درخواست‌های باز آن مرحله با `decidedBy: 'سامانه'` تأیید می‌شوند) و مرحله‌ی بعد بررسی می‌شود؛ اگر تأیید لازم باشد برای هر گیرنده‌ی پذیرفته یک درخواست `milestone_release` با `trigger: 'due_date'`، `packageId`، `stepId` و یادداشت «سررسید این مرحله رسیده است.» باز می‌شود (برای هر مرحله و گیرنده فقط یک بار). قرارداد تا پذیرش کارمند شروع نمی‌شود. **بک‌اند واقعی باید این پردازش را زمان‌بندی‌شده (مثلاً روزانه) اجرا کند**؛ ماک آن را پیش از هر درخواست API اجرا می‌کند (`processDueMilestones` در `src/mocks/handlers/org.ts`). وضعیت `reclaimed` («بازپس گرفته شد»، با `reclaimedAt` و `reclaimNote`) مثل `released` نهایی است.
 
 > **ویزارد ارسال بسته (UI):** نوع بسته پرسیده نمی‌شود؛ `reason` از شیوه‌ی دریافت می‌آید (مرحله‌ای = `project_contract`، بقیه همان قبلی یا `bonus`). برداشت نقدی هم پرسیده نمی‌شود؛ `cashAllowed` همان `settings.cashWithdrawalAllowed` قرارداد است (بخش آزاد قابل برداشت است). گیرندگان را می‌شود از فایل اکسل (کد ملی، مبلغ) انتخاب کرد؛ آن‌وقت مبلغ هر نفر در مرحله‌ی تنظیمات فقط‌خواندنی است. `OrgPackage.amountSource` اختیاری است (نبودنش = `uniform`).
 
@@ -244,6 +245,12 @@ DELETE /api/v1/org/departments/:id                   → { ok: true, moved: numb
        Every organization has the default unit «سایر» (`isDefault`), created with the organization.
 POST   /api/v1/org/departments/:id/members { employeeIds: string[] } → OrgDepartment (moves those employees into the unit) · 403 · 404 · 422 no_employees
        Writes are allowed only for the organization's administrator (`admins[].panelRole === 'admin'`).
+POST   /api/v1/org/panel-users        { employeeId, panelRole } → 201 Organization['admins'] · 404 not_found (not an employee) · 409 already_member · 422 bad_role | inactive_member
+PATCH  /api/v1/org/panel-users/:id    { panelRole }             → Organization['admins'] · 404 · 422 bad_role | last_admin
+DELETE /api/v1/org/panel-users/:id                              → Organization['admins'] · 404 · 422 self | last_admin
+       Panel access is chosen from the organization's employees (one Namadno account per person). Admin only (403 forbidden_role).
+       An `invited` employee (no active account yet) gets status `invited`: an activation SMS is sent and they sign in after
+       setting a password (`/org/auth/password/reset`). `PATCH /org/contract` no longer changes `admins`.
 POST /api/v1/org/employees  (override of the core endpoint)
      { nationalId, department?, fullName?, mobile?, employeeCode?, jobTitle?, joinedAt?, email?, role?, cardLimitPct?, sendSms? }
      Only the national id is required. No unit → «سایر». No name → looked up by national id (civil registry; simulated in the mock).
@@ -255,6 +262,8 @@ POST /api/v1/org/requests/:id/decision  (pass-through) notifies the employee's a
 
 Types: src/api/org-people-extra.ts · `OrgDepartment`, `OrgPanelRole` in src/types/domain.ts
 ```
+
+> **یک حساب برای اپ و پنل سازمان:** هر شخص یک حساب نمادنو دارد (کد ملی + موبایل + رمز). عضویت در سازمان = رکورد `Employee` (با همان `id` حساب)؛ دسترسی پنل = ورودی همان شخص در `Organization.admins` (`OrgPanelUser`). ورود پنل با کد ملی و رمز همان حساب است؛ ایمیل فقط برای تماس است و رمز موقت وجود ندارد. هر حساب فقط در یک سازمان دسترسی پنل دارد. مدیر سازمان دسترسی را از میان کارکنان می‌دهد (`/org/panel-users`)؛ بهره‌بردار هنگام ساخت سازمان یا از صفحه‌ی سازمان، با کد ملی و موبایل اضافه می‌کند (`hrUsers`): حساب موجود فوراً دسترسی می‌گیرد، در غیر این صورت حساب «دعوت‌شده» ساخته و پیامک فعال‌سازی فرستاده می‌شود؛ شخص در هر دو حالت عضو سازمان (واحد «سایر») هم می‌شود. «کارکنان» نقش پنل هر نفر را نشان می‌دهد.
 
 > **واحدها و نقش‌های پنل سازمان:** هر کاربر پنل (`Organization.admins[]`) یک `panelRole` دارد. فقط `admin` (مدیر سازمان) واحد می‌سازد، نامش را عوض می‌کند یا حذفش می‌کند؛ بک‌اند واقعی هم باید همین را بررسی کند و برای بقیه ۴۰۳ `forbidden_role` بدهد. خواندن فهرست واحدها برای همه‌ی نقش‌ها آزاد است (فیلتر و فرم کارکنان از آن استفاده می‌کنند). کارکنان با نام واحد به آن وصل‌اند (`Employee.department`)؛ تغییر نام واحد، واحد کارکنانش را هم عوض می‌کند. هر سازمان از زمان ساخت واحد پیش‌فرض «سایر» (`isDefault`) دارد: کارمند هیچ‌وقت بی‌واحد نیست؛ واحد خالی در ساخت، ورود از اکسل یا ویرایش کارمند «سایر» می‌شود و با حذف هر واحد، همکارانش به «سایر» می‌روند. «سایر» نه حذف می‌شود و نه نامش عوض می‌شود (`default_unit`). در UI، صفحه‌ی «واحدها» (`/org/departments`) و آیتم منوی آن فقط برای مدیر سازمان دیده می‌شود.
 
@@ -309,9 +318,13 @@ Registered before the core handlers, so the overrides below win; a resolver that
 through to the core handler. Types: src/api/op-core-extra.ts.
 
 ── New endpoints ──
-GET    /api/v1/op/core/org-ext                         → Record<orgId, OrgContractExt>   (metrics + contract terms + HR users of every organization)
+GET    /api/v1/op/core/org-ext                         → Record<orgId, OrgContractExt>   (metrics + contract terms + panel members of every organization;
+                                                          `hrUsers` is a read view of Organization.admins with last sign-in and 2FA; `hrEmail` = contact e-mail)
 GET    /api/v1/op/core/organizations/:id/credit        → OrgCreditRow[]                   (loans / card credit / BNPL of the organization's users)
-POST   /api/v1/op/core/organizations/:id/hr-users      { name, email, role } → HrUser (status «invited»)   · 422 missing_fields
+POST   /api/v1/op/core/organizations/:id/hr-users      { name, nationalId, mobile, role } → 201 HrUser   (adds a panel member; `role` = Persian label)
+       An existing Namadno account (matched by national ID) gets access at once (`active`); otherwise an account is opened as
+       `invited` and an activation SMS is sent. The person also becomes an employee of the organization (unit «سایر»).
+       · 422 missing_fields | bad_national_id | bad_mobile · 409 already_member | other_org (one organization per account)
 GET    /api/v1/op/core/overview?range=7|30|90          → OverviewExt                      (daily flow series, KPI deltas, lock counts, service health, feed)
 GET    /api/v1/op/core/users-meta                      → UsersMeta                        (facility kinds / lock types / KYC state per user + platform totals)
 GET    /api/v1/op/core/users/:id/extra                 → OpUserExtra                      (facilities, operator notes, audit log, devices)
@@ -319,16 +332,17 @@ POST   /api/v1/op/core/users/:id/notes                 { text, tag } → UserNot
 POST   /api/v1/op/core/users/:id/reset-password        {} → { sent: true }
 
 ── Overrides of core endpoints ──
-POST   /api/v1/op/organizations          body: Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: {name,email,mobile?,role,tempPassword?}[]; sendInvites?: boolean }
-       sendInvites: true → SMS invite link (the user sets a password). sendInvites: false → every user needs tempPassword
-       (≥ 8 chars, letters + digits; 422 temp_password_required | weak_password); the user changes it on first login
-       (admins[].mustChangePassword, HrUser.access 'temp_password'). The real backend stores only a hash.
+POST   /api/v1/op/organizations          body: Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: { name, nationalId, mobile, role }[] }
+       The first panel members, handled like hr-users above (no e-mail, no temporary passwords: they sign in with their own
+       Namadno account; people without an account get an activation SMS).
                                          → Organization (201, status «onboarding»)   · 422 missing_name | invalid_employees | missing_funds
+                                           | missing_fields | bad_national_id | bad_mobile | duplicate_national_id · 409 other_org
 PATCH  /api/v1/op/organizations/:id      body: Partial<Organization> & { contract?: Partial<OrgContractExt>; changeNote?: string }
                                          → Organization; a change of settings/contract bumps the contract version (OrgContractExt.versions)
        The contract only allows the receive policies (settings.lockPolicies: vesting / milestone); it sets no maximum savings
        months or milestone steps. The organization sets the release date or the steps of each package (OrgContractExt
        vestingMaxMonths / milestoneMaxSteps were removed).
+GET    /api/v1/op/users · /op/users/:id  each user carries `panelAccess?` (UserProfile) when they have organization-panel access; `q` also matches the national ID
 GET    /api/v1/op/users/:id              platform users without an app account get a real Portfolio built from their operator-side breakdown
 POST   /api/v1/op/users/:id/legal-hold   { holdingKind, amount, reference, reason } → Lock   · 422 missing_reference | invalid_amount | exceeds_free
                                          (locks from the FREE part only; adds a «lock» transaction + notification for app users)
@@ -450,6 +464,7 @@ Action queue + activity
         request_sla (pending operator requests whose SLA ends within 4h; credit kinds hidden while FEATURES.orgCredit is off) · risk_alert (open high/critical) ·
         milestone_due (approval steps due within 3 days) · org_onboarding · service_incident (open incidents)
   GET   /api/v1/op/activity?actor=user|org|operator|system&category&orgId&userId&q&limit&offset
+        actor may be a comma list (the console's «سامانه» tab = operator,system: Namadno team and automatic actions together)
         → ActivityPage { items[] newest first, total, counts{all, user, org, operator, system} (ignoring the actor filter), daily[14] }
         userId matches the actor or any ref. Events are written by the flows below and by the treasury endpoints.
         href fields may carry ?id= (requests, risk, orders, cash) or ?status=overdue (cash) for the pages to open the item.

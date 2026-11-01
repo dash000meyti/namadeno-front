@@ -22,13 +22,16 @@ export const CAT_ICON: Record<ActivityCategory, string> = {
   request: 'M9 4h6v3H9zM7 5.5H5V21h14V5.5h-2M9 12h6M9 16h4',
 };
 
-export const ACTOR_KINDS: ActorKind[] = ['user', 'org', 'operator', 'system'];
-/** Chart colour per actor kind. */
-export const ACTOR_COL: Record<ActorKind, string> = { user: 'var(--chart-3)', org: 'var(--chart-2)', operator: 'var(--chart-1)', system: 'var(--chart-4)' };
+/** Actor groups of the tabs and the chart. «سامانه» (`system`) also covers actions of the Namadno team (`operator`). */
+export const ACTOR_KINDS: ('user' | 'org' | 'system')[] = ['user', 'org', 'system'];
+/** Actor kinds of the data behind each group (API filter `actor`, counts and the daily chart). */
+export const ACTOR_GROUP: Record<'user' | 'org' | 'system', ActorKind[]> = { user: ['user'], org: ['org'], system: ['operator', 'system'] };
+/** Chart colour per actor group. */
+export const ACTOR_COL: Record<ActorKind, string> = { user: 'var(--chart-3)', org: 'var(--chart-2)', operator: 'var(--chart-1)', system: 'var(--chart-1)' };
 
 const first = (s?: string) => (s ?? '').trim().charAt(0) || '؟';
 
-/** Avatar (people, organizations) or tile (Namadno team, system) of who did it. */
+/** Avatar (people, organizations) or tile («سامانه»: Namadno team and automatic) of who did it. */
 export function actorLead(e: ActivityEvent, size?: 'sm' | 'md' | 'lg') {
   const a = e.actor;
   if (a.kind === 'user') return <Ava letter={first(a.name)} id={a.id ?? a.name} size={size} />;
@@ -41,7 +44,7 @@ export function actorSub(e: ActivityEvent): string {
   const a = e.actor;
   if (a.kind === 'user') return e.orgName ? `کاربر · ${e.orgName}` : 'کاربر';
   if (a.kind === 'org') return e.orgName ? `سازمان · ${e.orgName}` : 'سازمان';
-  if (a.kind === 'operator') return 'تیم نمادنو';
+  if (a.kind === 'operator') return 'سامانه';
   return 'خودکار';
 }
 

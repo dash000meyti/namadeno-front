@@ -1022,7 +1022,9 @@ export function activityPage(d: MockDB, f: ActivityFilter): ActivityPage {
     && (!q || [e.title, e.sub, e.actor.name, e.orgName].some((x) => x?.includes(q))));
   const kinds: ActorKind[] = ['user', 'org', 'operator', 'system'];
   const counts = { all: base.length, ...Object.fromEntries(kinds.map((k) => [k, base.filter((e) => e.actor.kind === k).length])) } as ActivityPage['counts'];
-  const list = (f.actor && f.actor !== 'all' ? base.filter((e) => e.actor.kind === f.actor) : base).sort((a, b) => b.at.localeCompare(a.at));
+  // `actor`: one kind or a comma list (the console's «سامانه» group = operator + system)
+  const actors = f.actor && f.actor !== 'all' ? (Array.isArray(f.actor) ? f.actor : String(f.actor).split(',')) : null;
+  const list = (actors ? base.filter((e) => actors.includes(e.actor.kind)) : base).sort((a, b) => b.at.localeCompare(a.at));
   const offset = Math.max(0, Number(f.offset) || 0);
   const limit = Math.max(1, Math.min(200, Number(f.limit) || 50));
   const daily = Array.from({ length: 14 }, (_, i) => {

@@ -1,13 +1,15 @@
 'use client';
 /**
  * Employee inspector of the employees list (kit Inspector — replaces the old fixed side panel):
- * identity → key numbers → pending milestone → assets with the free/reserved split → mix → latest packages; actions in the footer.
+ * identity → key numbers → pending milestone → assets with the free/reserved split → mix → latest packages → organization-panel
+ * access (role or «ندارد»; the administrator opens PanelAccessDialog from here); actions in the footer.
  * Also exports the employee status tones and the per-employee package status used by the employee screens.
  */
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { useOrgEmployee } from '@/api/org';
 import type { EmpFacts } from '@/api/org-people-extra';
-import type { Employee, OrgPackage } from '@/types/domain';
+import type { Employee, OrgPackage, OrgPanelUser } from '@/types/domain';
 import { Allocation, Ava, BigNum, Empty, FreeLocked, Inspector, KV, KeyStats, List, ListRow, Note, Pill, Section, Tile, Who, type Tone } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { LockTypeChip } from '@/components/ui/LockBar';
@@ -15,6 +17,7 @@ import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { faDigits, jDayMonth, jMonthYear, money } from '@/lib/format';
 import { EMP_STATUS, I, KIND_COLOR, million } from './shared';
+import { PANEL_ROLE_TONE } from './PanelAccessDialog';
 
 /** Employee status → kit tone (labels: EMP_STATUS in ./shared). */
 export const EMP_TONE: Record<Employee['status'], Tone> = { active: 'success', invited: 'warning', inactive: 'error' };
@@ -44,10 +47,12 @@ export function SuspendNotice() {
 
 const inMillion = (n: number) => (n ? `${million(n)} میلیون` : '—');
 
-export function EmployeeInspector({ emp, facts, onClose, onSuspend, onReactivate, onSendPackage, sending, busy }: {
+export function EmployeeInspector({ emp, facts, onClose, onSuspend, onReactivate, onSendPackage, sending, busy, panelMember, onPanelAccess }: {
   emp: Employee; facts?: EmpFacts; onClose: () => void; onSuspend: () => void; onReactivate: () => void; onSendPackage: () => void;
   /** a package draft is being created */ sending?: boolean;
   /** a status change is in flight */ busy?: boolean;
+  /** the employee's organization-panel access, if any */ panelMember?: OrgPanelUser;
+  /** opens PanelAccessDialog — passed only for the organization's administrator */ onPanelAccess?: () => void;
 }) {
   const detail = useOrgEmployee(emp.id);
   const inactive = emp.status === 'inactive';
@@ -112,6 +117,22 @@ export function EmployeeInspector({ emp, facts, onClose, onSuspend, onReactivate
               })}
             </List>
           )}
+      </Section>
+
+      <Section
+        title="دسترسی پنل سازمان"
+        action={onPanelAccess && (panelMember || !inactive)
+          ? <button type="button" className="nm-btn sm text" onClick={onPanelAccess}>{panelMember ? 'تغییر دسترسی' : 'دادن دسترسی پنل'}</button>
+          : undefined}
+      >
+        <KV rows={[
+          ['نقش در پنل', panelMember
+            ? <Pill key="r" tone={PANEL_ROLE_TONE[panelMember.panelRole ?? 'specialist']}>{panelMember.role}</Pill>
+            : <span key="r" className="mute">ندارد</span>],
+          ...(panelMember ? [['ورود', panelMember.status === 'invited'
+            ? <Pill key="s" tone="warning" dot>در انتظار فعال‌سازی</Pill>
+            : <span key="s">با کد ملی و رمز حساب نمادنو</span>] as [string, ReactNode]] : []),
+        ]} />
       </Section>
     </Inspector>
   );
