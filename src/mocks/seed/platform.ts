@@ -146,8 +146,8 @@ export const PRODUCTS: CreditProduct[] = [
 
 export const RULES: PlatformRule[] = [
   { id: 'r-lock-collateral', group: 'locks', title: 'پشتوانه‌ی وام و اعتبار', description: 'هنگام دریافت وام یا اعتبار کارت، معادل مبلغ از دارایی آزاد به‌عنوان پشتوانه رزرو می‌شود.', enabled: true },
-  { id: 'r-lock-vesting', group: 'locks', title: 'پس‌انداز سازمانی (Vesting)', description: 'سازمان می‌تواند بسته را تا تاریخ مشخص برای همکار پس‌انداز کند.', enabled: true, value: 365, unit: 'روز حداکثر' },
-  { id: 'r-lock-milestone', group: 'locks', title: 'دریافت مرحله‌ای', description: 'سازمان مبلغ قرارداد را رزرو می‌کند و با تأیید هر مرحله، سهم همان مرحله آزاد می‌شود.', enabled: true, value: 10, unit: 'مرحله حداکثر' },
+  { id: 'r-lock-vesting', group: 'locks', title: 'پس‌انداز سازمانی (Vesting)', description: 'سازمان می‌تواند بسته را تا تاریخ مشخص برای همکار پس‌انداز کند.', enabled: true },
+  { id: 'r-lock-milestone', group: 'locks', title: 'دریافت مرحله‌ای', description: 'سازمان مبلغ قرارداد را رزرو می‌کند و با تأیید هر مرحله، سهم همان مرحله آزاد می‌شود.', enabled: true },
   { id: 'r-lock-installment', group: 'locks', title: 'پشتوانه‌ی خرید اقساطی', description: 'با پرداخت هر قسط بخشی از پشتوانه آزاد می‌شود.', enabled: true },
   { id: 'r-lock-legal', group: 'locks', title: 'مسدودی قانونی', description: 'فقط بهره‌بردار با شماره دستور مرجع می‌تواند اعمال یا رفع کند.', enabled: true },
   { id: 'r-limit-withdraw-daily', group: 'limits', title: 'سقف برداشت روزانه', description: 'حداکثر برداشت از کیف پول ریالی در یک روز.', enabled: true, value: 100_000_000, unit: 'تومان' },

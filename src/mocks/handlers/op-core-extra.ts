@@ -49,7 +49,7 @@ function defaultExt(o: Organization): OrgContractExt {
   return {
     aum: 0, locked: 0, lockByType: {}, growthPct: 0, aumHistory: Array(12).fill(0), aumMix: { gold: 0, fixed: 0, rial: 0 },
     credit: { activeLoans: 0, outstanding: 0, cardHolders: 0, overdue: 0 }, newEmployeesMonth: 0,
-    cardPct: 20, perPersonCap: 30_000_000, vestingMaxMonths: 3, milestoneMaxSteps: 5, allowCollateral: true, allowInstallmentLock: o.settings.installmentEnabled,
+    cardPct: 20, perPersonCap: 30_000_000, allowCollateral: true, allowInstallmentLock: o.settings.installmentEnabled,
     financeApproval: true, version: 1, versions: [{ v: 1, note: 'عقد قرارداد اولیه', at: o.contractStart, by: OPERATOR }],
     accountManager: OPERATOR, city: 'تهران', hrEmail: o.admins[0]?.email ?? '', hrUsers: [], createdAt: nowIso(),
   };

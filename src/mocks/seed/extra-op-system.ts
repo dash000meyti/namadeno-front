@@ -36,7 +36,6 @@ const FUND_META: Record<string, { lock: Partial<LockMap>; holders: Partial<LockM
 
 const NEW_RULES: PlatformRule[] = [
   { id: 'r-pkg-min-amount', group: 'limits', title: 'حداقل مبلغ بسته', description: 'کمتر از این مبلغ ارسال نمی‌شود', enabled: true, value: 1_000_000, unit: 'تومان' },
-  { id: 'r-pkg-max-vesting', group: 'locks', title: 'حداکثر مدت پس‌انداز بسته', description: 'سقف مدت پس‌انداز بسته‌های سازمانی', enabled: true, value: 12, unit: 'ماه' },
   { id: 'r-pkg-cfo-approval', group: 'limits', title: 'نیاز به تأیید نهایی تأییدکننده‌ی سازمان', description: 'برای بسته‌های بالای ۵۰۰ میلیون', enabled: true },
   { id: 'r-withdraw-manual', group: 'limits', title: 'نیاز به تأیید دستی', description: 'برداشت‌های بالای ۲۰۰ میلیون تومان', enabled: true },
   { id: 'r-credit-min-score', group: 'credit', title: 'حداقل امتیاز اعتباری', description: 'برای وام و خرید اقساطی · بازه ۳۰۰ تا ۹۰۰', enabled: true, value: 600, unit: 'امتیاز' },
@@ -48,7 +47,6 @@ const NEW_RULES: PlatformRule[] = [
   { id: 'r-kyc-l2-withdraw-cap', group: 'kyc', title: 'سقف برداشت بدون تأیید دستی', description: 'سطح ۲ · در هر روز', enabled: true, value: 10_000_000, unit: 'تومان' },
   { id: 'r-lock-collateral-ltv', group: 'locks', title: 'حداکثر نسبت پشتوانه', description: 'پشتوانه‌ی وام و اعتبار', enabled: true, value: 70, unit: '٪ آزاد' },
   { id: 'r-lock-installment-share', group: 'locks', title: 'حداکثر سهم از آزاد', description: 'پشتوانه‌ی خرید اقساطی', enabled: true, value: 50, unit: '٪' },
-  { id: 'r-lock-milestone-months', group: 'locks', title: 'حداکثر مدت قرارداد', description: 'دریافت مرحله‌ای', enabled: true, value: 24, unit: 'ماه' },
   { id: 'r-lock-legal-ref', group: 'locks', title: 'شماره مرجع الزامی', description: 'مسدودی قانونی', enabled: true },
   { id: 'r-lock-legal-2nd', group: 'locks', title: 'رفع با تأیید نفر دوم', description: 'مسدودی قانونی', enabled: true },
   { id: 'r-lock-collateral-by', group: 'locks', title: 'ایجادکننده رزرو پشتوانه', description: 'system,org,operator', enabled: true, value: 'system' },
@@ -115,8 +113,6 @@ export function seed_opSystem(db: MockDB) {
   db.products.forEach((p) => { (p as typeof p & { meta: unknown }).meta = { ...(pm[p.id] ?? {}), updatedAt: jalaliToIso(1405, 7, 2) }; });
 
   // ── rules: align existing values with the console design and add the full catalogue
-  const vest = db.rules.find((r) => r.id === 'r-lock-vesting');
-  if (vest) { vest.value = 24; vest.unit = 'ماه'; }
   const wd = db.rules.find((r) => r.id === 'r-limit-withdraw-daily');
   if (wd) { wd.value = 50_000_000; wd.description = 'به ازای هر کاربر'; }
   for (const r of NEW_RULES) if (!db.rules.some((x) => x.id === r.id)) db.rules.push({ ...r });
@@ -124,11 +120,11 @@ export function seed_opSystem(db: MockDB) {
     version: 12,
     defaults: Object.fromEntries(db.rules.map((r) => [r.id, { enabled: r.enabled, value: r.value }])),
     history: [
-      { id: 'rh-7', at: jalaliToIso(1405, 7, 12), group: 'رزرو دارایی', text: 'افزودن نوع «دریافت مرحله‌ای» · حداکثر ۱۰ مرحله', by: 'علی نادری' },
+      { id: 'rh-7', at: jalaliToIso(1405, 7, 12), group: 'رزرو دارایی', text: 'افزودن نوع «دریافت مرحله‌ای»', by: 'علی نادری' },
       { id: 'rh-6', at: jalaliToIso(1405, 7, 9), group: 'تسهیلات', text: 'حداقل امتیاز اعتباری ۵۸۰ → ۶۰۰', by: 'علی نادری' },
       { id: 'rh-5', at: jalaliToIso(1405, 6, 28), group: 'KYC', text: 'افزودن ویدیو به مدارک سطح ۲', by: 'سمیرا توکلی' },
       { id: 'rh-4', at: jalaliToIso(1405, 6, 15), group: 'برداشت', text: 'سقف برداشت روزانه ۳۰ → ۵۰ میلیون', by: 'علی نادری' },
-      { id: 'rh-3', at: jalaliToIso(1405, 5, 30), group: 'بسته‌ها', text: 'حداکثر مدت پس‌انداز بسته ۶ → ۱۲ ماه', by: 'علی نادری' },
+      { id: 'rh-3', at: jalaliToIso(1405, 5, 30), group: 'بسته‌ها', text: 'فعال‌سازی تأیید نهایی بسته‌های بالای ۵۰۰ میلیون', by: 'علی نادری' },
       { id: 'rh-2', at: jalaliToIso(1405, 5, 12), group: 'تسهیلات', text: 'فعال‌سازی رزرو خودکار پشتوانه', by: 'مهدی رحیمی' },
       { id: 'rh-1', at: jalaliToIso(1405, 4, 2), group: 'بسته‌ها', text: 'حداقل مبلغ بسته ۵۰۰٬۰۰۰ → ۱٬۰۰۰٬۰۰۰', by: 'علی نادری' },
     ],

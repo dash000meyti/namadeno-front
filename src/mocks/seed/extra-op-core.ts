@@ -22,21 +22,21 @@ export interface OpCoreExtra {
 }
 
 // ───────────── Organizations ─────────────
-// aum (B), locked (B), policies [vesting, milestone, collateral, installment], contract version, growth %, card %, per-person cap, vesting max months, milestone max steps, cash, funds [gold, fixed]
-type OrgX = [number, number, [number, number, number, number], number, number, number, number, number, number, number, [number, number]];
+// aum (B), locked (B), policies [vesting, milestone, collateral, installment], contract version, growth %, card %, per-person cap, cash, funds [gold, fixed]
+type OrgX = [number, number, [number, number, number, number], number, number, number, number, number, [number, number]];
 const ORG_X: Record<string, OrgX> = {
-  'org-arman': [68.4, 17.8, [1, 1, 1, 1], 6, 12, 25, 50_000_000, 3, 5, 1, [1, 1]],
-  'org-pars': [54.1, 14.6, [1, 0, 1, 0], 5, 8.5, 20, 40_000_000, 6, 5, 1, [1, 1]],
-  'org-novin': [31.7, 9.2, [1, 1, 1, 1], 4, 15, 25, 60_000_000, 3, 5, 0, [1, 1]],
-  'org-atieh': [0, 0, [1, 0, 1, 0], 4, 0, 15, 30_000_000, 6, 5, 0, [1, 0]],
-  'org-sepehr': [22.9, 4.1, [1, 0, 1, 0], 4, -1.4, 20, 35_000_000, 3, 5, 1, [1, 1]],
-  'org-ideh': [9.6, 3.4, [1, 0, 1, 0], 5, -3.2, 10, 20_000_000, 12, 5, 0, [0, 1]],
-  'org-kaveh': [20.4, 5.6, [1, 1, 1, 1], 5, 6.2, 20, 45_000_000, 3, 5, 1, [1, 1]],
-  'org-ava': [18.2, 4.9, [1, 0, 1, 1], 4, 9.1, 25, 40_000_000, 3, 5, 1, [1, 1]],
-  'org-rad': [16.9, 3.8, [1, 0, 1, 0], 6, 3.4, 15, 30_000_000, 6, 5, 1, [1, 1]],
-  'org-alborz': [12.3, 2.6, [1, 0, 1, 0], 4, 4.0, 20, 25_000_000, 3, 5, 1, [1, 1]],
-  'org-mehr': [0, 0, [1, 1, 0, 0], 4, 0, 15, 20_000_000, 6, 5, 0, [0, 1]],
-  'org-aseman': [10.8, 2.7, [1, 0, 1, 0], 5, 2.7, 20, 35_000_000, 3, 5, 1, [1, 1]],
+  'org-arman': [68.4, 17.8, [1, 1, 1, 1], 6, 12, 25, 50_000_000, 1, [1, 1]],
+  'org-pars': [54.1, 14.6, [1, 0, 1, 0], 5, 8.5, 20, 40_000_000, 1, [1, 1]],
+  'org-novin': [31.7, 9.2, [1, 1, 1, 1], 4, 15, 25, 60_000_000, 0, [1, 1]],
+  'org-atieh': [0, 0, [1, 0, 1, 0], 4, 0, 15, 30_000_000, 0, [1, 0]],
+  'org-sepehr': [22.9, 4.1, [1, 0, 1, 0], 4, -1.4, 20, 35_000_000, 1, [1, 1]],
+  'org-ideh': [9.6, 3.4, [1, 0, 1, 0], 5, -3.2, 10, 20_000_000, 0, [0, 1]],
+  'org-kaveh': [20.4, 5.6, [1, 1, 1, 1], 5, 6.2, 20, 45_000_000, 1, [1, 1]],
+  'org-ava': [18.2, 4.9, [1, 0, 1, 1], 4, 9.1, 25, 40_000_000, 1, [1, 1]],
+  'org-rad': [16.9, 3.8, [1, 0, 1, 0], 6, 3.4, 15, 30_000_000, 1, [1, 1]],
+  'org-alborz': [12.3, 2.6, [1, 0, 1, 0], 4, 4.0, 20, 25_000_000, 1, [1, 1]],
+  'org-mehr': [0, 0, [1, 1, 0, 0], 4, 0, 15, 20_000_000, 0, [0, 1]],
+  'org-aseman': [10.8, 2.7, [1, 0, 1, 0], 5, 2.7, 20, 35_000_000, 1, [1, 1]],
 };
 
 const NOTES: [string, [number, number, number], string][] = [
@@ -44,7 +44,7 @@ const NOTES: [string, [number, number, number], string][] = [
   ['سقف اعتبار هر نفر ۴۰ → ۵۰ میلیون', [1405, 4, 18], 'علی نادری'],
   ['فعال‌سازی خرید اقساطی', [1404, 12, 10], 'سمیرا توکلی'],
   ['افزودن صندوق درآمد ثابت به صندوق‌های مجاز', [1404, 8, 3], 'مهدی رحیمی'],
-  ['حداکثر مدت پس‌انداز ۶ → ۳ ماه', [1404, 5, 11], 'علی نادری'],
+  ['تمدید مدت قرارداد', [1404, 5, 11], 'علی نادری'],
   ['عقد قرارداد اولیه', [1404, 1, 15], 'علی نادری'],
 ];
 
@@ -140,7 +140,7 @@ export function seed_opCore(db: MockDB) {
   db.organizations.forEach((o, i) => {
     const x = ORG_X[o.id];
     if (!x) return;
-    const [aumB, lockedB, pol, ver, growth, cardPct, perCap, vest, msMax, cash, funds] = x;
+    const [aumB, lockedB, pol, ver, growth, cardPct, perCap, cash, funds] = x;
     const keys = (['vesting', 'milestone', 'collateral', 'installment'] as const).filter((_, j) => pol[j]);
     const tot = keys.reduce((s, k) => s + SHARE[k], 0) || 1;
     const lockByType: Partial<Record<LockType, number>> = o.id === 'org-arman'
@@ -166,7 +166,7 @@ export function seed_opCore(db: MockDB) {
         ? { activeLoans: 128, outstanding: 3.8e9, cardHolders: 260, overdue: 4 }
         : { activeLoans, outstanding: activeLoans * 30_000_000, cardHolders: o.settings.cardEnabled ? Math.round(o.employees * 0.68) : 0, overdue: Math.round(activeLoans * 0.03) },
       newEmployeesMonth: o.id === 'org-arman' ? 12 : Math.round(o.employees * 0.03),
-      cardPct, perPersonCap: perCap, vestingMaxMonths: vest, milestoneMaxSteps: msMax,
+      cardPct, perPersonCap: perCap,
       allowCollateral: !!pol[2], allowInstallmentLock: !!pol[3], financeApproval: o.id === 'org-arman' || i % 2 === 0,
       version: ver, versions: versions(ver),
       nationalId: String(10100000000 + i * 7919123).slice(0, 11),
