@@ -25,8 +25,9 @@ import {
 const B = 1e9;
 const M = 1e6;
 
-/** Allocated value per fund (Toman billions) — free stock = held − allocated − committed. */
-const ALLOC_B: Record<string, number> = { gold: 239.5, fixed: 166, equity: 47, mixed: 35, silver: 11.2, saffron: 6.8, leverage: 8.4, project: 14.2 };
+/** Allocated value per fund (Toman billions) — free stock = held − allocated − committed.
+ *  Silver is allocated beyond its 12B held (shortfall «کسری»): its buy TR-1036 was cancelled and not placed again. */
+const ALLOC_B: Record<string, number> = { gold: 239.5, fixed: 166, equity: 47, mixed: 35, silver: 12.6, saffron: 6.8, leverage: 8.4, project: 14.2 };
 /** Unrealised gain of the held stock over its cost. */
 const GAIN: Record<string, number> = { gold: 0.18, fixed: 0.09, equity: 0.06, mixed: 0.05, silver: 0.1, saffron: 0.04, leverage: -0.03, project: 0.07 };
 const COMMIT_B = { gold: 6.1, fixed: 4.0, rial: 0.4 };
@@ -48,6 +49,7 @@ const TARGETS = (): TreasuryTargets => ({
     { fundId: 'gold', minFreeValue: 20 * B, targetDays: 21, maxFreeValue: 45 * B },
     { fundId: 'fixed', minFreeValue: 12 * B, targetDays: 21, maxFreeValue: 40 * B },
     { fundId: 'equity', minFreeValue: 3 * B, targetDays: 30, maxFreeValue: 8 * B },
+    { fundId: 'silver', minFreeValue: 1 * B, targetDays: 30, maxFreeValue: 3 * B },
   ],
   aum: { value: 750 * B, by: jalaliToIso(1405, 12, 29) },
   mix: { gold: 45, fixed: 35, other: 20 },
