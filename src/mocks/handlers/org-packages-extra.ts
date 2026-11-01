@@ -75,7 +75,8 @@ function validatePolicy(lp: LockPolicy | undefined, orgId: string) {
   if (lp.type === 'vesting' && (!lp.releaseAt || new Date(lp.releaseAt).getTime() <= now().getTime())) return fail(422, 'bad_release_date', 'تاریخ آزادسازی باید در آینده باشد.');
   if (lp.type === 'milestone') {
     const steps = lp.steps ?? [];
-    if (!steps.length || steps.length > 8) return fail(422, 'bad_steps', 'تعداد مراحل باید بین ۱ تا ۸ باشد.');
+    // the organization decides how many steps a package has (no cap); each step is at least 5٪ and the shares sum to 100٪
+    if (!steps.length) return fail(422, 'bad_steps', 'حداقل یک مرحله تعریف کنید.');
     if (steps.some((s) => !s.title?.trim())) return fail(422, 'bad_steps', 'عنوان همه مراحل را وارد کنید.');
     if (steps.some((s) => !(s.sharePct >= 5))) return fail(422, 'bad_steps', 'سهم هر مرحله حداقل ۵٪ است.');
     if (steps.reduce((s, x) => s + x.sharePct, 0) !== 100) return fail(422, 'bad_steps', 'جمع درصد مراحل باید ۱۰۰٪ باشد.');

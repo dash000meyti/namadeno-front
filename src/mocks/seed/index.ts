@@ -2,7 +2,7 @@ import type { MockDB } from '../db';
 import { DB_VERSION } from '../db';
 import { FUNDS, buildSara } from './core';
 import {
-  ARMAN_EMPLOYEES, ARMAN_PACKAGES, BLOG, FAQ, ORGANIZATIONS, PLATFORM_USERS, PRODUCTS, REQUESTS, RISK_ALERTS, RULES, STORES,
+  ARMAN_EMPLOYEES, ARMAN_PACKAGES, BLOG, FAQ, ORG_ADMIN_EMPLOYEES, ORGANIZATIONS, PLATFORM_USERS, PRODUCTS, REQUESTS, RISK_ALERTS, RULES, STORES,
 } from './platform';
 import { extraSeeds } from './extra';
 
@@ -15,7 +15,7 @@ export function buildSeed(): MockDB {
     users: { 'u-1001': buildSara() },
     platformUsers: clone(PLATFORM_USERS),
     organizations: clone(ORGANIZATIONS),
-    employees: { 'org-arman': clone(ARMAN_EMPLOYEES) },
+    employees: { ...clone(ORG_ADMIN_EMPLOYEES), 'org-arman': clone(ARMAN_EMPLOYEES) },
     orgPackages: { 'org-arman': clone(ARMAN_PACKAGES) },
     requests: clone(REQUESTS),
     products: clone(PRODUCTS),

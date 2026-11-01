@@ -24,6 +24,12 @@
  * DELETE /api/v1/org/departments/:id                   → { ok: true, moved: number } (its employees move to «سایر») · 403 forbidden_role · 409 default_unit
  *        Every organization has the default unit «سایر» (`isDefault`), created with the organization.
  * POST   /api/v1/org/departments/:id/members { employeeIds: string[] } → OrgDepartment (moves those employees into the unit) · 403 · 404 · 422 no_employees
+ *
+ * Panel access — members of the organization chosen from its employees (one Namadno account per person; sign-in is national ID +
+ * account password). Admin only (403 forbidden_role); each returns the updated Organization['admins'].
+ * POST   /api/v1/org/panel-users        { employeeId, panelRole } → 201 · 404 not_found · 409 already_member · 422 bad_role | inactive_member
+ * PATCH  /api/v1/org/panel-users/:id    { panelRole }             → 404 · 422 bad_role | last_admin
+ * DELETE /api/v1/org/panel-users/:id                              → 404 · 422 self | last_admin
  *        Writes are allowed only for the organization's administrator (`admins[].panelRole === 'admin'`).
  * GET  /api/v1/org/notifications            → { items: OrgNotification[] }  needs-action items (derived from current data) + system updates
  * POST /api/v1/org/notifications/read       { ids?: string[] } (omitted = all) → { ok: true }
@@ -38,7 +44,7 @@
  * Types: src/api/org-people-extra.ts
  */
 import { http, type HttpHandler } from 'msw';
-import type { AllocationSplit, ApprovalRequest, AssetKind, Employee, Holding, Lock, LockType, Loan, LoanInstallment, MilestoneStep, OrgDepartment, OrgPackage } from '@/types/domain';
+import type { AllocationSplit, ApprovalRequest, AssetKind, Employee, Holding, Lock, LockType, Loan, LoanInstallment, MilestoneStep, OrgDepartment, OrgPackage, Organization, OrgPanelRole } from '@/types/domain';
 import type { CreditLoanRow, EmpActivity, EmpDetailExtra, EmpFacts, ImportRow, OrgNotification, PeopleCredit, PeopleInsights, RequestRow } from '@/api/org-people-extra';
 import { db, newId, recalcHoldings, type UserData } from '../db';
 import { body, fail, latency, ok, p, who } from '../http';
@@ -46,7 +52,8 @@ import { ORG_UPDATES, seed_orgPeople, type OrgPeopleExtra, type OrgPeopleProfile
 import { jalaliToIso, minutesAgo, now } from '@/lib/clock';
 import { JALALI_MONTHS, enDigits, faDigits, jDayMonth, money, pct, signedMoney } from '@/lib/format';
 import { ASSET_META, LOCK_META } from '@/lib/locks';
-import { DEFAULT_UNIT, isOrgRequest } from '@/lib/org';
+import { DEFAULT_UNIT, isOrgRequest, roleLabel } from '@/lib/org';
+import { panelUserOf } from '../identity';
 import { ledger } from './app';
 import { AUTO_DECIDER } from './org';
 
@@ -415,13 +422,16 @@ function departments(orgId: string): StoredDepartment[] {
   return list;
 }
 const deptOut = (orgId: string, d: StoredDepartment): OrgDepartment => ({ ...d, employees: employees(orgId).filter((e) => e.department === d.name).length });
-/** The signed-in panel user may manage units only as the organization's administrator. */
-function forbidUnlessAdmin(req: Request) {
+/** The signed-in panel user may manage units and panel access only as the organization's administrator. */
+function forbidUnlessAdmin(req: Request, msg = 'ساخت و ویرایش واحد فقط با دسترسی مدیر سازمان ممکن است.') {
   const s = who(req, 'org_admin');
   const admin = orgById(s.orgId!).admins.find((a) => a.id === s.userId);
   if ((admin?.panelRole ?? 'specialist') === 'admin') return null;
-  return fail(403, 'forbidden_role', 'ساخت و ویرایش واحد فقط با دسترسی مدیر سازمان ممکن است.');
+  return fail(403, 'forbidden_role', msg);
 }
+const PANEL_ONLY_ADMIN = 'دسترسی پنل را فقط مدیر سازمان می‌دهد یا تغییر می‌دهد.';
+const PANEL_ROLES: OrgPanelRole[] = ['admin', 'approver', 'specialist'];
+const lastAdmin = (o: Organization, id: string) => o.admins.filter((a) => a.panelRole === 'admin' && a.id !== id).length === 0;
 const cleanName = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, ' ');
 
 // ───────────── notifications ─────────────
@@ -727,6 +737,50 @@ export const orgPeopleHandlers: HttpHandler[] = [
     for (const e of employees(orgId)) if (e.department === d.name) { e.department = fallback; moved += 1; }
     list.splice(i, 1);
     return ok({ ok: true, moved });
+  }),
+
+  // ───────────── panel access (members of the organization; one Namadno account per person) ─────────────
+  http.post(p('/org/panel-users'), async ({ request }) => {
+    await latency();
+    const no = forbidUnlessAdmin(request, PANEL_ONLY_ADMIN);
+    if (no) return no;
+    const orgId = who(request, 'org_admin').orgId!;
+    const o = orgById(orgId);
+    const b = await body<{ employeeId?: string; panelRole?: OrgPanelRole }>(request);
+    if (!b.panelRole || !PANEL_ROLES.includes(b.panelRole)) return fail(422, 'bad_role', 'نقش پنل معتبر نیست.');
+    const e = employees(orgId).find((x) => x.id === b.employeeId);
+    if (!e) return fail(404, 'not_found', 'این شخص در کارکنان سازمان نیست؛ اول او را به کارکنان اضافه کنید.');
+    if (e.status === 'inactive') return fail(422, 'inactive_member', 'به همکار تعلیق‌شده نمی‌توان دسترسی پنل داد.');
+    if (o.admins.some((a) => a.id === e.id)) return fail(409, 'already_member', 'این همکار همین حالا به پنل دسترسی دارد.');
+    o.admins.push(panelUserOf(e, b.panelRole));
+    return ok(o.admins, { status: 201 });
+  }),
+  http.patch(p('/org/panel-users/:id'), async ({ request, params }) => {
+    await latency();
+    const no = forbidUnlessAdmin(request, PANEL_ONLY_ADMIN);
+    if (no) return no;
+    const o = orgById(who(request, 'org_admin').orgId!);
+    const a = o.admins.find((x) => x.id === params.id);
+    if (!a) return fail(404, 'not_found', 'این همکار دسترسی پنل ندارد.');
+    const b = await body<{ panelRole?: OrgPanelRole }>(request);
+    if (!b.panelRole || !PANEL_ROLES.includes(b.panelRole)) return fail(422, 'bad_role', 'نقش پنل معتبر نیست.');
+    if (a.panelRole === 'admin' && b.panelRole !== 'admin' && lastAdmin(o, a.id)) return fail(422, 'last_admin', 'سازمان باید دست‌کم یک «مدیر» در پنل داشته باشد.');
+    a.panelRole = b.panelRole;
+    a.role = roleLabel(b.panelRole);
+    return ok(o.admins);
+  }),
+  http.delete(p('/org/panel-users/:id'), async ({ request, params }) => {
+    await latency();
+    const no = forbidUnlessAdmin(request, PANEL_ONLY_ADMIN);
+    if (no) return no;
+    const s = who(request, 'org_admin');
+    const o = orgById(s.orgId!);
+    const i = o.admins.findIndex((x) => x.id === params.id);
+    if (i < 0) return fail(404, 'not_found', 'این همکار دسترسی پنل ندارد.');
+    if (o.admins[i].id === s.userId) return fail(422, 'self', 'دسترسی خودتان را نمی‌توانید بردارید.');
+    if (o.admins[i].panelRole === 'admin' && lastAdmin(o, o.admins[i].id)) return fail(422, 'last_admin', 'سازمان باید دست‌کم یک «مدیر» در پنل داشته باشد.');
+    o.admins.splice(i, 1);
+    return ok(o.admins);
   }),
 
   // Override of the core create endpoint: honours joinedAt / e-mail / role and validates the national id, mobile and code.

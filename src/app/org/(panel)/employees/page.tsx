@@ -2,11 +2,12 @@
 /**
  * Organization panel — employees. Kit list page: summary (team assets with the free/reserved split; three cells double as
  * quick filters) → list card (status tabs, department, search, selectable table, bulk actions) → employee inspector.
+ * Members with organization-panel access carry a «پنل · نقش» pill after the name; the administrator changes access from the inspector.
  */
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useOrgEmployees, useUpdateEmployee } from '@/api/org';
-import { useBulkEmployeeStatus, useOrgDepartments, useOrgPeopleFacts, type EmpFacts } from '@/api/org-people-extra';
+import { useOrgEmployees, useOrgMe, useUpdateEmployee } from '@/api/org';
+import { useBulkEmployeeStatus, useOrgDepartments, useOrgPanelRole, useOrgPeopleFacts, type EmpFacts } from '@/api/org-people-extra';
 import type { Employee } from '@/types/domain';
 import {
   Ava, BulkBar, Card, Confirm, Empty, Ident, PageHeading, Pill, SearchField, Select, StatStrip, Table, TableFoot, Tabs, Tile, Toolbar,
@@ -19,6 +20,7 @@ import { usePanelToast } from '@/components/org/people/PanelToast';
 import { EMP_STATUS, I, compactParts, errMsg } from '@/components/org/people/shared';
 import { EMP_TONE, EmployeeInspector, SuspendNotice } from '@/components/org/people/EmployeeSidePanel';
 import { useStartPackage } from '@/components/org/people/useStartPackage';
+import { PanelAccessDialog, PanelRolePill } from '@/components/org/people/PanelAccessDialog';
 import { compactMoney, enDigits, faDigits, money, pct } from '@/lib/format';
 import { routes } from '@/lib/routes';
 
@@ -65,6 +67,7 @@ export default function OrgEmployeesPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [picked, setPicked] = useState<string | null>(null);
   const [suspendIds, setSuspendIds] = useState<string[] | null>(null);
+  const [accessFor, setAccessFor] = useState<Employee | null>(null);
 
   useEffect(() => { const t = setTimeout(() => setDebounced(enDigits(q.trim())), 300); return () => clearTimeout(t); }, [q]);
 
@@ -75,6 +78,10 @@ export default function OrgEmployeesPage() {
   const update = useUpdateEmployee();
   const bulk = useBulkEmployeeStatus();
   const pkg = useStartPackage((e) => show(errMsg(e), 'error'));
+  // organization-panel members (same account as the app); only the administrator changes their access
+  const panel = useOrgMe().data?.organization.admins ?? [];
+  const memberOf = (id: string) => panel.find((a) => a.id === id);
+  const isAdmin = useOrgPanelRole() === 'admin';
 
   const everyone = all.data ?? [];
   const departments = [...new Set([...(units.data ?? []).map((d) => d.name), ...everyone.map((e) => e.department)])];
@@ -131,7 +138,11 @@ export default function OrgEmployeesPage() {
   const columns: Column<Employee>[] = [
     {
       key: 'emp', label: 'کارمند', width: 'minmax(0, 1.6fr)',
-      render: (e) => <Ident lead={<Ava letter={e.avatarLetter} id={e.id} />} title={e.fullName} sub={<>{e.department} · <span className="num">{faDigits(e.employeeCode)}</span></>} />,
+      render: (e) => {
+        const m = memberOf(e.id);
+        const title = m ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%' }}>{e.fullName}<PanelRolePill member={m} /></span> : e.fullName;
+        return <Ident lead={<Ava letter={e.avatarLetter} id={e.id} />} title={title} sub={<>{e.department} · <span className="num">{faDigits(e.employeeCode)}</span></>} />;
+      },
     },
     {
       key: 'assets', label: 'دارایی (تومان)', width: '136px', col: true,
@@ -218,8 +229,12 @@ export default function OrgEmployeesPage() {
           onSendPackage={() => pkg.start([pickedEmp.id])}
           onSuspend={() => setSuspendIds([pickedEmp.id])}
           onReactivate={() => setStatus(pickedEmp, 'active', `حساب ${pickedEmp.fullName} دوباره فعال شد`)}
+          panelMember={memberOf(pickedEmp.id)}
+          onPanelAccess={isAdmin ? () => setAccessFor(pickedEmp) : undefined}
         />
       )}
+
+      <PanelAccessDialog open={!!accessFor} employee={accessFor ?? undefined} onClose={() => setAccessFor(null)} />
 
       <Confirm
         open={!!suspendIds} onClose={() => setSuspendIds(null)} onConfirm={doSuspend} danger busy={update.isPending || bulk.isPending}

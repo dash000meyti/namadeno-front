@@ -149,15 +149,15 @@ export function seed_opCore(db: MockDB) {
     const gold = o.id === 'org-arman' ? 53 : 44 + ((i * 7) % 14);
     const rial = o.id === 'org-arman' ? 13 : 9 + (i % 5);
     const activeLoans = o.id === 'org-arman' ? 128 : o.settings.loanEnabled ? Math.round(o.employees * 0.33) : 0;
-    const hrUsers: HrUser[] = o.id === 'org-arman'
-      ? [
-        { id: 'hr-200', name: 'مهسا تهرانی', email: 'm.tehrani@arman.co', role: 'مدیر', lastLoginAt: daysFromNow(-2, '11:05'), twoFA: true, status: 'active' },
-        { id: 'hr-201', name: 'نیما رضایی', email: 'nima.rezaei@arman.co', role: 'کارشناس', lastLoginAt: daysFromNow(0, '09:12'), twoFA: true, status: 'active' },
-        { id: 'hr-202', name: 'لیلا کاظمی', email: 'l.kazemi@arman.co', role: 'کارشناس', lastLoginAt: daysFromNow(-3, '13:20'), twoFA: true, status: 'active' },
-        { id: 'hr-204', name: 'رضا حسینی', email: 'r.hosseini@arman.co', role: 'تأییدکننده', lastLoginAt: daysFromNow(-1, '16:40'), twoFA: true, status: 'active' },
-        { id: 'hr-203', name: 'کاوه شریفی', email: 'k.sharifi@arman.ir', role: 'کارشناس', twoFA: false, status: 'invited' },
-      ]
-      : o.admins.map((a, j) => ({ id: 'hr-' + o.id + '-' + j, name: a.name, email: a.email, role: a.role, lastLoginAt: o.status === 'onboarding' ? undefined : daysFromNow(-(i % 4), '10:00'), twoFA: o.status !== 'onboarding', status: o.status === 'onboarding' ? 'invited' : 'active' }));
+    // read view of the panel members (Organization.admins) with their last sign-in; the handler keeps it in sync
+    const ARMAN_LOGIN: Record<string, [string, string]> = { 'u-1013': ['-2', '11:05'], 'u-1014': ['0', '09:12'], 'u-1015': ['-3', '13:20'], 'u-1004': ['-1', '16:40'] };
+    const hrUsers: HrUser[] = o.admins.map((a) => {
+      const seen = a.status === 'active' ? (o.id === 'org-arman' ? ARMAN_LOGIN[a.id] : [String(-(i % 4)), '10:00']) : undefined;
+      return {
+        id: a.id, name: a.name, nationalId: a.nationalId, mobile: a.mobile, role: a.role, panelRole: a.panelRole ?? 'specialist', status: a.status,
+        lastLoginAt: seen ? daysFromNow(Number(seen[0]), seen[1]) : undefined, twoFA: a.status === 'active',
+      };
+    });
     orgs[o.id] = {
       aum: Math.round(aumB * 1e9), locked: Math.round(lockedB * 1e9), lockByType, growthPct: growth,
       aumHistory: ARMAN_AUM.map((v) => Math.round((aumB * 1e9 * v) / 68.4)),
@@ -173,7 +173,7 @@ export function seed_opCore(db: MockDB) {
       representative: { name: o.admins[0]?.name ?? '', phone: '021-' + String(44550000 + i * 1111) },
       accountManager: o.id === 'org-arman' ? 'سمیرا توکلی' : MANAGERS[i % 3],
       city: 'تهران',
-      hrEmail: o.id === 'org-arman' ? 'hr@arman-holding.ir' : o.admins[0]?.email ?? '',
+      hrEmail: o.id === 'org-arman' ? 'hr@arman-holding.ir' : 'hr@' + o.id.slice(4) + '.ir',
       hrUsers,
       createdAt: o.contractStart,
     };

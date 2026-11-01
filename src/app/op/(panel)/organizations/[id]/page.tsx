@@ -3,7 +3,8 @@
  * Operator console — organization page. Kit detail page: heading (logo, status, products, actions) → key numbers → sections:
  * overview (AUM trend, contract facts, «خزانه و تعهدات»: members' stock, commitments, deposits, upcoming events),
  * contract (terms editor + approval chain + versions, sticky save bar), staff (row → inspector), packages,
- * credit (row → user profile; hidden while FEATURES.orgCredit is off), HR users (invite). Suspend / invite in dialogs.
+ * credit (row → user profile; hidden while FEATURES.orgCredit is off), panel users (row → user profile; add by national ID).
+ * Suspend / add panel user in dialogs.
  */
 import { useState } from 'react';
 import Link from 'next/link';
@@ -25,10 +26,10 @@ import { OrgTreasuryCards } from '@/components/op/cash/OrgTreasuryCards';
 import { scaled } from '@/components/op/cash/money';
 import { amt } from '@/components/op/treasury/ui';
 import { ICON, ORG_STATUS, PRODUCT_META, errMsg, fb, fm, orgProducts, pctFa, signedPct, splitPct } from '@/components/op/core/ui';
-import { faDigits, jDate, jMonthYear, money, relTime } from '@/lib/format';
+import { enDigits, faDigits, jDate, jMonthYear, maskMobile, maskNationalId, money, nidOk, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { routes } from '@/lib/routes';
-import { ORG_ROLES } from '@/lib/org';
+import { ORG_ROLES, roleLabel } from '@/lib/org';
 import { FEATURES } from '@/lib/features';
 
 type Tab = 'overview' | 'contract' | 'staff' | 'packages' | 'credit' | 'hr';
@@ -40,7 +41,8 @@ const FAC_TONE: Record<FacilityKind, Tone> = { loan: 'info', bnpl: 'success', ca
 const FAC_STATUS: Record<OrgCreditRow['status'], [string, Tone]> = { current: ['جاری', 'success'], late: ['معوق', 'error'], blocked: ['متوقف', 'neutral'], settled: ['تسویه‌شده', 'neutral'] };
 const EMP_STATUS: Record<Employee['status'], [string, Tone]> = { active: ['فعال', 'success'], invited: ['در انتظار فعال‌سازی', 'warning'], inactive: ['غیرفعال', 'neutral'] };
 const ASSET_SHORT: Record<string, string> = { rial: 'ریال', gold: 'طلا', fixed: 'درآمد ثابت', mixed: 'مختلط', equity: 'سهامی', silver: 'نقره' };
-const HR_ROLES = ORG_ROLES.map((r) => r.label);
+const PANEL_ROLES = ORG_ROLES.map((r) => r.label);
+const BLANK_PANEL_USER = { name: '', nationalId: '', mobile: '', role: 'کارشناس' };
 const bn = (n: number) => `${fb(n)} میلیارد`;
 const b1 = (v: number) => faDigits(String(Math.round(v * 10) / 10), true);
 
@@ -102,7 +104,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
   const [empId, setEmpId] = useState<string | null>(null);
   const [modal, setModal] = useState<'' | 'suspend' | 'invite'>('');
   const [reason, setReason] = useState('عدم تسویه صورت‌حساب مهر ۱۴۰۵');
-  const [inv, setInv] = useState({ name: '', email: '', role: 'کارشناس' });
+  const [inv, setInv] = useState(BLANK_PANEL_USER);
   const [invErr, setInvErr] = useState('');
 
   const prods = orgProducts(org);
@@ -110,7 +112,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
   const typeCount = Object.values(ext.lockByType).filter((v) => (v ?? 0) > 0).length;
   const lastVer = ext.versions[0];
   const daysLeft = Math.ceil((new Date(org.contractEnd).getTime() - now().getTime()) / DAY);
-  const hrHead = ext.hrUsers[0]?.name ?? org.admins[0]?.name ?? '—';
+  const panelHead = org.admins.find((a) => a.panelRole === 'admin')?.name ?? '—';
   const creditRows = (credit.data ?? []).map((r, i) => ({ ...r, key: `${r.userId}-${r.kind}-${i}` }));
   const platform = new Map((usersQ.data ?? []).map((u) => [u.id, u]));
   const monthsOptions = products.data?.find((p) => p.kind === 'loan')?.monthsOptions ?? [3, 6, 12, 18];
@@ -148,11 +150,19 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
     });
   };
   const openInvite = () => { setInvErr(''); setModal('invite'); };
+  // an existing Namadno account (matched by national ID) gets access at once; otherwise an account is opened (activation SMS)
   const sendInvite = () => {
-    if (!inv.name.trim()) { setInvErr('نام کاربر را وارد کنید.'); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inv.email.trim())) { setInvErr('ایمیل معتبر وارد کنید.'); return; }
-    invite.mutate({ orgId: org.id, name: inv.name.trim(), email: inv.email.trim(), role: inv.role }, {
-      onSuccess: () => { setModal(''); setInv({ name: '', email: '', role: 'کارشناس' }); toast('دعوت‌نامه کاربر سازمان ارسال شد'); },
+    const nid = enDigits(inv.nationalId).replace(/\D/g, '');
+    const mobile = enDigits(inv.mobile).replace(/\D/g, '');
+    if (inv.name.trim().length < 3) { setInvErr('نام کاربر را وارد کنید.'); return; }
+    if (!nidOk(nid)) { setInvErr('کد ملی ۱۰ رقمی معتبر نیست.'); return; }
+    if (ext.hrUsers.some((h) => h.nationalId === nid)) { setInvErr('این شخص همین حالا به پنل این سازمان دسترسی دارد.'); return; }
+    if (!/^09\d{9}$/.test(mobile)) { setInvErr('شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.'); return; }
+    invite.mutate({ orgId: org.id, name: inv.name.trim(), nationalId: nid, mobile, role: inv.role }, {
+      onSuccess: (h) => {
+        setModal(''); setInv(BLANK_PANEL_USER);
+        toast(`${h.name} به پنل سازمان اضافه شد${h.status === 'invited' ? ' · پیامک فعال‌سازی ارسال شد' : ''}`);
+      },
       onError: (e) => setInvErr(errMsg(e)),
     });
   };
@@ -206,11 +216,13 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
     { key: 'st', label: 'وضعیت', width: '88px', render: (r) => <Pill tone={FAC_STATUS[r.status][1]} dot>{FAC_STATUS[r.status][0]}</Pill> },
   ];
   const hrCols: Column<HrUser>[] = [
-    { key: 'u', label: 'کاربر', width: 'minmax(0, 1.4fr)', render: (h) => <Ident lead={<Ava letter={h.name[0]} id={h.id} />} title={h.name} sub={h.email} subLtr /> },
-    { key: 'role', label: 'نقش', width: '160px', render: (h) => <span className="el">{h.role}</span> },
-    { key: 'last', label: 'آخرین ورود', width: '120px', render: (h) => <span className="sm">{h.lastLoginAt ? relTime(h.lastLoginAt, now()) : '—'}</span> },
+    // the name links to the user's profile when the person is in «کاربران» (same account as in the app)
+    { key: 'u', label: 'کاربر', width: 'minmax(0, 1.4fr)', render: (h) => <Ident lead={<Ava letter={h.name[0]} id={h.id} />} title={platform.has(h.id) ? <Link href={routes.op.user(h.id)} className="nm-more">{h.name}</Link> : h.name} sub={<>کد ملی <span className="num ltr">{maskNationalId(h.nationalId)}</span></>} /> },
+    { key: 'mob', label: 'موبایل', width: '120px', render: (h) => <span className="num ltr">{h.mobile ? maskMobile(h.mobile) : '—'}</span> },
+    { key: 'role', label: 'نقش', width: '104px', render: (h) => <span className="el">{h.role || roleLabel(h.panelRole)}</span> },
+    { key: 'last', label: 'آخرین ورود', width: '112px', render: (h) => <span className="sm">{h.lastLoginAt ? relTime(h.lastLoginAt, now()) : '—'}</span> },
     { key: 'tfa', label: 'ورود دومرحله‌ای', width: '112px', render: (h) => <Pill tone={h.twoFA ? 'success' : 'warning'}>{h.twoFA ? 'فعال' : 'غیرفعال'}</Pill> },
-    { key: 'st', label: 'وضعیت', width: '96px', render: (h) => <Pill tone={h.status === 'active' ? 'success' : 'info'} dot>{h.status === 'active' ? 'فعال' : 'دعوت‌شده'}</Pill> },
+    { key: 'st', label: 'وضعیت', width: '148px', render: (h) => <Pill tone={h.status === 'active' ? 'success' : 'warning'} dot>{h.status === 'active' ? 'فعال' : 'در انتظار فعال‌سازی'}</Pill> },
   ];
 
   return (
@@ -274,8 +286,8 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
                 ['شروع قرارداد', <span key="s" className="num">{jDate(org.contractStart)}</span>],
                 ['پایان / تمدید', <span key="e" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span className="num">{jDate(org.contractEnd)}</span><Pill tone={daysLeft < 60 ? 'warning' : 'neutral'}>{daysLeft >= 0 ? `${faDigits(daysLeft)} روز` : 'منقضی'}</Pill></span>],
                 ['نسخه قرارداد', <span key="v" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>نسخه {faDigits(ext.version)}{lastVer && <span className="num mute">· {jDate(lastVer.at)}</span>}<button type="button" className="nm-more" onClick={() => pick('contract')}>تاریخچه</button></span>],
-                ['مدیر HR', hrHead],
-                ['ایمیل HR', <span key="m" className="ltr">{ext.hrEmail || '—'}</span>],
+                ['مدیر پنل سازمان', panelHead],
+                ['ایمیل تماس', <span key="m" className="ltr">{ext.hrEmail || '—'}</span>],
                 ['مدیر حساب (نمادنو)', ext.accountManager],
               ]} />
             </Card>
@@ -359,9 +371,12 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
       )}
 
       {tab === 'hr' && (
-        <Card flush title="کاربران HR" count={ext.hrUsers.length} actions={<button type="button" className="nm-btn sm ghost" onClick={openInvite}><Icon d={ICON.plus} size={15} strokeWidth={2} />دعوت کاربر HR</button>}>
-          <Table columns={hrCols} rows={ext.hrUsers} rowKey={(h) => h.id} empty={<Empty icon={ICON.users} title="هنوز کاربر HR اضافه نشده است" />} minWidth={680} />
-          <div className="nm-tfoot">دعوت‌نامه با لینک یک‌بارمصرف ۴۸ ساعته ارسال می‌شود</div>
+        <Card flush title="کاربران پنل سازمان" count={ext.hrUsers.length} actions={<button type="button" className="nm-btn sm ghost" onClick={openInvite}><Icon d={ICON.plus} size={15} strokeWidth={2} />افزودن کاربر پنل</button>}>
+          <Table
+            columns={hrCols} rows={ext.hrUsers} rowKey={(h) => h.id} rowLabel={(h) => h.name}
+            empty={<Empty icon={ICON.users} title="هنوز کسی به پنل این سازمان دسترسی ندارد" />} minWidth={800}
+          />
+          <div className="nm-tfoot">با حساب نمادنوی خود (کد ملی و رمز) وارد می‌شوند؛ کسی که حساب ندارد پیامک افتتاح حساب می‌گیرد.</div>
         </Card>
       )}
 
@@ -389,24 +404,28 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
       </Dialog>
 
       <Dialog
-        open={modal === 'invite'} onClose={() => setModal('')} width={520} title={`دعوت کاربر HR — ${org.name}`} sub="دعوت‌نامه با لینک یک‌بارمصرف ۴۸ ساعته ارسال می‌شود"
+        open={modal === 'invite'} onClose={() => setModal('')} width={520} title={`افزودن کاربر پنل — ${org.name}`}
+        sub="اگر حساب نمادنو داشته باشد همین حالا دسترسی می‌گیرد؛ وگرنه پیامک افتتاح حساب برایش فرستاده می‌شود."
         footer={(
           <>
             <button type="button" className="nm-btn ghost" onClick={() => setModal('')}>انصراف</button>
-            <button type="button" className="nm-btn" disabled={invite.isPending} onClick={sendInvite}>{invite.isPending ? 'در حال ارسال…' : 'ارسال دعوت‌نامه'}</button>
+            <button type="button" className="nm-btn" disabled={invite.isPending} onClick={sendInvite}>{invite.isPending ? 'در حال افزودن…' : 'افزودن کاربر پنل'}</button>
           </>
         )}
       >
+        <Field label="نام و نام خانوادگی" htmlFor="hr-name">
+          <div className="nm-ctl"><input id="hr-name" value={inv.name} onChange={(e) => { setInv({ ...inv, name: e.target.value }); setInvErr(''); }} /></div>
+        </Field>
         <div className="nm-grid c2" style={{ gap: 12 }}>
-          <Field label="نام و نام خانوادگی" htmlFor="hr-name">
-            <div className="nm-ctl"><input id="hr-name" value={inv.name} onChange={(e) => { setInv({ ...inv, name: e.target.value }); setInvErr(''); }} /></div>
+          <Field label="کد ملی" htmlFor="hr-nid">
+            <div className="nm-ctl"><input id="hr-nid" dir="ltr" inputMode="numeric" placeholder="۰۰۱۲۳۴۵۶۷۸" value={faDigits(inv.nationalId)} onChange={(e) => { setInv({ ...inv, nationalId: enDigits(e.target.value).replace(/\D/g, '').slice(0, 10) }); setInvErr(''); }} style={{ textAlign: 'right' }} /></div>
           </Field>
-          <Field label="ایمیل سازمانی" htmlFor="hr-email">
-            <div className="nm-ctl"><input id="hr-email" dir="ltr" value={inv.email} onChange={(e) => { setInv({ ...inv, email: e.target.value }); setInvErr(''); }} /></div>
+          <Field label="موبایل" htmlFor="hr-mobile">
+            <div className="nm-ctl"><input id="hr-mobile" dir="ltr" inputMode="numeric" placeholder="۰۹۱۲۰۰۰۰۰۰۰" value={faDigits(inv.mobile)} onChange={(e) => { setInv({ ...inv, mobile: enDigits(e.target.value).replace(/\D/g, '').slice(0, 11) }); setInvErr(''); }} style={{ textAlign: 'right' }} /></div>
           </Field>
         </div>
         <Field label="نقش">
-          <Chips label="نقش کاربر HR" value={inv.role} onChange={(r) => setInv({ ...inv, role: r })} options={HR_ROLES.map((r) => ({ key: r, label: r }))} />
+          <Chips label="نقش کاربر پنل" value={inv.role} onChange={(r) => setInv({ ...inv, role: r })} options={PANEL_ROLES.map((r) => ({ key: r, label: r }))} />
         </Field>
         {invErr && <Note tone="err">{invErr}</Note>}
       </Dialog>

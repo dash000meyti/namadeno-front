@@ -2,6 +2,7 @@
 /**
  * Operator console — user profile. Kit detail page: heading with avatar + status pills + actions → stats → tabs → cards.
  * Holdings with free/locked split, lock items (legal hold apply/remove), transactions, facilities, risk, audit log, notes.
+ * «اعتبار و دسترسی» also shows the account's organization-panel access (one Namadno account for the app and the panel).
  */
 import { useState } from 'react';
 import Link from 'next/link';
@@ -18,9 +19,10 @@ import { LockBar, LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
 import { ICON, LOCK_COL, errMsg, fm, pctFa } from '@/components/op/core/ui';
 import { UserActivityCard } from '@/components/op/activity/UserActivityCard';
-import { enDigits, faDigits, jDate, jDayMonth, money, relTime, signedMoney, time, units } from '@/lib/format';
+import { enDigits, faDigits, jDate, jDayMonth, maskNationalId, money, relTime, signedMoney, time, units } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { ASSET_META, HOURGLASS, LOCK_META } from '@/lib/locks';
+import { roleLabel } from '@/lib/org';
 import { routes } from '@/lib/routes';
 
 type Tab = 'assets' | 'locks' | 'tx' | 'credit' | 'risk' | 'log';
@@ -94,7 +96,7 @@ export default function OpUserPage() {
   const lockedHoldings = holdings.filter((h) => h.locked > 0).length;
   const kyc = kycOf(user);
   const blocked = user.status === 'suspended';
-  const acct: [string, Tone] = blocked ? ['مسدود موقت', 'error'] : user.status === 'invited' ? ['دعوت‌شده', 'info'] : ['فعال', 'success'];
+  const acct: [string, Tone] = blocked ? ['مسدود موقت', 'error'] : user.status === 'invited' ? ['در انتظار فعال‌سازی', 'warning'] : ['فعال', 'success'];
   const loanSum = facilities.filter((f) => f.kind === 'loan').reduce((s, f) => s + f.amount, 0);
   const cardSum = facilities.filter((f) => f.kind === 'card').reduce((s, f) => s + f.amount, 0);
   const bnplSum = facilities.filter((f) => f.kind === 'bnpl').reduce((s, f) => s + f.amount, 0);
@@ -256,7 +258,10 @@ export default function OpUserPage() {
                 ['سقف قرارداد سازمان', <span key="c" className="num">وام {pctFa(loanPct)} · کارت {pctFa(cardPct)}</span>],
                 ['ظرفیت وام (از دارایی آزاد)', <span key="v" className="num">{money(capacity)}</span>],
                 ['موبایل', <span key="m" className="num ltr">{faDigits(user.mobile.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3'))}</span>],
-                ['کد ملی', <span key="n" className="num ltr">{faDigits(user.nationalId.slice(0, 3) + '•••••' + user.nationalId.slice(-2))}</span>],
+                ['کد ملی', <span key="n" className="num ltr">{maskNationalId(user.nationalId)}</span>],
+                ['پنل سازمان', user.panelAccess
+                  ? <Link key="p" href={routes.op.organization(user.panelAccess.orgId)} className="nm-more">{roleLabel(user.panelAccess.panelRole)} · {user.panelAccess.orgName}{user.panelAccess.status === 'invited' ? ' · در انتظار فعال‌سازی' : ''}</Link>
+                  : <span key="p" className="mute">ندارد</span>],
                 ['آخرین ورود', x ? `${relTime(x.devices.lastLoginAt, now())} · ${x.devices.city}` : relTime(user.lastActiveAt, now())],
                 ['دستگاه‌ها', <span key="d" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{x ? `${faDigits(x.devices.count)} فعال` : '—'}{x?.devices.newDevice && <Pill tone="warning">دستگاه جدید</Pill>}</span>],
               ]} />

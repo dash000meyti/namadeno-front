@@ -5,6 +5,7 @@ import type {
 } from '@/types/domain';
 import { db, fund, newId, recalcHoldings, trackingCode, userData, type UserData } from '../db';
 import { body, fail, latency, ok, p, qs, who } from '../http';
+import { panelAccessOf } from '../identity';
 import { now, jalaliToIso } from '@/lib/clock';
 import { faDigits, money } from '@/lib/format';
 import { onPackageAccepted, onUserCash, onUserTrade } from '../treasury';
@@ -80,7 +81,8 @@ function loanCapacity(ud: UserData) {
 
 export const appHandlers = [
   // ───────── profile ─────────
-  http.get(p('/me'), async ({ request }) => { await latency(); return ok(u(request).profile); }),
+  // the same account may also have organization-panel access (computed from Organization.admins)
+  http.get(p('/me'), async ({ request }) => { await latency(); const pr = u(request).profile; return ok({ ...pr, panelAccess: panelAccessOf(pr.id) }); }),
   http.patch(p('/me/profile'), async ({ request }) => {
     await latency();
     const ud = u(request);

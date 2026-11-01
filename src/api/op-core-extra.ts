@@ -5,17 +5,23 @@
  * so the core operator mutations (which invalidate qk.op.all) refresh them too.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AssetKind, ISODate, LockType, Organization, Toman } from '@/types/domain';
+import type { AssetKind, ISODate, LockType, Organization, OrgPanelRole, Toman } from '@/types/domain';
 import { get, post } from './client';
 import { qk } from './keys';
 
 // ───────────── Types ─────────────
 
 export interface ContractVersion { v: number; note: string; at: ISODate; by: string }
+/**
+ * A member with organization-panel access, as the operator sees it — a read view of `Organization.admins`
+ * (one Namadno account per person; `id` is the account id, sign-in is national ID + account password).
+ * `status: 'invited'` = no active account yet (activation SMS sent).
+ */
 export interface HrUser {
-  id: string; name: string; email: string; mobile?: string; role: string; lastLoginAt?: ISODate; twoFA: boolean; status: 'active' | 'invited';
-  /** How the first login happens: an SMS invite link, or a temporary password set by the operator (changed on first login). */
-  access?: 'invite' | 'temp_password';
+  id: string; name: string; nationalId: string; mobile: string; role: string; panelRole: OrgPanelRole;
+  lastLoginAt?: ISODate; twoFA: boolean; status: 'active' | 'invited';
+  /** Contact e-mail only. */
+  email?: string;
 }
 
 /** Operator-only contract & metrics data of an organization (beyond `Organization`). */
@@ -42,6 +48,7 @@ export interface OrgContractExt {
   representative?: { name: string; phone: string };
   accountManager: string;
   city: string;
+  /** The organization's contact e-mail (not a sign-in). */
   hrEmail: string;
   hrUsers: HrUser[];
   createdAt: ISODate;
@@ -50,8 +57,10 @@ export interface OrgContractExt {
 /** Body accepted by PATCH /op/organizations/:id (core endpoint, extended by this area). */
 export type OrgPatch = Partial<Organization> & { id: string; contract?: Partial<OrgContractExt>; changeNote?: string };
 /** Body accepted by POST /op/organizations (core endpoint, extended by this area). */
-/** `hrUsers[].tempPassword`: required for each user when `sendInvites` is false (≥ 8 characters, letters and digits); never stored in plain text. */
-export type OrgCreate = Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: (Omit<HrUser, 'id' | 'status' | 'twoFA' | 'access'> & { tempPassword?: string })[]; sendInvites?: boolean };
+/** New panel member: an existing Namadno account is matched by `nationalId`; otherwise an account is opened (activation SMS). `role` = Persian label. */
+export interface PanelUserInput { name: string; nationalId: string; mobile: string; role: string }
+/** `hrUsers`: the organization's first panel members; each also becomes a member (employee) of the organization in the default unit. */
+export type OrgCreate = Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: PanelUserInput[] };
 
 export type FacilityKind = 'loan' | 'card' | 'bnpl';
 export interface Facility {
@@ -124,4 +133,4 @@ function useCoreMutation<V, R>(fn: (v: V) => Promise<R>) {
 
 export const useAddUserNote = () => useCoreMutation((v: { userId: string; text: string; tag: UserNote['tag'] }) => post<UserNote>(`/op/core/users/${v.userId}/notes`, v));
 export const useResetUserPassword = () => useCoreMutation((v: { userId: string }) => post<{ sent: boolean }>(`/op/core/users/${v.userId}/reset-password`, v));
-export const useInviteHrUser = () => useCoreMutation((v: { orgId: string; name: string; email: string; role: string }) => post<HrUser>(`/op/core/organizations/${v.orgId}/hr-users`, v));
+export const useInviteHrUser = () => useCoreMutation((v: PanelUserInput & { orgId: string }) => post<HrUser>(`/op/core/organizations/${v.orgId}/hr-users`, v));

@@ -72,6 +72,10 @@ export function seed_orgPeople(db: MockDB) {
       'u-1010': P({ email: 'z.ghasemi@arman.co', score: 0, kycLevel: 0, split: [0, 0, 0], lastActiveMin: -1 }),
       'u-1011': P({ email: 'k.sharifi@arman.co', score: 0, kycLevel: 0, split: [0, 0, 0], lastActiveMin: -1 }),
       'u-1012': P({ email: 'n.akbari@arman.co', score: 726, split: [45, 45, 10], locks: [['vesting', 20_000_000]], cardLimit: 15_000_000, cardUsed: 3_100_000, lastActiveMin: 240 }),
+      // HR staff with organization-panel access (same accounts as in the app)
+      'u-1013': P({ email: 'm.tehrani@arman.co', score: 776, split: [55, 38, 7], locks: [['vesting', 22_000_000]], lastActiveMin: 1500, role: 'مدیر واحد' }),
+      'u-1014': P({ email: 'nima.rezaei@arman.co', score: 731, split: [52, 41, 7], locks: [['vesting', 10_000_000]], lastActiveMin: 30 }),
+      'u-1015': P({ email: 'l.kazemi@arman.co', score: 744, split: [51, 40, 9], locks: [['vesting', 14_000_000]], lastActiveMin: 2400 }),
     },
     requestMeta: {
       'RQ-2041': { months: 12 },

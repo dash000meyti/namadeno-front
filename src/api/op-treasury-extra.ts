@@ -454,7 +454,8 @@ export interface ActivityPage {
 }
 
 export interface ActivityFilter {
-  actor?: ActorKind | 'all';
+  /** One kind, or several (sent as a comma list, e.g. «سامانه» = `operator,system`). */
+  actor?: ActorKind | 'all' | ActorKind[];
   category?: ActivityCategory | 'all';
   orgId?: ID;
   userId?: ID;

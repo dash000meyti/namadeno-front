@@ -2,41 +2,43 @@
 /**
  * Organization — contract settings (read-mostly). Kit settings page: heading (contract, status, validity and
  * «درخواست تغییر قرارداد») → settings groups: contract · credit terms · allowed receive policies (شیوه‌های دریافت) | allowed funds ·
- * approval chain (editable, saved through the action bar) · panel users (invite dialog).
+ * approval chain (editable, saved through the action bar) · panel users: members of the organization who sign in with their own
+ * Namadno account (national ID + password); the administrator gives, changes and removes access with PanelAccessDialog.
  * Read-only values sit as plain text in the control slot; limits change only through the operator.
  */
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import {
-  ActionBar, Ava, Chips, Dialog, ErrorBlock, Field, Note, PageHeading, Pill, SettingRow, SettingsGroup, SkeletonCard,
+  ActionBar, Ava, ErrorBlock, Note, PageHeading, Pill, SettingRow, SettingsGroup, SkeletonCard,
   SkeletonRows, Switch, Tile, type Tone,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
-import { useOrgContract, useUpdateContract } from '@/api/org';
+import { useOrgContract, useOrgEmployees } from '@/api/org';
 import { useFunds } from '@/api/app';
 import { useApprovalChain, useUpdateApprovalChain } from '@/api/org-packages-extra';
+import { useOrgPanelRole } from '@/api/org-people-extra';
 import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
-import { faDigits, jDate } from '@/lib/format';
-import type { Organization, OrgPanelRole } from '@/types/domain';
-import { ORG_ROLES } from '@/lib/org';
+import { faDigits, jDate, maskNationalId } from '@/lib/format';
 import { FEATURES } from '@/lib/features';
 import { I } from '@/components/org/packages/meta';
 import { errMsg } from '@/components/org/packages/ui';
+import { PanelAccessDialog } from '@/components/org/people/PanelAccessDialog';
 
 const FUND_COLOR: Record<string, string> = { gold: '--warning-main', fixed: '--chart-3', equity: '--chart-1', mixed: '--chart-2', energy: '--chart-5' };
 const COLLATERAL: Record<string, string> = { gold: 'پشتوانه‌ی وام تا ۷۰٪', fixed: 'پشتوانه‌ی وام تا ۹۰٪' };
 const LOCK_RULES: Record<'none' | 'vesting' | 'milestone', string> = {
   none: 'برای مزایا، عیدی و بسته‌های نقدی',
-  vesting: 'حداکثر ۱۲ ماه · پیش‌فرض ۳ ماه · فقط بخش صندوقی',
-  milestone: 'حداکثر ۸ مرحله · هر مرحله حداقل ۵٪ · جمع ۱۰۰٪',
+  // the contract only allows the policy; the organization sets the date or the steps of each package
+  vesting: 'تاریخ آزادسازی را هنگام ارسال هر بسته تعیین می‌کنید · فقط بخش صندوقی',
+  milestone: 'مراحل و سهم هر مرحله را هنگام ارسال هر بسته تعیین می‌کنید · جمع ۱۰۰٪',
 };
-const ROLES: { key: OrgPanelRole; label: string; pick: string; panelRole: OrgPanelRole }[] = ORG_ROLES.map((r) => ({ key: r.key, label: r.label, pick: r.label, panelRole: r.key }));
 const roleTone = (role: string): Tone => (role === 'مدیر' ? 'primary' : role === 'تأییدکننده' ? 'success' : 'info');
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** A settings row that is a button (panel users, for the administrator). */
+const ROW_BTN: CSSProperties = { width: '100%', border: 0, background: 'transparent', color: 'inherit', font: 'inherit', textAlign: 'right', cursor: 'pointer' };
 const CRUMBS = [{ label: 'مدیریت' }];
 
 /** Group title with a small category tile (same pattern as the operator rules page). */
@@ -44,15 +46,17 @@ const groupTitle = (d: string, tone: Tone, label: string) => <span style={{ disp
 /** Read-only value in the control slot of a settings row. */
 const val = (v: ReactNode) => <span className="num" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{v}</span>;
 
-/** Settings row with a leading mark (fund dot, avatar) — the kit SettingRow has no lead slot. */
-function LeadRow({ lead, label, desc, dim, children }: { lead: ReactNode; label: ReactNode; desc?: ReactNode; dim?: boolean; children?: ReactNode }) {
-  return (
-    <div className="nm-set-row" style={dim ? { opacity: 0.6 } : undefined}>
+/** Settings row with a leading mark (fund dot, avatar). With `onClick` the whole row is a button (opens a dialog). */
+function LeadRow({ lead, label, desc, dim, children, onClick, aria }: { lead: ReactNode; label: ReactNode; desc?: ReactNode; dim?: boolean; children?: ReactNode; onClick?: () => void; aria?: string }) {
+  const inner = (
+    <>
       {lead}
       <div className="l"><b>{label}</b>{desc != null && <small>{desc}</small>}</div>
       {children != null && <div className="c">{children}</div>}
-    </div>
+    </>
   );
+  if (onClick) return <button type="button" className="nm-set-row" style={ROW_BTN} onClick={onClick} aria-label={aria}>{inner}</button>;
+  return <div className="nm-set-row" style={dim ? { opacity: 0.6 } : undefined}>{inner}</div>;
 }
 
 export default function OrgContractPage() {
@@ -61,13 +65,12 @@ export default function OrgContractPage() {
   const { data: funds } = useFunds();
   const { data: chain } = useApprovalChain();
   const updateChain = useUpdateApprovalChain();
-  const updateContract = useUpdateContract();
+  const { data: employees } = useOrgEmployees();
+  // only the organization's administrator gives, changes or removes panel access
+  const isAdmin = useOrgPanelRole() === 'admin';
   const [chainOn, setChainOn] = useState<Record<string, boolean>>({});
-  const [invite, setInvite] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<OrgPanelRole>('specialist');
-  const [inviteErr, setInviteErr] = useState<{ field: 'name' | 'email' | 'form'; msg: string } | null>(null);
+  // panel access dialog: `{}` = add a member, `{ id }` = change that member's access
+  const [access, setAccess] = useState<{ id?: string } | null>(null);
 
   useEffect(() => {
     if (chain) setChainOn(Object.fromEntries(chain.items.map((c) => [c.id, c.enabled])));
@@ -98,21 +101,6 @@ export default function OrgContractPage() {
   const resetChain = () => { if (chain) setChainOn(Object.fromEntries(chain.items.map((c) => [c.id, c.enabled]))); };
   // steps required by the contract are shown as disabled switches with a «الزامی» pill
   const toggleChain = (id: string) => setChainOn((c) => ({ ...c, [id]: !c[id] }));
-
-  const openInvite = () => { setName(''); setEmail(''); setRole('specialist'); setInviteErr(null); setInvite(true); };
-  const sendInvite = () => {
-    if (updateContract.isPending) return;
-    if (name.trim().length < 3) { setInviteErr({ field: 'name', msg: 'نام و نام خانوادگی را وارد کنید.' }); return; }
-    if (!EMAIL_RE.test(email.trim())) { setInviteErr({ field: 'email', msg: 'ایمیل سازمانی معتبر وارد کنید.' }); return; }
-    if (o.admins.some((a) => a.email.toLowerCase() === email.trim().toLowerCase())) { setInviteErr({ field: 'email', msg: 'این ایمیل قبلاً به پنل اضافه شده است.' }); return; }
-    const r = ROLES.find((x) => x.key === role)!;
-    const admins: Organization['admins'] = [...o.admins, { id: 'oa-' + Date.now().toString(36), name: name.trim(), role: r.label, email: email.trim(), panelRole: r.panelRole }];
-    updateContract.mutate({ admins }, {
-      onSuccess: () => { setInvite(false); toast(`دعوت‌نامه برای ${name.trim()} ارسال شد`); },
-      onError: (e) => setInviteErr({ field: 'form', msg: errMsg(e) }),
-    });
-  };
-  const onEnter = (e: KeyboardEvent) => { if (e.key === 'Enter') sendInvite(); };
 
   return (
     <>
@@ -185,14 +173,23 @@ export default function OrgContractPage() {
 
           <SettingsGroup
             title={groupTitle(I.users, 'secondary', 'کاربران پنل')}
-            action={<button type="button" className="nm-btn sm ghost" onClick={openInvite}><Icon d={I.plus} size={15} strokeWidth={2} />افزودن کاربر</button>}
-            footer="نقش‌ها: مدیر (دسترسی کامل)، تأییدکننده (تأیید نهایی بسته‌ها)، کارشناس (آماده‌سازی بسته‌ها)."
+            action={isAdmin ? <button type="button" className="nm-btn sm ghost" onClick={() => setAccess({})}><Icon d={I.plus} size={15} strokeWidth={2} />افزودن کاربر</button> : undefined}
+            footer={<>همه با حساب نمادنوی خود (کد ملی و رمز، همان حساب اپ) وارد می‌شوند.{!isAdmin && ' دسترسی‌ها را فقط مدیر سازمان تغییر می‌دهد.'}</>}
           >
-            {o.admins.map((u) => (
-              <LeadRow key={u.id} lead={<Ava letter={u.name[0]} id={u.id} />} label={u.name} desc={<span className="ltr" style={{ display: 'block', textAlign: 'right' }}>{u.email}</span>}>
-                <Pill tone={roleTone(u.role)}>{u.role}</Pill>
-              </LeadRow>
-            ))}
+            {o.admins.map((u) => {
+              const unit = employees?.find((e) => e.id === u.id)?.department;
+              return (
+                <LeadRow
+                  key={u.id} lead={<Ava letter={u.name[0]} id={u.id} />} label={u.name}
+                  desc={<>{unit ? `${unit} · ` : ''}کد ملی <span className="num ltr">{maskNationalId(u.nationalId)}</span></>}
+                  onClick={isAdmin ? () => setAccess({ id: u.id }) : undefined} aria={isAdmin ? `تغییر دسترسی پنل ${u.name}` : undefined}
+                >
+                  {u.status === 'invited' && <Pill tone="warning" dot>در انتظار فعال‌سازی</Pill>}
+                  <Pill tone={roleTone(u.role)}>{u.role}</Pill>
+                  {isAdmin && <Icon d={I.chevL} size={16} style={{ color: 'var(--text-disabled)' }} />}
+                </LeadRow>
+              );
+            })}
           </SettingsGroup>
         </div>
       </div>
@@ -208,35 +205,7 @@ export default function OrgContractPage() {
         </ActionBar>
       )}
 
-      <Dialog
-        open={invite} onClose={() => setInvite(false)} title="افزودن کاربر به پنل سازمان"
-        sub="لینک فعال‌سازی به ایمیل سازمانی کاربر ارسال می‌شود و ۴۸ ساعت اعتبار دارد."
-        footer={(
-          <>
-            <button type="button" className="nm-btn ghost" onClick={() => setInvite(false)}>انصراف</button>
-            <button type="button" className="nm-btn" onClick={sendInvite} disabled={updateContract.isPending}>{updateContract.isPending ? 'در حال ارسال…' : 'ارسال دعوت'}</button>
-          </>
-        )}
-      >
-        <div className="nm-grid c2" style={{ gap: 12 }}>
-          <Field label="نام و نام خانوادگی" htmlFor="inv-name" error={inviteErr?.field === 'name' ? inviteErr.msg : undefined}>
-            <span className={inviteErr?.field === 'name' ? 'nm-in err' : 'nm-in'} style={{ width: '100%' }}>
-              <input id="inv-name" type="text" value={name} autoFocus placeholder="مینا راد" aria-label="نام و نام خانوادگی" onKeyDown={onEnter}
-                onChange={(e) => { setName(e.target.value); setInviteErr(null); }} />
-            </span>
-          </Field>
-          <Field label="ایمیل سازمانی" htmlFor="inv-email" error={inviteErr?.field === 'email' ? inviteErr.msg : undefined}>
-            <span className={inviteErr?.field === 'email' ? 'nm-in err' : 'nm-in'} style={{ width: '100%' }}>
-              <input id="inv-email" type="email" dir="ltr" value={email} placeholder="name@company.ir" aria-label="ایمیل" style={{ textAlign: 'right' }} onKeyDown={onEnter}
-                onChange={(e) => { setEmail(e.target.value); setInviteErr(null); }} />
-            </span>
-          </Field>
-        </div>
-        <Field label="نقش">
-          <Chips label="نقش" value={role} onChange={setRole} options={ROLES.map((r) => ({ key: r.key, label: r.pick }))} />
-        </Field>
-        {inviteErr?.field === 'form' && <Note tone="err">{inviteErr.msg}</Note>}
-      </Dialog>
+      <PanelAccessDialog open={!!access} memberId={access?.id} onClose={() => setAccess(null)} />
     </>
   );
 }

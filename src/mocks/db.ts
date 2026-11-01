@@ -54,7 +54,7 @@ export interface MockDB {
 }
 
 const STORAGE_KEY = 'nm-mock-db';
-export const DB_VERSION = 17;
+export const DB_VERSION = 18;
 
 let state: MockDB | null = null;
 
@@ -90,7 +90,7 @@ export function resetDb() {
 
 export const DEMO_USER_ID = 'u-1001'; // سارا محمدی
 export const DEMO_ORG_ID = 'org-arman'; // هلدینگ آرمان
-export const DEMO_ORG_ADMIN_ID = 'oa-201'; // نیما رضایی
+export const DEMO_ORG_ADMIN_ID = 'u-1014'; // نیما رضایی (an Arman member with «کارشناس» panel access)
 export const DEMO_OPERATOR_ID = 'op-301'; // علی نادری
 
 export function userData(userId: string = DEMO_USER_ID): UserData {

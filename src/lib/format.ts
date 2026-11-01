@@ -127,6 +127,17 @@ export function maskMobile(m: string): string {
   return faDigits(m.slice(0, 4) + '•••' + m.slice(-4));
 }
 
+/** National ID format check (same rule as app signup): 10 digits, not all the same digit. Accepts Persian digits. */
+export function nidOk(s: string): boolean {
+  const d = enDigits(s).replace(/\D/g, '');
+  return /^\d{10}$/.test(d) && !/^(\d)\1{9}$/.test(d);
+}
+
+/** Masks: «۰۰۱•••••۷۸» */
+export function maskNationalId(n: string): string {
+  return faDigits(n.slice(0, 3) + '•••••' + n.slice(-2));
+}
+
 export function iban(i: string): string {
   return i.replace(/(.{4})/g, '$1 ').trim();
 }

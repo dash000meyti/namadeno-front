@@ -5,7 +5,7 @@
  * Keys live under ['org', 'people', …] so every org mutation (qk.org.all) refreshes them.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AllocationSplit, ApprovalRequest, AssetKind, Employee, Holding, Loan, LockType, MilestoneStep, OrgDepartment, OrgPanelRole } from '@/types/domain';
+import type { AllocationSplit, ApprovalRequest, AssetKind, Employee, Holding, Loan, LockType, MilestoneStep, OrgDepartment, OrgPanelRole, OrgPanelUser } from '@/types/domain';
 import { del, get, patch, post } from './client';
 import { useOrgMe } from './org';
 import { qk } from './keys';
@@ -169,7 +169,15 @@ export const useOrgNotifications = () => useQuery({ queryKey: pk.notifications, 
 /** Mark notifications as read (`ids` omitted = all). */
 export const useMarkOrgNotificationsRead = () => usePeopleMutation((v: { ids?: string[] }) => post<{ ok: true }>('/org/notifications/read', v));
 
-/** Panel role of the signed-in user (`undefined` while loading). Only `admin` manages units. */
+/**
+ * Panel access — chosen from the organization's employees (one Namadno account per person; they sign in with their
+ * national ID and account password). Admin only; each returns the updated `Organization['admins']`.
+ */
+export const useGrantPanelAccess = () => usePeopleMutation((v: { employeeId: string; panelRole: OrgPanelRole }) => post<OrgPanelUser[]>('/org/panel-users', v));
+export const useUpdatePanelAccess = () => usePeopleMutation((v: { id: string; panelRole: OrgPanelRole }) => patch<OrgPanelUser[]>(`/org/panel-users/${v.id}`, { panelRole: v.panelRole }));
+export const useRevokePanelAccess = () => usePeopleMutation((id: string) => del<OrgPanelUser[]>(`/org/panel-users/${id}`));
+
+/** Panel role of the signed-in user (`undefined` while loading). Only `admin` manages units and panel access. */
 export function useOrgPanelRole(): OrgPanelRole | undefined {
   const { data } = useOrgMe();
   return data ? data.admin.panelRole ?? 'specialist' : undefined;

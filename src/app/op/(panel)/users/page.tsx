@@ -1,20 +1,25 @@
 'use client';
-/** Operator console — users. Kit list page: stats → list card (tabs, search, organization filter, table) → inspector. */
+/**
+ * Operator console — users. Kit list page: stats → list card (tabs, search, organization filter, table) → inspector.
+ * One Namadno account per person: a member with organization-panel access shows a «پنل · نقش» pill and a «پنل سازمان» row.
+ */
 import { useMemo, useState } from 'react';
-import type { AssetKind, PlatformUser } from '@/types/domain';
+import Link from 'next/link';
+import type { AssetKind, PanelAccess, PlatformUser } from '@/types/domain';
 import { useOpUser, useOpUsers, useSetUserStatus } from '@/api/op';
 import { useAddUserNote, useOpUserExtra, useResetUserPassword, useUsersMeta, type Facility, type UserMetaRow } from '@/api/op-core-extra';
 import {
-  Ava, BigNum, Card, Chips, Dialog, Empty, Field, FreeLocked, Inspector, KeyStats, List, ListRow, Meter, PageHeading, Pill,
+  Ava, BigNum, Card, Chips, Dialog, Empty, Field, FreeLocked, Inspector, KV, KeyStats, List, ListRow, Meter, PageHeading, Pill,
   SearchField, Section, Select, StatStrip, Table, TableFoot, Tabs, Tile, Toolbar, Who, usePaging, type Column, type Tone,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { LockBar, LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
 import { ICON, PRODUCT_META, errMsg, fm, pctFa } from '@/components/op/core/ui';
-import { enDigits, faDigits, jDate, money, relTime } from '@/lib/format';
+import { enDigits, faDigits, jDate, maskNationalId, money, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { LOCK_META } from '@/lib/locks';
+import { roleLabel } from '@/lib/org';
 import { routes } from '@/lib/routes';
 
 type Filt = 'all' | 'active' | 'kyc' | 'locked' | 'legal' | 'blocked';
@@ -156,12 +161,25 @@ export default function OpUsersPage() {
 }
 
 function IdentCell({ u }: { u: PlatformUser }) {
+  const a = u.panelAccess;
   return (
     <span className="nm-ident">
       <Ava letter={u.avatarLetter} id={u.id} />
-      <span className="nm-col"><b>{u.fullName}</b><small className="num ltr" style={{ textAlign: 'right' }}>{phone(u.mobile)}</small></span>
+      <span className="nm-col">
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          <b>{u.fullName}</b>
+          {a && <Pill tone={a.status === 'invited' ? 'warning' : 'neutral'} title={`دسترسی پنل ${a.orgName}${a.status === 'invited' ? ' · در انتظار فعال‌سازی' : ''}`}>پنل · {roleLabel(a.panelRole)}</Pill>}
+        </span>
+        <small className="num ltr" style={{ textAlign: 'right' }}>{phone(u.mobile)}</small>
+      </span>
     </span>
   );
+}
+
+/** «پنل سازمان» value: role and organization (link), or «ندارد». */
+function PanelAccessValue({ a }: { a?: PanelAccess }) {
+  if (!a) return <span className="mute">ندارد</span>;
+  return <Link href={routes.op.organization(a.orgId)} className="nm-more">{roleLabel(a.panelRole)} · {a.orgName}{a.status === 'invited' ? ' · در انتظار فعال‌سازی' : ''}</Link>;
 }
 
 function UserInspector({ user, meta, onClose }: { user: PlatformUser; meta?: UserMetaRow; onClose: () => void }) {
@@ -239,6 +257,13 @@ function UserInspector({ user, meta, onClose }: { user: PlatformUser; meta?: Use
             </List>
           </Section>
         )}
+
+        <Section title="اعتبار و دسترسی">
+          <KV rows={[
+            ['کد ملی', <span key="n" className="num ltr">{maskNationalId(user.nationalId)}</span>],
+            ['پنل سازمان', <PanelAccessValue key="p" a={detail.data?.user.panelAccess ?? user.panelAccess} />],
+          ]} />
+        </Section>
 
         <Section title="تسهیلات فعال">
           {facs.length ? (

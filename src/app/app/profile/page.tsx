@@ -17,6 +17,7 @@ import { useColorMode } from '@/theme/ColorModeProvider';
 import { faDigits, jDayMonth, maskMobile, money } from '@/lib/format';
 import { HOURGLASS } from '@/lib/locks';
 import { routes } from '@/lib/routes';
+import { roleLabel } from '@/lib/org';
 
 const PREFS_KEY = 'nm-app-prefs';
 type Prefs = { bio: boolean; n1: boolean; n2: boolean };
@@ -137,6 +138,20 @@ export default function ProfilePage() {
             <Chev />
           </button>
         </SectionCard>
+
+        {/* the same account signs in to the organization panel when the organization gave this person panel access */}
+        {me.data?.panelAccess && (
+          <SectionCard title="سازمان">
+            <Link href={routes.org.login} className="rowbtn" style={{ textDecoration: 'none' }}>
+              <RowIcon d="M5 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17M15 9h3a1 1 0 0 1 1 1v11M3 21h18M9 7h2M9 11h2M9 15h2" tone="info" />
+              <RowText
+                title="ورود به پنل سازمان"
+                sub={`${roleLabel(me.data.panelAccess.panelRole)} · ${me.data.panelAccess.orgName}${me.data.panelAccess.status === 'invited' ? ' · در انتظار فعال‌سازی' : ''}`}
+              />
+              <Chev />
+            </Link>
+          </SectionCard>
+        )}
 
         <SectionCard title="امنیت">
           <button className="rowbtn" onClick={() => setSheet('pass')} style={dashed}>

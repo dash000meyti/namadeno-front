@@ -22,7 +22,7 @@ import { LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
 import { contractFunds, fundMeta } from '@/components/op/core/ContractEditor';
 import { ICON, errMsg, parseJalali } from '@/components/op/core/ui';
-import { enDigits, faDigits, jDate, time } from '@/lib/format';
+import { enDigits, faDigits, jDate, maskNationalId, nidOk, time } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
@@ -39,22 +39,15 @@ const STEPS = [
 ];
 const DRAFT_KEY = 'nm-op-org-draft';
 
-/** `tempPassword` = first-login password when SMS invites are off (never written to the saved draft). */
-interface OrgUser { id: string; name: string; email: string; mobile: string; role: number; tempPassword?: string }
-const PW_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
-/** A readable temporary password: 10 characters, letters and digits (no look-alike characters). */
-function genPassword() {
-  const letters = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
-  const digits = '23456789';
-  const all = letters + digits;
-  const pick = (set: string) => set[Math.floor(Math.random() * set.length)];
-  const chars = [pick(letters), pick(digits), ...Array.from({ length: 8 }, () => pick(all))];
-  return chars.sort(() => Math.random() - 0.5).join('');
-}
-const withPasswords = (users: OrgUser[]) => users.map((u) => (u.tempPassword ? u : { ...u, tempPassword: genPassword() }));
+/**
+ * A first panel member of the organization. They sign in with their Namadno account (national ID + password, the same
+ * account as the app); with no account yet, an account is opened and an activation SMS is sent when the organization is created.
+ * `nationalId` / `mobile` are latin digits; `role` = index in ROLES.
+ */
+interface OrgUser { id: string; name: string; nationalId: string; mobile: string; role: number }
 interface Form {
   name: string; nid: string; sector: number; staff: string; rep: string; tel: string;
-  loan: number; months: number[]; card: number; perCap: string; bnpl: boolean; cash: boolean; invite: boolean;
+  loan: number; months: number[]; card: number; perCap: string; bnpl: boolean; cash: boolean;
   pol: { vesting: boolean; milestone: boolean; collateral: boolean; installment: boolean };
   funds: string[]; start: string; end: string; users: OrgUser[];
 }
@@ -64,11 +57,29 @@ const blank = (): Form => {
   return {
     name: '', nid: '', sector: 2, staff: '', rep: '', tel: '',
     // while facilities are «به‌زودی» (FEATURES.orgCredit off) the organization is created with them disabled
-    loan: FAC ? 40 : 0, months: [6, 12, 18], card: FAC ? 25 : 0, perCap: '50000000', bnpl: FAC, cash: true, invite: true,
+    loan: FAC ? 40 : 0, months: [6, 12, 18], card: FAC ? 25 : 0, perCap: '50000000', bnpl: FAC, cash: true,
     pol: { vesting: true, milestone: true, collateral: FAC, installment: FAC },
     funds: ['gold', 'fixed'], start: jDate(t), end: jDate(new Date(t.getTime() + 364 * 86400000)), users: [],
   };
 };
+
+const str = (v: unknown) => (typeof v === 'string' ? v : '');
+/** A user from a saved draft. Older drafts kept `email` / `invite` / no national ID: unknown fields are dropped and a missing national ID fails step 3. */
+function restoreUser(raw: unknown, i: number): OrgUser {
+  const u = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const role = typeof u.role === 'number' && u.role >= 0 && u.role < ROLES.length ? u.role : 2;
+  return { id: str(u.id) || `nu-${i}-${Date.now()}`, name: str(u.name), nationalId: enDigits(str(u.nationalId)).replace(/\D/g, '').slice(0, 10), mobile: enDigits(str(u.mobile)).replace(/\D/g, ''), role };
+}
+/** The saved draft on top of a blank form: only the fields this form knows. */
+function restoreForm(raw: unknown): Form {
+  const b = blank();
+  const d = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const out = { ...b } as Record<string, unknown>;
+  for (const k of Object.keys(b)) if (d[k] !== undefined && typeof d[k] === typeof (b as unknown as Record<string, unknown>)[k]) out[k] = d[k];
+  out.pol = { ...b.pol, ...(d.pol && typeof d.pol === 'object' ? d.pol : {}) };
+  out.users = Array.isArray(d.users) ? d.users.map(restoreUser) : [];
+  return out as unknown as Form;
+}
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 /** Whole number in [a, b]; an empty field counts as the minimum. */
@@ -116,7 +127,7 @@ export default function OpOrgNewPage() {
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [done, setDone] = useState<Organization | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [nu, setNu] = useState({ name: '', email: '', mobile: '', role: 2, tempPassword: '' });
+  const [nu, setNu] = useState({ name: '', nationalId: '', mobile: '', role: 2 });
   const [nuErr, setNuErr] = useState('');
   const [apiErr, setApiErr] = useState('');
   const loaded = useRef(false);
@@ -127,11 +138,8 @@ export default function OpOrgNewPage() {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
-        const d = JSON.parse(raw) as { f: Form; step: number; at: string };
-        const restored = { ...blank(), ...d.f };
-        // temporary passwords are not saved in the draft: make new ones when invites are off
-        if (!restored.invite) restored.users = withPasswords(restored.users);
-        setF(restored); setStep(d.step || 1); setSavedAt(new Date(d.at));
+        const d = JSON.parse(raw) as { f?: unknown; step?: number; at?: string };
+        setF(restoreForm(d.f)); setStep(clamp(Number(d.step) || 1, 1, 3)); if (d.at) setSavedAt(new Date(d.at));
       }
     } catch { /* ignore */ }
     loaded.current = true;
@@ -140,8 +148,7 @@ export default function OpOrgNewPage() {
     if (!loaded.current || done) return;
     if (step === 1 && JSON.stringify(f) === pristine.current) return; // nothing typed yet
     const at = new Date();
-    const draft = { ...f, users: f.users.map(({ tempPassword: _pw, ...u }) => { void _pw; return u; }) };
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ f: draft, step, at: at.toISOString() })); setSavedAt(at); } catch { /* ignore */ }
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ f, step, at: at.toISOString() })); setSavedAt(at); } catch { /* ignore */ }
   }, [f, step, done]);
 
   const set = (p: Partial<Form>) => { setF((x) => ({ ...x, ...p })); setApiErr(''); };
@@ -168,7 +175,8 @@ export default function OpOrgNewPage() {
       else if (startIso && endIso <= startIso) e.end = 'تاریخ پایان باید بعد از تاریخ شروع باشد.';
     }
     if (n === 3 && !f.users.length) e.users = 'حداقل یک کاربر سازمانی اضافه کنید.';
-    else if (n === 3 && !f.invite && f.users.some((u) => !PW_RE.test(u.tempPassword ?? ''))) e.users = 'برای هر کاربر رمز موقت معتبر (حداقل ۸ نویسه، حرف و عدد) تعیین کنید.';
+    else if (n === 3 && f.users.some((u) => !nidOk(u.nationalId))) e.users = 'برای هر کاربر کد ملی معتبر لازم است؛ کاربری را که کد ملی ندارد حذف و دوباره اضافه کنید.';
+    else if (n === 3 && new Set(f.users.map((u) => u.nationalId)).size !== f.users.length) e.users = 'کد ملی تکراری در کاربران سازمان؛ یکی از آن‌ها را حذف کنید.';
     return e;
   };
   const err = tried[step] ? errors(step) : {};
@@ -198,8 +206,7 @@ export default function OpOrgNewPage() {
         allowCollateral: FAC && f.pol.collateral, allowInstallmentLock: FAC && f.bnpl && f.pol.installment,
         nationalId: enDigits(f.nid), representative: { name: f.rep.trim(), phone: enDigits(f.tel) },
       },
-      hrUsers: f.users.map((u) => ({ name: u.name, email: u.email, mobile: enDigits(u.mobile), role: ROLES[u.role], ...(f.invite ? {} : { tempPassword: u.tempPassword }) })),
-      sendInvites: f.invite,
+      hrUsers: f.users.map((u) => ({ name: u.name, nationalId: enDigits(u.nationalId), mobile: enDigits(u.mobile), role: ROLES[u.role] })),
     };
     create.mutate(payload, {
       onSuccess: (o) => {
@@ -215,15 +222,16 @@ export default function OpOrgNewPage() {
     setF(blank()); setStep(1); setTried({}); setDone(null); setApiErr(''); setSavedAt(null);
   };
 
-  const openAdd = () => { setNuErr(''); setNu((x) => ({ ...x, tempPassword: genPassword() })); setAddOpen(true); };
+  const openAdd = () => { setNuErr(''); setAddOpen(true); };
   const addUser = () => {
+    const nid = enDigits(nu.nationalId).replace(/\D/g, '');
+    const mobile = enDigits(nu.mobile).replace(/\D/g, '');
     if (nu.name.trim().length < 3) { setNuErr('نام کاربر را وارد کنید.'); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nu.email.trim())) { setNuErr('ایمیل معتبر وارد کنید.'); return; }
-    if (!/^09\d{9}$/.test(enDigits(nu.mobile).replace(/\s/g, ''))) { setNuErr('شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.'); return; }
-    if (f.users.some((u) => u.email === nu.email.trim())) { setNuErr('این ایمیل قبلاً اضافه شده است.'); return; }
-    if (!f.invite && !PW_RE.test(nu.tempPassword)) { setNuErr('رمز موقت باید حداقل ۸ نویسه و شامل حرف لاتین و عدد باشد.'); return; }
-    set({ users: [...f.users, { id: 'nu-' + Date.now(), name: nu.name.trim(), email: nu.email.trim(), mobile: enDigits(nu.mobile).replace(/\s/g, ''), role: nu.role, ...(f.invite ? {} : { tempPassword: nu.tempPassword }) }] });
-    setNu({ name: '', email: '', mobile: '', role: 2, tempPassword: '' }); setNuErr(''); setAddOpen(false);
+    if (!nidOk(nid)) { setNuErr('کد ملی ۱۰ رقمی معتبر نیست.'); return; }
+    if (f.users.some((u) => u.nationalId === nid)) { setNuErr('این کد ملی قبلاً اضافه شده است.'); return; }
+    if (!/^09\d{9}$/.test(mobile)) { setNuErr('شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.'); return; }
+    set({ users: [...f.users, { id: 'nu-' + Date.now(), name: nu.name.trim(), nationalId: nid, mobile, role: nu.role }] });
+    setNu({ name: '', nationalId: '', mobile: '', role: 2 }); setNuErr(''); setAddOpen(false);
   };
 
   const funds = contractFunds(fundsQ.data);
@@ -273,7 +281,7 @@ export default function OpOrgNewPage() {
             action={(
               <>
                 <Pill tone="info" dot>در حال عقد — در انتظار امضای نماینده</Pill>
-                {f.users.length > 0 && <span className="mute" style={{ fontSize: 12.5 }}>{f.invite ? `دعوت‌نامه پیامکی برای ${faDigits(f.users.length)} کاربر ارسال شد.` : 'رمز موقت هر کاربر را به او بدهید؛ در اولین ورود رمز تازه انتخاب می‌کند.'}</span>}
+                {f.users.length > 0 && <span className="mute" style={{ fontSize: 12.5 }}>کسانی که حساب نمادنو دارند همین حالا دسترسی دارند؛ بقیه پیامک فعال‌سازی حساب گرفتند.</span>}
                 <span style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 8 }}>
                   <button type="button" className="nm-btn" onClick={() => router.push(routes.op.organization(done.id))}>مشاهده سازمان</button>
                   <Link href={routes.op.organizations} className="nm-btn ghost">مشاهده سازمان‌ها</Link>
@@ -376,38 +384,34 @@ export default function OpOrgNewPage() {
               )}
 
               {step === 3 && (
-                <>
-                  <Card title="کاربران سازمان" count={f.users.length || undefined}
-                    actions={<button type="button" className="nm-btn sm ghost" onClick={openAdd}><Icon d={ICON.plus} size={15} strokeWidth={2} />افزودن کاربر</button>}>
-                    <span className="mute" style={{ fontSize: 12.5, lineHeight: 1.7 }}>این افراد به پنل سازمانی دسترسی می‌گیرند. برای ارسال بسته، حداقل یک «تأییدکننده» لازم است.</span>
-                    {f.users.length ? (
-                      <List>
-                        {f.users.map((u) => (
-                          <ListRow key={u.id}
-                            lead={<Ava letter={u.name[0]} id={u.id} />}
-                            title={u.name}
-                            sub={<><span className="ltr">{u.email}</span> · <span className="num ltr">{faDigits(u.mobile.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3'))}</span>{!f.invite && <> · رمز موقت: <span className="ltr" style={{ fontFamily: 'ui-monospace, monospace', color: 'var(--text-primary)' }}>{u.tempPassword || '—'}</span></>}</>}
-                            trail={(
-                              <>
-                                <Select label={`نقش ${u.name}`} value={u.role} align="end" options={ROLES.map((t, i) => ({ key: i, label: t }))} onChange={(r) => set({ users: f.users.map((x) => (x.id === u.id ? { ...x, role: r } : x)) })} />
-                                <button type="button" className="nm-ib" aria-label={`حذف ${u.name}`} onClick={() => set({ users: f.users.filter((x) => x.id !== u.id) })}><Icon d={ICON.trash} size={17} /></button>
-                              </>
-                            )}
-                          />
-                        ))}
-                      </List>
-                    ) : (
-                      <Empty icon={ICON.users} tone={err.users ? 'error' : undefined} title={err.users ?? 'هنوز کاربری اضافه نشده است'} sub="مدیر و تأییدکننده‌ی سازمان را اضافه کنید."
-                        action={<button type="button" className="nm-btn sm" onClick={openAdd}>افزودن کاربر</button>} />
-                    )}
-                    {!hasApprover && f.users.length > 0 && <Note tone="warn">هیچ کاربری نقش «تأییدکننده» ندارد؛ بسته‌ها بدون تأیید نهایی ارسال نمی‌شوند.</Note>}
-                  </Card>
-                  <SettingsGroup>
-                    <SettingRow label="ارسال دعوت‌نامه پیامکی" desc={f.invite ? 'لینک ورود به پنل سازمانی برای کاربران پیامک می‌شود و هر کاربر رمز خودش را می‌سازد' : 'بدون دعوت‌نامه، هر کاربر با رمز موقت وارد می‌شود و در اولین ورود رمز تازه انتخاب می‌کند'}>
-                      <Switch on={f.invite} onChange={(v) => set(v ? { invite: true } : { invite: false, users: withPasswords(f.users) })} label="ارسال دعوت‌نامه" />
-                    </SettingRow>
-                  </SettingsGroup>
-                </>
+                <Card title="کاربران سازمان" count={f.users.length || undefined}
+                  actions={<button type="button" className="nm-btn sm ghost" onClick={openAdd}><Icon d={ICON.plus} size={15} strokeWidth={2} />افزودن کاربر</button>}>
+                  <span className="mute" style={{ fontSize: 12.5, lineHeight: 1.7 }}>این افراد با حساب نمادنوی خود (کد ملی و رمز، همان حساب اپ) وارد پنل سازمانی می‌شوند. کسی که هنوز حساب ندارد، پیامک افتتاح حساب می‌گیرد. برای ارسال بسته، حداقل یک «تأییدکننده» لازم است.</span>
+                  {f.users.length ? (
+                    <List>
+                      {f.users.map((u) => (
+                        <ListRow key={u.id}
+                          lead={<Ava letter={u.name[0] ?? 'ک'} id={u.id} />}
+                          title={u.name || '—'}
+                          sub={<>{nidOk(u.nationalId)
+                            ? <>کد ملی <span className="num ltr">{maskNationalId(u.nationalId)}</span></>
+                            : <span style={{ color: 'var(--error-text)' }}>کد ملی ثبت نشده</span>} · <span className="num ltr">{faDigits(u.mobile.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3'))}</span></>}
+                          trail={(
+                            <>
+                              <Select label={`نقش ${u.name}`} value={u.role} align="end" options={ROLES.map((t, i) => ({ key: i, label: t }))} onChange={(r) => set({ users: f.users.map((x) => (x.id === u.id ? { ...x, role: r } : x)) })} />
+                              <button type="button" className="nm-ib" aria-label={`حذف ${u.name}`} onClick={() => set({ users: f.users.filter((x) => x.id !== u.id) })}><Icon d={ICON.trash} size={17} /></button>
+                            </>
+                          )}
+                        />
+                      ))}
+                    </List>
+                  ) : (
+                    <Empty icon={ICON.users} tone={err.users ? 'error' : undefined} title={err.users ?? 'هنوز کاربری اضافه نشده است'} sub="مدیر و تأییدکننده‌ی سازمان را اضافه کنید."
+                      action={<button type="button" className="nm-btn sm" onClick={openAdd}>افزودن کاربر</button>} />
+                  )}
+                  {err.users && f.users.length > 0 && <Note tone="err">{err.users}</Note>}
+                  {!hasApprover && f.users.length > 0 && <Note tone="warn">هیچ کاربری نقش «تأییدکننده» ندارد؛ بسته‌ها بدون تأیید نهایی ارسال نمی‌شوند.</Note>}
+                </Card>
               )}
 
               {apiErr && <Note tone="err">{apiErr}</Note>}
@@ -452,8 +456,8 @@ export default function OpOrgNewPage() {
           <Ctl id="nu-name" value={nu.name} onChange={(v) => { setNu({ ...nu, name: v }); setNuErr(''); }} />
         </Field>
         <div className="nm-grid c2" style={{ gap: 12 }}>
-          <Field label="ایمیل" htmlFor="nu-email">
-            <Ctl id="nu-email" ltr value={nu.email} onChange={(v) => { setNu({ ...nu, email: v }); setNuErr(''); }} />
+          <Field label="کد ملی" htmlFor="nu-nid">
+            <Ctl id="nu-nid" ltr numeric placeholder="۰۰۱۲۳۴۵۶۷۸" value={faDigits(nu.nationalId)} onChange={(v) => { setNu({ ...nu, nationalId: enDigits(v).replace(/\D/g, '').slice(0, 10) }); setNuErr(''); }} />
           </Field>
           <Field label="موبایل" htmlFor="nu-mobile">
             <Ctl id="nu-mobile" ltr numeric placeholder="۰۹۱۲۰۰۰۰۰۰۰" value={faDigits(nu.mobile)} onChange={(v) => { setNu({ ...nu, mobile: enDigits(v).replace(/\D/g, '').slice(0, 11) }); setNuErr(''); }} />
@@ -462,14 +466,6 @@ export default function OpOrgNewPage() {
         <Field label="نقش">
           <Chips label="نقش کاربر سازمان" value={nu.role} onChange={(r) => setNu({ ...nu, role: r })} options={ROLES.map((t, i) => ({ key: i, label: t }))} />
         </Field>
-        {!f.invite && (
-          <Field label="رمز موقت" htmlFor="nu-pw" help="کاربر با این رمز وارد می‌شود و در اولین ورود رمز تازه انتخاب می‌کند">
-            <div className="nm-ctl">
-              <input id="nu-pw" dir="ltr" autoComplete="off" value={nu.tempPassword} onChange={(e) => { setNu({ ...nu, tempPassword: e.target.value.trim() }); setNuErr(''); }} style={{ textAlign: 'right', fontFamily: 'ui-monospace, monospace' }} />
-              <button type="button" className="nm-btn sm text" onClick={() => setNu({ ...nu, tempPassword: genPassword() })}>ساخت دوباره</button>
-            </div>
-          </Field>
-        )}
         {nuErr && <Note tone="err">{nuErr}</Note>}
       </Dialog>
     </>

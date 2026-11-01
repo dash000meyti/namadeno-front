@@ -1,8 +1,9 @@
 /** Organizations, employees, packages, requests, operator data, stores, FAQ and blog. */
 import type {
-  ApprovalRequest, BlogPost, CreditProduct, Employee, FaqItem, MilestoneStep, OrgPackage, Organization, PlatformRule, PlatformUser,
+  ApprovalRequest, BlogPost, CreditProduct, Employee, FaqItem, MilestoneStep, OrgPackage, Organization, OrgPanelRole, OrgPanelUser, PlatformRule, PlatformUser,
   RiskAlert, Store,
 } from '@/types/domain';
+import { roleLabel } from '@/lib/org';
 import { daysFromNow, jalaliToIso, minutesAgo } from '@/lib/clock';
 import { MS_STEPS } from './core';
 
@@ -33,14 +34,8 @@ export const ORGANIZATIONS: Organization[] = ORG_ROWS.map(([id, name, contract, 
     loanEnabled: products.includes('loan'), loanMaxPct: loanPct, loanMonthsOptions: months,
     cardEnabled: products.includes('credit'), installmentEnabled: products.includes('bnpl'),
   },
-  admins: id === 'org-arman'
-    ? [
-      { id: 'oa-200', name: 'مهسا تهرانی', role: 'مدیر', email: 'm.tehrani@arman.co', panelRole: 'admin' },
-      { id: 'oa-201', name: 'نیما رضایی', role: 'کارشناس', email: 'nima.rezaei@arman.co', panelRole: 'specialist' },
-      { id: 'oa-202', name: 'لیلا کاظمی', role: 'کارشناس', email: 'l.kazemi@arman.co', panelRole: 'specialist' },
-      { id: 'oa-203', name: 'رضا حسینی', role: 'تأییدکننده', email: 'r.hosseini@arman.co', panelRole: 'approver' },
-    ]
-    : [{ id: 'oa-' + id, name: 'مدیر سازمان', role: 'مدیر', email: 'hr@' + id.slice(4) + '.ir', panelRole: 'admin' }],
+  // members with panel access are set below, from the organization's employees (one account per person)
+  admins: [],
 }));
 
 // ───────────── Employees of هلدینگ آرمان ─────────────
@@ -59,12 +54,53 @@ const EMP_ROWS: EmpRow[] = [
   ['u-1011', 'کاوه شریفی', '1079', 'عملیات', 'تحلیلگر داده', 'invited', 0, 0, 0, [1405, 8, 2], '09363349901'],
   ['u-1012', 'نازنین اکبری', '1052', 'فروش', 'کارشناس بازاریابی', 'active', 131_000_000, 20_000_000, 58_000_000, [1404, 5, 9], '09128890011'],
 ];
+/** HR staff who work in the organization panel — members like everyone else (same account in the app). */
+const HR_ROWS: EmpRow[] = [
+  ['u-1013', 'مهسا تهرانی', '1003', 'منابع انسانی', 'مدیر منابع انسانی', 'active', 154_000_000, 22_000_000, 60_000_000, [1403, 4, 12], '09121873340'],
+  ['u-1014', 'نیما رضایی', '1019', 'منابع انسانی', 'کارشناس منابع انسانی', 'active', 96_500_000, 10_000_000, 40_000_000, [1403, 11, 6], '09124456219'],
+  ['u-1015', 'لیلا کاظمی', '1027', 'منابع انسانی', 'کارشناس جبران خدمات', 'active', 118_000_000, 14_000_000, 50_000_000, [1404, 2, 3], '09365512087'],
+];
 
-export const ARMAN_EMPLOYEES: Employee[] = EMP_ROWS.map(([id, fullName, code, department, jobTitle, status, portfolioValue, lockedValue, totalReceived, j, mobile], i) => ({
+export const ARMAN_EMPLOYEES: Employee[] = [...EMP_ROWS, ...HR_ROWS].map(([id, fullName, code, department, jobTitle, status, portfolioValue, lockedValue, totalReceived, j, mobile], i) => ({
   id, fullName, nationalId: String(12345678 + i * 1111111).padStart(10, '0'), mobile, employeeCode: code, department, jobTitle, status,
   joinedAt: jalaliToIso(j[0], j[1], j[2]), totalReceived, portfolioValue, lockedValue,
   lastPackageAt: status === 'active' ? jalaliToIso(1405, 7, 14) : undefined, avatarLetter: fullName[0],
 }));
+
+// ───────────── Organization-panel members ─────────────
+// One Namadno account per person for the app and the panel: `admins[].id` is the member's account / employee id and
+// they sign in with their national ID. کاوه شریفی has not activated his account yet («در انتظار فعال‌سازی»).
+const ARMAN_PANEL: [id: string, role: OrgPanelRole][] = [['u-1013', 'admin'], ['u-1004', 'approver'], ['u-1014', 'specialist'], ['u-1015', 'specialist'], ['u-1011', 'specialist']];
+const OTHER_ADMINS: Record<string, [name: string, nationalId: string, mobile: string]> = {
+  'org-pars': ['بهزاد کامرانی', '0451873620', '09121405532'],
+  'org-novin': ['سپیده نیک‌نام', '0068342915', '09122318476'],
+  'org-atieh': ['فرهاد صالحی', '0079451326', '09123327105'],
+  'org-sepehr': ['ندا رسولی', '0083615472', '09124436617'],
+  'org-ideh': ['آرش منصوری', '0491628354', '09125548820'],
+  'org-kaveh': ['شیرین بهرامی', '1271845639', '09126659931'],
+  'org-ava': ['کیان فرهمند', '0019583746', '09127761142'],
+  'org-rad': ['مریم اسدی', '0072946183', '09128872253'],
+  'org-alborz': ['پرهام عطایی', '0038275196', '09129983364'],
+  'org-mehr': ['الناز شکوهی', '0057382914', '09351094475'],
+  'org-aseman': ['هومن یگانه', '0046192837', '09352105586'],
+};
+/** The panel administrator of every other organization is also its (only seeded) member, in the default unit. */
+export const ORG_ADMIN_EMPLOYEES: Record<string, Employee[]> = Object.fromEntries(ORGANIZATIONS.filter((o) => OTHER_ADMINS[o.id]).map((o, i) => {
+  const [fullName, nationalId, mobile] = OTHER_ADMINS[o.id];
+  const e: Employee = {
+    id: 'u-' + (6101 + i), fullName, nationalId, mobile, employeeCode: '1001', department: 'سایر', jobTitle: 'مدیر منابع انسانی',
+    status: o.status === 'onboarding' ? 'invited' : 'active', joinedAt: o.contractStart, totalReceived: 0, portfolioValue: 0, lockedValue: 0, avatarLetter: fullName[0],
+  };
+  return [o.id, [e]];
+}));
+const panelUser = (e: Employee, panelRole: OrgPanelRole): OrgPanelUser => ({
+  id: e.id, name: e.fullName, role: roleLabel(panelRole), panelRole, nationalId: e.nationalId, mobile: e.mobile, status: e.status === 'invited' ? 'invited' : 'active',
+});
+for (const o of ORGANIZATIONS) {
+  o.admins = o.id === 'org-arman'
+    ? ARMAN_PANEL.map(([id, role]) => panelUser(ARMAN_EMPLOYEES.find((e) => e.id === id)!, role))
+    : (ORG_ADMIN_EMPLOYEES[o.id] ?? []).map((e) => panelUser(e, 'admin'));
+}
 
 // ───────────── Packages of هلدینگ آرمان ─────────────
 const recipients = (ids: string[], amount: number, status: (i: number) => 'pending' | 'accepted' | 'expired') =>
@@ -73,7 +109,8 @@ const recipients = (ids: string[], amount: number, status: (i: number) => 'pendi
     const s = status(i);
     return { employeeId: id, name: e.fullName, amount, status: s, acceptedAt: s === 'accepted' ? daysFromNow(-20 + i) : undefined };
   });
-const ACTIVE_IDS = ARMAN_EMPLOYEES.filter((e) => e.status === 'active').map((e) => e.id);
+// package recipients of the seed: the original staff list (the HR rows above joined the demo later)
+const ACTIVE_IDS = ARMAN_EMPLOYEES.filter((e) => e.status === 'active' && EMP_ROWS.some((r) => r[0] === e.id)).map((e) => e.id);
 
 const BRAND_STEPS: MilestoneStep[] = [
   { id: 'ms-1', title: 'مفهوم و طرح اولیه', sharePct: 30, status: 'released', releasedAt: jalaliToIso(1405, 7, 15), dueDate: jalaliToIso(1405, 7, 15), requiresApproval: true },
@@ -125,14 +162,19 @@ const PU_ROWS: PURow[] = [
   ['u-2138', 'الهام رستمی', 'org-novin', '2138', 3_000_000, 41_000_000, 32_000_000, 76_000_000, 455, 2, 'suspended', 82, ['legal_hold', 'card_blocked'], 6],
   ['u-4006', 'بهراد کیانی', 'org-sepehr', '4006', 34_900_000, 0, 0, 0, 0, 1, 'invited', 61, ['kyc_rejected'], 999],
   ['u-1004', 'رضا حسینی', 'org-arman', '1008', 40_000_000, 140_000_000, 88_000_000, 52_000_000, 802, 3, 'active', 6, [], 0],
+  ['u-1013', 'مهسا تهرانی', 'org-arman', '1003', 14_000_000, 82_000_000, 58_000_000, 22_000_000, 776, 3, 'active', 8, [], 0],
+  ['u-1014', 'نیما رضایی', 'org-arman', '1019', 6_500_000, 50_000_000, 40_000_000, 10_000_000, 731, 3, 'active', 10, [], 0],
+  ['u-1015', 'لیلا کاظمی', 'org-arman', '1027', 9_000_000, 61_000_000, 48_000_000, 14_000_000, 744, 3, 'active', 9, [], 2],
 ];
 export const PLATFORM_USERS: PlatformUser[] = PU_ROWS.map(([id, fullName, orgId, code, rial, gold, fixed, locked, score, kyc, status, risk, flags, lastDays]) => {
   const org = ORGANIZATIONS.find((o) => o.id === orgId)!;
+  const emp = orgId === 'org-arman' ? ARMAN_EMPLOYEES.find((e) => e.id === id) : undefined;
   const total = rial + gold + fixed;
   const [firstName, ...rest] = fullName.split(' ');
   return {
-    id, firstName, lastName: rest.join(' '), fullName, mobile: '0912' + id.replace(/\D/g, '').padStart(7, '0').slice(-7), nationalId: '00' + id.replace(/\D/g, '').padStart(8, '1'),
-    employeeCode: code, orgId, orgName: org.name, kycLevel: kyc, creditScore: score, joinedAt: jalaliToIso(1404, 6, 1), avatarLetter: fullName[0], status,
+    // one account per person: a member of هلدینگ آرمان has the same national ID, mobile and code as their employee record
+    id, firstName, lastName: rest.join(' '), fullName, mobile: emp?.mobile ?? '0912' + id.replace(/\D/g, '').padStart(7, '0').slice(-7), nationalId: emp?.nationalId ?? '00' + id.replace(/\D/g, '').padStart(8, '1'),
+    employeeCode: emp?.employeeCode ?? code, orgId, orgName: org.name, kycLevel: kyc, creditScore: score, joinedAt: jalaliToIso(1404, 6, 1), avatarLetter: fullName[0], status,
     portfolioValue: total, freeValue: total - locked, lockedValue: locked, riskScore: risk, lastActiveAt: daysFromNow(-lastDays), flags,
   };
 });

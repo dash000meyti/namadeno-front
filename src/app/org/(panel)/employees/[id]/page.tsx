@@ -1,11 +1,12 @@
 'use client';
 /**
  * Organization panel — employee profile. Kit detail page: heading with avatar + status pills + actions → key numbers → tabs →
- * cards: assets (holdings with the free/reserved split, active reserves, milestone contract, account), packages, facilities, activity.
+ * cards: assets (holdings with the free/reserved split, active reserves, milestone contract, account and contact incl. national ID
+ * and organization-panel access), packages, facilities, activity.
  */
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { useOrgEmployee, useReleaseMilestone, useUpdateEmployee } from '@/api/org';
+import { useOrgEmployee, useOrgMe, useReleaseMilestone, useUpdateEmployee } from '@/api/org';
 import { useOrgPeopleEmployee, type EmpActivity } from '@/api/org-people-extra';
 import type { AllocationSplit, AssetKind, Holding, Lock, OrgPackage } from '@/types/domain';
 import {
@@ -18,12 +19,13 @@ import { useToast } from '@/components/ui/Toast';
 import { usePanelToast } from '@/components/org/people/PanelToast';
 import { EMP_STATUS, I, MsSeg, errMsg, million } from '@/components/org/people/shared';
 import { EMP_TONE, SuspendNotice } from '@/components/org/people/EmployeeSidePanel';
+import { PANEL_ROLE_TONE } from '@/components/org/people/PanelAccessDialog';
 import { useStartPackage } from '@/components/org/people/useStartPackage';
 import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 import { FEATURES } from '@/lib/features';
 import { now } from '@/lib/clock';
-import { faDigits, jDate, jDayMonth, jMonthYear, money, pct, relTime, signedMoney, time } from '@/lib/format';
+import { faDigits, jDate, jDayMonth, jMonthYear, maskNationalId, money, pct, relTime, signedMoney, time } from '@/lib/format';
 
 type Tab = 'assets' | 'pkgs' | 'loans' | 'log';
 const ACT_ICON: Record<EmpActivity['kind'], { d: string; tone: Tone }> = {
@@ -48,6 +50,7 @@ export default function OrgEmployeePage() {
   const { id } = useParams<{ id: string }>();
   const core = useOrgEmployee(id);
   const extra = useOrgPeopleEmployee(id);
+  const panelMember = useOrgMe().data?.organization.admins.find((a) => a.id === id);
   const update = useUpdateEmployee();
   const release = useReleaseMilestone();
   usePanelToast(); // shows a message flashed by the previous screen (e.g. after adding this employee)
@@ -298,9 +301,16 @@ export default function OrgEmployeePage() {
             )}
             <Card title="حساب و تماس">
               <KV rows={[
+                ['کد ملی', <span key="n" className="num ltr">{maskNationalId(emp.nationalId)}</span>],
                 ['موبایل', <span key="m" className="num ltr">{mobileFmt(emp.mobile)}</span>],
                 ['ایمیل', <span key="e" className="ltr">{x?.email || '—'}</span>],
                 ['آخرین فعالیت', <span key="a" className="num">{x?.lastActiveAt ? relTime(x.lastActiveAt, now()) : 'هنوز وارد اپ نشده'}</span>],
+                ['دسترسی پنل', panelMember
+                  ? <span key="p" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Pill tone={PANEL_ROLE_TONE[panelMember.panelRole ?? 'specialist']}>{panelMember.role}</Pill>
+                    {panelMember.status === 'invited' && <Pill tone="warning" dot>در انتظار فعال‌سازی</Pill>}
+                  </span>
+                  : <span key="p" className="mute">ندارد</span>],
               ]} />
             </Card>
           </div>

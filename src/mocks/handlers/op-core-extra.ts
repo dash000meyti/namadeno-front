@@ -4,9 +4,10 @@
  * through to the core handler. Types: src/api/op-core-extra.ts.
  *
  * ── New endpoints ──
- * GET    /api/v1/op/core/org-ext                         → Record<orgId, OrgContractExt>   (metrics + contract terms + HR users of every organization)
+ * GET    /api/v1/op/core/org-ext                         → Record<orgId, OrgContractExt>   (metrics + contract terms + panel members of every organization)
  * GET    /api/v1/op/core/organizations/:id/credit        → OrgCreditRow[]                   (loans / card credit / BNPL of the organization's users)
- * POST   /api/v1/op/core/organizations/:id/hr-users      { name, email, role } → HrUser (status «invited»)   · 422 missing_fields
+ * POST   /api/v1/op/core/organizations/:id/hr-users      { name, nationalId, mobile, role } → 201 HrUser (existing account → active, else invited + activation SMS)
+ *                                                         · 422 missing_fields | bad_national_id | bad_mobile · 409 already_member | other_org
  * GET    /api/v1/op/core/overview?range=7|30|90          → OverviewExt                      (daily flow series, KPI deltas, lock counts, service health, feed)
  * GET    /api/v1/op/core/users-meta                      → UsersMeta                        (facility kinds / lock types / KYC state per user + platform totals)
  * GET    /api/v1/op/core/users/:id/extra                 → OpUserExtra                      (facilities, operator notes, audit log, devices)
@@ -14,8 +15,8 @@
  * POST   /api/v1/op/core/users/:id/reset-password        {} → { sent: true }
  *
  * ── Overrides of core endpoints ──
- * POST   /api/v1/op/organizations          body: Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: {name,email,mobile?,role,tempPassword?}[]; sendInvites?: boolean }
- *        Without invites every user needs a temporary password (422 temp_password_required / weak_password); they change it on first login.
+ * POST   /api/v1/op/organizations          body: Partial<Organization> & { contract?: Partial<OrgContractExt>; hrUsers?: { name, nationalId, mobile, role }[] }
+ *        The first panel members (one Namadno account per person; matched by national ID, otherwise invited with an activation SMS).
  *                                          → Organization (201, status «onboarding»)   · 422 missing_name | invalid_employees | missing_funds
  * PATCH  /api/v1/op/organizations/:id      body: Partial<Organization> & { contract?: Partial<OrgContractExt>; changeNote?: string }
  *                                          → Organization; a change of settings/contract bumps the contract version (OrgContractExt.versions)
@@ -27,13 +28,14 @@
  */
 import { http, type HttpHandler } from 'msw';
 import type { AssetKind, Holding, Lock, LockType, Organization, PlatformUser, Portfolio } from '@/types/domain';
-import type { Facility, FacilityKind, HrUser, OpUserExtra, OrgContractExt, OrgCreate, OrgCreditRow, OrgPatch, OverviewExt, UserLog, UserMetaRow, UserNote, UsersMeta } from '@/api/op-core-extra';
+import type { Facility, FacilityKind, HrUser, OpUserExtra, OrgContractExt, OrgCreate, OrgCreditRow, OrgPatch, OverviewExt, PanelUserInput, UserLog, UserMetaRow, UserNote, UsersMeta } from '@/api/op-core-extra';
 import { db, newId, recalcHoldings, type UserData } from '../db';
 import { body, fail, latency, ok, p, qs } from '../http';
 import { seed_opCore, type OpCoreExtra, type PlatformUserMeta } from '../seed/extra-op-core';
 import { ledger, portfolioOf } from './app';
 import { daysFromNow, now } from '@/lib/clock';
-import { faDigits, jDayMonth, money } from '@/lib/format';
+import { faDigits, jDayMonth, money, nidOk } from '@/lib/format';
+import { addPanelMember, digits, panelAccessOf, panelMemberByNid } from '../identity';
 import { roleOfLabel } from '@/lib/org';
 
 const nowIso = () => now().toISOString();
@@ -51,14 +53,35 @@ function defaultExt(o: Organization): OrgContractExt {
     credit: { activeLoans: 0, outstanding: 0, cardHolders: 0, overdue: 0 }, newEmployeesMonth: 0,
     cardPct: 20, perPersonCap: 30_000_000, allowCollateral: true, allowInstallmentLock: o.settings.installmentEnabled,
     financeApproval: true, version: 1, versions: [{ v: 1, note: 'عقد قرارداد اولیه', at: o.contractStart, by: OPERATOR }],
-    accountManager: OPERATOR, city: 'تهران', hrEmail: o.admins[0]?.email ?? '', hrUsers: [], createdAt: nowIso(),
+    accountManager: OPERATOR, city: 'تهران', hrEmail: o.admins.find((a) => a.email)?.email ?? '', hrUsers: [], createdAt: nowIso(),
   };
 }
 
 function orgExt(o: Organization): OrgContractExt {
   const x = ext();
   if (!x.orgs[o.id]) x.orgs[o.id] = defaultExt(o);
-  return x.orgs[o.id];
+  const e = x.orgs[o.id];
+  // `hrUsers` is a read view of the panel members (Organization.admins), so the org panel and the console show one list
+  e.hrUsers = o.admins.map((a): HrUser => {
+    const prev = e.hrUsers.find((h) => h.id === a.id);
+    return {
+      id: a.id, name: a.name, nationalId: a.nationalId, mobile: a.mobile, email: a.email, role: a.role, panelRole: a.panelRole ?? 'specialist', status: a.status,
+      lastLoginAt: prev?.lastLoginAt, twoFA: prev?.twoFA ?? false,
+    };
+  });
+  return e;
+}
+
+/** Checks one new panel member (operator side); returns an error response or null. */
+function badPanelInput(u: Partial<PanelUserInput>, orgId?: string) {
+  const nid = digits(u.nationalId ?? '');
+  if (!u.name?.trim() || !nid || !u.mobile) return fail(422, 'missing_fields', 'نام، کد ملی و موبایل کاربر پنل الزامی است.');
+  if (!nidOk(nid)) return fail(422, 'bad_national_id', 'کد ملی معتبر نیست.');
+  if (!/^09\d{9}$/.test(digits(u.mobile))) return fail(422, 'bad_mobile', 'شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.');
+  const hit = panelMemberByNid(nid);
+  if (hit && hit.org.id === orgId) return fail(409, 'already_member', 'این شخص همین حالا به پنل این سازمان دسترسی دارد.');
+  if (hit) return fail(409, 'other_org', `این شخص به پنل «${hit.org.name}» دسترسی دارد؛ هر حساب فقط در یک سازمان دسترسی پنل می‌گیرد.`);
+  return null;
 }
 
 function addLog(userId: string, text: string, tone: UserLog['tone'] = 'default', by = OPERATOR) {
@@ -165,11 +188,12 @@ export const opCoreHandlers: HttpHandler[] = [
     await latency();
     const o = db().organizations.find((x) => x.id === params.id);
     if (!o) return fail(404, 'not_found', 'سازمان پیدا نشد.');
-    const b = await body<{ name?: string; email?: string; role?: string }>(request);
-    if (!b.name || !b.email) return fail(422, 'missing_fields', 'نام و ایمیل کاربر HR الزامی است.');
-    const u: HrUser = { id: newId('hr'), name: b.name, email: b.email, role: b.role || 'کارشناس', twoFA: false, status: 'invited' };
-    orgExt(o).hrUsers.push(u);
-    return ok(u, { status: 201 });
+    const b = await body<Partial<PanelUserInput>>(request);
+    const bad = badPanelInput(b, o.id);
+    if (bad) return bad;
+    // an existing account gets access at once; otherwise an account is opened and an activation SMS is sent
+    const a = addPanelMember(o, { name: b.name!.trim(), nationalId: digits(b.nationalId!), mobile: digits(b.mobile!), panelRole: roleOfLabel(b.role || 'کارشناس') });
+    return ok(orgExt(o).hrUsers.find((h) => h.id === a.id)!, { status: 201 });
   }),
 
   // override: create organization with contract terms + HR users
@@ -182,25 +206,22 @@ export const opCoreHandlers: HttpHandler[] = [
     const id = newId('org');
     const name = b.name.trim();
     const users = b.hrUsers ?? [];
-    if (b.sendInvites === false) {
-      if (users.some((u) => !u.tempPassword)) return fail(422, 'temp_password_required', 'بدون دعوت‌نامه، برای هر کاربر رمز موقت تعیین کنید.');
-      if (users.some((u) => !/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(u.tempPassword ?? ''))) return fail(422, 'weak_password', 'رمز موقت باید حداقل ۸ نویسه و شامل حرف و عدد باشد.');
-    }
-    // the temporary password itself is not kept in the mock (any password signs in); only "must change on first login" is
-    const withTemp = (u: { tempPassword?: string }) => b.sendInvites === false && !!u.tempPassword;
-    const hr = users.map((u): HrUser => ({ id: newId('hr'), name: u.name, email: u.email, mobile: u.mobile, role: u.role, twoFA: false, status: 'invited', access: withTemp(u) ? 'temp_password' : 'invite' }));
+    for (const u of users) { const bad = badPanelInput(u); if (bad) return bad; }
+    if (new Set(users.map((u) => digits(u.nationalId))).size !== users.length) return fail(422, 'duplicate_national_id', 'کد ملی تکراری در کاربران پنل.');
     const o: Organization = {
       id, name, legalName: b.legalName ?? name, contractNo: b.contractNo ?? 'NW-' + Math.floor(1130 + Math.random() * 800), industry: b.industry ?? '',
       employees: b.employees ?? 0, activeEmployees: 0, status: 'onboarding',
       contractStart: b.contractStart ?? nowIso(), contractEnd: b.contractEnd ?? new Date(now().getTime() + 365 * 86400000).toISOString(),
       budgetYear: b.budgetYear ?? 0, budgetUsed: 0, logoLetter: name[0],
       settings: { allowedFunds: ['gold', 'fixed'], cashWithdrawalAllowed: true, lockPolicies: ['none', 'vesting', 'milestone'], loanEnabled: true, loanMaxPct: 40, loanMonthsOptions: [3, 6, 12], cardEnabled: true, installmentEnabled: false, ...(b.settings ?? {}) },
-      admins: hr.map((u) => ({ id: u.id, name: u.name, role: u.role, email: u.email, panelRole: roleOfLabel(u.role), ...(u.access === 'temp_password' ? { mustChangePassword: true } : {}) })),
+      admins: [],
     };
     db().organizations.unshift(o);
     db().employees[id] = [];
     db().orgPackages[id] = [];
-    const e = { ...defaultExt(o), ...(b.contract ?? {}), hrUsers: hr, hrEmail: hr[0]?.email ?? '', version: 1, createdAt: nowIso() };
+    // the first panel members: existing accounts get access at once, the rest receive an activation SMS; all become members of the organization
+    for (const u of users) addPanelMember(o, { name: u.name.trim(), nationalId: digits(u.nationalId), mobile: digits(u.mobile), panelRole: roleOfLabel(u.role) });
+    const e = { ...defaultExt(o), ...(b.contract ?? {}), hrUsers: [], version: 1, createdAt: nowIso() };
     e.versions = [{ v: 1, note: 'عقد قرارداد اولیه', at: nowIso(), by: OPERATOR }];
     ext().orgs[id] = e;
     return ok(o, { status: 201 });
@@ -374,7 +395,7 @@ export const opCoreHandlers: HttpHandler[] = [
     if (!pu || !m) return undefined;
     await latency();
     syncPlatformUser(pu, m);
-    return ok({ user: pu, portfolio: portfolioFromMeta(m), loans: [], installments: [], transactions: m.transactions, alerts: db().riskAlerts.filter((a) => a.userId === id) });
+    return ok({ user: { ...pu, panelAccess: panelAccessOf(pu.id) }, portfolio: portfolioFromMeta(m), loans: [], installments: [], transactions: m.transactions, alerts: db().riskAlerts.filter((a) => a.userId === id) });
   }),
 
   // override: legal hold (free part only), for app users and platform users

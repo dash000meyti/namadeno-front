@@ -3,6 +3,7 @@ import { http } from 'msw';
 import type { AssetKind, Organization, PlatformUser } from '@/types/domain';
 import { db, newId, recalcHoldings } from '../db';
 import { body, fail, latency, ok, p, qs } from '../http';
+import { panelAccessOf } from '../identity';
 import { now } from '@/lib/clock';
 import { ledger, portfolioOf } from './app';
 import { LOCK_TYPES, aumMonthlyLive, snapshot, totalsOf, treasuryOf } from '../treasury';
@@ -18,7 +19,7 @@ const OP_SETTINGS = {
   ],
 };
 
-/** Operator view of every user: the full demo user + lightweight platform users. */
+/** Operator view of every user: the full demo user + lightweight platform users, each with their organization-panel access. */
 function allUsers(): PlatformUser[] {
   const out: PlatformUser[] = [];
   for (const ud of Object.values(db().users)) {
@@ -26,7 +27,7 @@ function allUsers(): PlatformUser[] {
     const legal = ud.holdings.flatMap((h) => h.locks).some((l) => l.type === 'legal');
     out.push({ ...ud.profile, portfolioValue: pf.total, freeValue: pf.free, lockedValue: pf.locked, riskScore: 12, lastActiveAt: nowIso(), flags: legal ? ['legal_hold'] : [] });
   }
-  return out.concat(db().platformUsers.filter((x) => !db().users[x.id]));
+  return out.concat(db().platformUsers.filter((x) => !db().users[x.id])).map((u) => ({ ...u, panelAccess: panelAccessOf(u.id) }));
 }
 
 export const opHandlers = [
@@ -112,7 +113,7 @@ export const opHandlers = [
     const text = q.get('q') ?? '';
     const filter = q.get('filter');
     let list = allUsers();
-    if (text) list = list.filter((u) => u.fullName.includes(text) || u.mobile.includes(text) || (u.employeeCode ?? '').includes(text));
+    if (text) list = list.filter((u) => u.fullName.includes(text) || u.mobile.includes(text) || u.nationalId.includes(text) || (u.employeeCode ?? '').includes(text));
     if (filter === 'locked') list = list.filter((u) => u.lockedValue > 0);
     if (filter === 'kyc') list = list.filter((u) => u.kycLevel < 2);
     if (filter === 'legal') list = list.filter((u) => u.flags.includes('legal_hold'));
@@ -128,7 +129,7 @@ export const opHandlers = [
     }
     const pu = db().platformUsers.find((x) => x.id === id);
     if (!pu) return fail(404, 'not_found', 'کاربر پیدا نشد.');
-    return ok({ user: pu, portfolio: null, loans: [], installments: [], transactions: [], alerts: db().riskAlerts.filter((a) => a.userId === id) });
+    return ok({ user: { ...pu, panelAccess: panelAccessOf(pu.id) }, portfolio: null, loans: [], installments: [], transactions: [], alerts: db().riskAlerts.filter((a) => a.userId === id) });
   }),
   http.post(p('/op/users/:id/status'), async ({ request, params }) => {
     await latency();
