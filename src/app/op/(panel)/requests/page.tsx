@@ -160,7 +160,7 @@ export default function OpRequestsPage() {
 
   return (
     <>
-      <PageHeading title="درخواست‌ها" crumbs={[{ label: 'عملیات' }]} sub="صف بررسی درخواست‌های همه‌ی سازمان‌ها؛ تأیید یا رد با دلیل، پیش از پایان مهلت SLA">
+      <PageHeading title="درخواست‌ها" crumbs={[{ label: 'مشتریان' }]} sub="صف بررسی درخواست‌های همه‌ی سازمان‌ها؛ تأیید یا رد با دلیل، پیش از پایان مهلت SLA">
         <Link href={routes.op.rules} className="nm-btn ghost"><Icon d={IC.rules} size={17} />قوانین تأیید خودکار</Link>
       </PageHeading>
 

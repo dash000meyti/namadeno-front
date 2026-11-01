@@ -115,6 +115,7 @@ ActionBar (اختیاری)    نوار ذخیره‌ی چسبان پایین ف�
 
 - کمکی‌های داده و فرمت (فقط داده، بدون UI): `src/components/op/core/ui.tsx` (آیکن‌ها، وضعیت سازمان، متای محصول، `fb`/`fm`/`pctFa`، `parseJalali`)، `src/components/op/system/ui.tsx` (`IC`)، `src/components/op/system/fmt.ts`، `src/components/org/people/shared.tsx` (آیکن‌ها، وضعیت کارمند/درخواست، `compactParts`، CSV، `MsSeg`)، `src/components/org/packages/meta.ts`.
 - قطعه‌های مشترک چند صفحه: `EmployeeInspector` (`org/people/EmployeeSidePanel.tsx`)، `ContractEditor` + `useContractDraft` (`op/core/ContractEditor.tsx`)، `FundEditDialog` + `NavChart` (`op/system/FundUi.tsx`)، `WizardHeader` (`org/packages/Stepper.tsx`).
+- خزانه‌ی کنسول بهره‌بردار: واژه‌ها، آیکن‌ها و رنگ‌های مشترک صفحه‌های موجودی، سفارش، نقدینگی، برنامه‌ریزی و فعالیت در `src/components/op/treasury/ui.ts` (`TI`، `fundUi`، `STOCK_STATE`، `SIDE`، `orderStatus`، `CASH_KIND`، `MOVE_KIND`، `ACTOR`، `SEVERITY`، `ACTION_KIND`، `amt`، `daysText`، `unitsText`). هر جا سفارش به صندوق ثبت می‌شود فقط `OrderDialog` (`op/treasury/OrderDialog.tsx`): پیش‌فاکتور زنده (تعداد واحد، کارمزد، تاریخ تسویه، اثر روی نقد و موجودی آزاد) و هشدارهای سرور؛ با `key` تازه برای هر پیش‌پر کردن mount شود.
 - `org.css` و `op.css` حذف شده‌اند؛ کلاس‌های قدیمی (`.btn`، `.btnp`، `.lbl` رنگی دستی، `.fld`، `.th`، `.dim`، …) در پنل‌ها استفاده نشوند. نام کلاس‌های کیت همه با `nm-` شروع می‌شوند تا با چیزی تداخل نکنند.
 
 ## ۷. مرزها

@@ -17,6 +17,7 @@ import { Icon } from '@/components/ui/Icon';
 import { LockBar, LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
 import { ICON, LOCK_COL, errMsg, fm, pctFa } from '@/components/op/core/ui';
+import { UserActivityCard } from '@/components/op/activity/UserActivityCard';
 import { enDigits, faDigits, jDate, jDayMonth, money, relTime, signedMoney, time, units } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { ASSET_META, HOURGLASS, LOCK_META } from '@/lib/locks';
@@ -265,6 +266,7 @@ export default function OpUserPage() {
                 <List>{notes.slice(0, 3).map((n) => <ListRow key={n.id} title={<span style={{ fontWeight: 500, whiteSpace: 'normal' }}>{n.text}</span>} sub={`${n.by} · ${jDate(n.at)} · ${NOTE_TAGS.find(([k]) => k === n.tag)?.[1] ?? ''}`} />)}</List>
               ) : <span className="mute" style={{ fontSize: 12.5 }}>یادداشتی ثبت نشده است.</span>}
             </Card>
+            <UserActivityCard userId={user.id} />
           </div>
         </div>
       )}

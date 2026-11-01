@@ -41,11 +41,11 @@ const SURFACES: Surface[] = [
   },
   {
     name: 'پنل بهره‌بردار', sub: 'ادمین · صاحبان صندوق و تیم توسعه', start: op.login, startLabel: 'شروع از ورود', groups: [
-      { name: 'ورود و نمای کلی', items: [L(op.login, 'ورود'), L(op.overview, 'نمای کلی')] },
+      { name: 'ورود و پایش', items: [L(op.login, 'ورود'), L(op.overview, 'نمای کلی'), L(op.activity, 'فعالیت‌ها'), L(op.risk, 'ریسک و تقلب')] },
       { name: 'سازمان‌ها', items: [L(op.organizations, 'سازمان‌ها و قراردادها'), L(op.organization('org-arman'), 'پروفایل سازمان'), L(op.orgNew, 'افزودن سازمان')] },
-      { name: 'صندوق‌ها و محصولات', items: [L(op.funds, 'صندوق‌ها'), L(op.fund('gold'), 'جزئیات صندوق'), L(op.products, 'محصولات اعتباری'), L(op.rules, 'قوانین و محدودیت‌ها')] },
-      { name: 'کاربران و ریسک', items: [L(op.users, 'کاربران'), L(op.user('u-1002'), 'پروفایل کاربر'), L(op.requests, 'درخواست‌ها'), L(op.risk, 'ریسک و تقلب')] },
-      { name: 'سیستم', items: [L(op.reports, 'گزارش‌ها'), L(op.settings, 'تنظیمات')] },
+      { name: 'خزانه', items: [L(op.funds, 'موجودی صندوق‌ها'), L(op.fund('gold'), 'جزئیات صندوق'), L(op.orders, 'سفارش‌ها'), L(op.cash, 'نقدینگی'), L(op.planning, 'برنامه‌ریزی و اهداف')] },
+      { name: 'مشتریان', items: [L(op.users, 'کاربران'), L(op.user('u-1002'), 'پروفایل کاربر'), L(op.requests, 'درخواست‌ها'), L(op.products, 'محصولات اعتباری')] },
+      { name: 'تنظیمات', items: [L(op.rules, 'قوانین و محدودیت‌ها'), L(op.settings, 'تنظیمات')] },
     ],
   },
 ];

@@ -16,6 +16,7 @@ import { LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
 import { enDigits, faDigits, jDate } from '@/lib/format';
 import { LOCK_META } from '@/lib/locks';
+import { FEATURES } from '@/lib/features';
 import { ICON, errMsg } from './ui';
 
 export const CONTRACT_FUND_IDS = ['gold', 'fixed'];
@@ -123,7 +124,8 @@ export function ContractEditor({ c, funds, monthsOptions }: { c: ContractDraft; 
   const options = Array.from(new Set([...monthsOptions, ...d.months])).sort((a, b) => a - b);
   const offDefault = d.months.join(',') !== DEFAULT_MONTHS.join(',');
   // Receive policies («شیوه‌ی دریافت»: free / vesting / milestone) vs. reserves managed by Namadno (collateral / installment / legal).
-  const policies: { t: LockType | 'none'; receive?: boolean; desc: string; on: boolean; toggle?: () => void; disabled?: boolean; max?: { key: 'vestMax' | 'msMax'; suffix: string; label: string } }[] = [
+  type Policy = { t: LockType | 'none'; receive?: boolean; desc: string; on: boolean; toggle?: () => void; disabled?: boolean; max?: { key: 'vestMax' | 'msMax'; suffix: string; label: string } };
+  const allPolicies: Policy[] = [
     { t: 'none', receive: true, desc: 'همیشه مجاز · کل مبلغ بلافاصله آزاد', on: true, disabled: true },
     { t: 'vesting', receive: true, desc: 'آزاد در تاریخ مشخص؛ حداکثر مدت پس‌انداز', on: d.vesting, toggle: () => set({ vesting: !d.vesting }), max: { key: 'vestMax', suffix: 'ماه', label: 'حداکثر مدت پس‌انداز' } },
     { t: 'milestone', receive: true, desc: 'دریافت با تأیید هر مرحله؛ حداکثر تعداد مراحل', on: d.milestone, toggle: () => set({ milestone: !d.milestone }), max: { key: 'msMax', suffix: 'مرحله', label: 'حداکثر تعداد مراحل' } },
@@ -131,10 +133,12 @@ export function ContractEditor({ c, funds, monthsOptions }: { c: ContractDraft; 
     { t: 'installment', desc: d.bnpl ? 'هم‌زمان با خرید اقساطی' : 'نیازمند فعال بودن خرید اقساطی', on: d.bnpl && d.instLock, toggle: () => set({ instLock: !d.instLock }), disabled: !d.bnpl },
     { t: 'legal', desc: 'همیشه فعال · فقط بهره‌بردار', on: true, disabled: true },
   ];
+  // credit reserves (پشتوانه، اقساطی) wait for facilities («به‌زودی»)
+  const policies = allPolicies.filter((p) => FEATURES.orgCredit || (p.t !== 'collateral' && p.t !== 'installment'));
 
   return (
     <>
-      <SettingsGroup title="محدودیت‌های تسهیلات">
+      {FEATURES.orgCredit && <SettingsGroup title="محدودیت‌های تسهیلات">
         <SettingRow label="سقف وام" desc="درصد دارایی آزاد کارمند · ۰ یعنی وام غیرفعال" htmlFor={`loan-cap-${org.id}`}>
           <NumberInput id={`loan-cap-${org.id}`} label="سقف وام (٪ دارایی آزاد)" value={shown(d.loanPct)} onChange={(n) => setNum('loanPct', n)} suffix="٪" width={52} decimals invalid={bad('loanPct')} />
         </SettingRow>
@@ -148,7 +152,7 @@ export function ContractEditor({ c, funds, monthsOptions }: { c: ContractDraft; 
           <NumberInput id={`per-cap-${org.id}`} label="سقف اعتبار هر نفر" value={shown(d.perCap)} onChange={(n) => setNum('perCap', Number.isFinite(n) ? Math.round(Math.abs(n)) : NaN)} suffix="تومان" width={112} invalid={bad('perCap')} />
         </SettingRow>
         <SettingRow label="خرید اقساطی" desc="فروشگاه‌های طرف قرارداد"><Switch on={d.bnpl} onChange={(v) => set({ bnpl: v })} label="خرید اقساطی" /></SettingRow>
-      </SettingsGroup>
+      </SettingsGroup>}
 
       {([
         [true, 'شیوه‌های دریافت مجاز در قرارداد', 'سازمان هنگام ارسال بسته یکی از این شیوه‌ها را انتخاب می‌کند.'],

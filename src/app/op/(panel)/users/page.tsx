@@ -121,7 +121,7 @@ export default function OpUsersPage() {
 
   return (
     <>
-      <PageHeading title="کاربران" crumbs={[{ label: 'عملیات' }]} sub="همه‌ی کاربران نمادنو، دارایی آزاد و رزروشده و وضعیت احراز هویت">
+      <PageHeading title="کاربران" crumbs={[{ label: 'مشتریان' }]} sub="همه‌ی کاربران نمادنو، دارایی آزاد و رزروشده و وضعیت احراز هویت">
         <button type="button" className="nm-btn ghost" onClick={exportCsv} disabled={!rows.length}><Icon d={ICON.download} size={17} />خروجی Excel</button>
       </PageHeading>
 

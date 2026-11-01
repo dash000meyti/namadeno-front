@@ -1,8 +1,9 @@
 'use client';
 /**
  * Operator console — organization page. Kit detail page: heading (logo, status, products, actions) → key numbers → sections:
- * overview (AUM trend, contract facts), contract (terms editor + approval chain + versions, sticky save bar),
- * staff (row → inspector), packages, credit (row → user profile), HR users (invite). Suspend / invite in dialogs.
+ * overview (AUM trend, contract facts, «خزانه و تعهدات»: members' stock, commitments, deposits, upcoming events),
+ * contract (terms editor + approval chain + versions, sticky save bar), staff (row → inspector), packages,
+ * credit (row → user profile; hidden while FEATURES.orgCredit is off), HR users (invite). Suspend / invite in dialogs.
  */
 import { useState } from 'react';
 import Link from 'next/link';
@@ -10,6 +11,7 @@ import { useParams } from 'next/navigation';
 import type { Employee, OrgPackage, Organization, PlatformUser } from '@/types/domain';
 import { useOpFunds, useOpOrganization, useOpProducts, useOpUsers, useUpdateOrganization, type OpOrganizationDetail } from '@/api/op';
 import { useInviteHrUser, useOrgContracts, useOrgCredit, type FacilityKind, type HrUser, type OrgContractExt, type OrgCreditRow, type OrgPatch } from '@/api/op-core-extra';
+import { useOrgTreasury } from '@/api/op-treasury-extra';
 import {
   ActionBar, Allocation, Ava, BigNum, Card, Chips, Dialog, Empty, ErrorBlock, Field, FreeLocked, Ident, Inspector, KV, KeyStats, LineChart,
   List, ListRow, Meter, Note, PageHeading, Pill, Section, SettingRow, SettingsGroup, SkeletonCard, StatStrip, Switch, Table, TableFoot,
@@ -19,11 +21,15 @@ import { Icon } from '@/components/ui/Icon';
 import { LockBar } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
 import { ContractEditor, VersionList, useContractDraft } from '@/components/op/core/ContractEditor';
+import { OrgTreasuryCards } from '@/components/op/cash/OrgTreasuryCards';
+import { scaled } from '@/components/op/cash/money';
+import { amt } from '@/components/op/treasury/ui';
 import { ICON, ORG_STATUS, PRODUCT_META, errMsg, fb, fm, orgProducts, pctFa, signedPct, splitPct } from '@/components/op/core/ui';
 import { faDigits, jDate, jMonthYear, money, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { routes } from '@/lib/routes';
 import { ORG_ROLES } from '@/lib/org';
+import { FEATURES } from '@/lib/features';
 
 type Tab = 'overview' | 'contract' | 'staff' | 'packages' | 'credit' | 'hr';
 const DAY = 86400000;
@@ -84,6 +90,8 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
   const toast = useToast();
   const { organization: org, employees, packages } = detail;
   const credit = useOrgCredit(org.id);
+  const treasury = useOrgTreasury(org.id);
+  const tr = treasury.data?.row;
   const fundsQ = useOpFunds();
   const products = useOpProducts();
   const usersQ = useOpUsers();
@@ -164,7 +172,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
         );
       },
     },
-    { key: 'fac', label: 'تسهیلات', render: (e) => <span className="el sm">{facText(e.id)}</span> },
+    ...(FEATURES.orgCredit ? [{ key: 'fac', label: 'تسهیلات', render: (e: Employee) => <span className="el sm">{facText(e.id)}</span> }] : []),
     { key: 'st', label: 'وضعیت', width: '128px', render: (e) => { const s = EMP_STATUS[e.status]; return <Pill tone={s[1]} dot>{s[0]}</Pill>; } },
   ];
   const pkgCols: Column<OrgPackage>[] = [
@@ -212,7 +220,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
         lead={<Ava letter={org.logoLetter} id={org.id} sq size="xl" />}
         title={org.name}
         sub={<>کد قرارداد <span className="ltr">{org.contractNo}</span> · {org.industry || '—'} · {ext.city}</>}
-        pills={<><Pill tone={ORG_TONE[org.status]} dot>{ORG_STATUS[org.status].label}</Pill>{prods.length ? prods.map((k) => <Pill key={k} icon={PRODUCT_META[k].d}>{PRODUCT_META[k].name}</Pill>) : <Pill>بدون محصول فعال</Pill>}</>}
+        pills={<><Pill tone={ORG_TONE[org.status]} dot>{ORG_STATUS[org.status].label}</Pill>{FEATURES.orgCredit && (prods.length ? prods.map((k) => <Pill key={k} icon={PRODUCT_META[k].d}>{PRODUCT_META[k].name}</Pill>) : <Pill>بدون محصول فعال</Pill>)}</>}
       >
         {org.status === 'active' && <button type="button" className="nm-btn line danger" onClick={() => setModal('suspend')}><Icon d={ICON.pause} size={16} />تعلیق</button>}
         {org.status === 'suspended' && <button type="button" className="nm-btn line ok" disabled={update.isPending} onClick={() => setStatus('active', `تعلیق ${org.name} برداشته شد`)}><Icon d={ICON.play} size={16} />رفع تعلیق</button>}
@@ -223,8 +231,14 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
       <StatStrip items={[
         { label: 'کارکنان', value: faDigits(org.employees), unit: 'نفر', note: ext.newEmployeesMonth ? `+${faDigits(ext.newEmployeesMonth)} در این ماه` : 'بدون تغییر در این ماه', trend: ext.newEmployeesMonth ? 'up' : undefined },
         { label: 'AUM سازمان', value: fb(ext.aum), unit: 'میلیارد تومان', note: `${signedPct(ext.growthPct)} نسبت به ماه قبل`, trend: ext.growthPct > 0 ? 'up' : undefined },
-        { label: 'وام‌های فعال', value: faDigits(ext.credit.activeLoans), unit: 'وام', note: `مانده ${bn(ext.credit.outstanding)} · ${faDigits(ext.credit.overdue)} معوق` },
+        ...(FEATURES.orgCredit ? [{ label: 'وام‌های فعال', value: faDigits(ext.credit.activeLoans), unit: 'وام', note: `مانده ${bn(ext.credit.outstanding)} · ${faDigits(ext.credit.overdue)} معوق` }] : []),
         { label: 'دارایی رزروشده کارکنان', value: fb(ext.locked), unit: 'میلیارد', note: `${faDigits(typeCount)} نوع رزرو · ${pctFa(sp.lockedPct)} از AUM` },
+        tr ? {
+          label: 'واریز در انتظار', ...scaled(tr.depositsExpected),
+          note: tr.depositsOverdue > 0 ? `دیرکرد ${amt(tr.depositsOverdue)} تومان` : tr.commitments > 0 ? `تعهد باز ${amt(tr.commitments)} تومان` : 'بدون تعهد باز',
+          trend: tr.depositsOverdue > 0 ? 'down' as const : undefined,
+          href: `${routes.op.cash}?org=${encodeURIComponent(org.id)}`,
+        } : { label: 'واریز در انتظار', value: '—', note: treasury.isError ? 'دریافت نشد' : 'در حال بارگذاری…' },
       ]} />
 
       <Tabs label="بخش‌های سازمان" size="lg" value={tab} onChange={pick} items={[
@@ -232,39 +246,42 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
         { key: 'contract', label: 'قرارداد', count: unsaved || undefined, hot: true },
         { key: 'staff', label: 'کارکنان', count: org.employees },
         { key: 'packages', label: 'بسته‌ها', count: packages.length },
-        { key: 'credit', label: 'تسهیلات', count: ext.credit.activeLoans },
+        ...(FEATURES.orgCredit ? [{ key: 'credit' as const, label: 'تسهیلات', count: ext.credit.activeLoans }] : []),
         { key: 'hr', label: 'کاربران سازمان', count: ext.hrUsers.length },
       ]} />
 
       {tab === 'overview' && (
-        <div className="nm-grid side">
-          <Card title="AUM — ۱۲ ماه" actions={ext.aum > 0 ? <Pill tone={growth12 >= 0 ? 'success' : 'error'}>{growth12 >= 0 ? '+' : '−'}{pctFa(Math.abs(growth12))}</Pill> : undefined}>
-            {ext.aum > 0 ? (
-              <>
-                <FreeLocked free={sp.free} locked={ext.locked} fmt={bn} />
-                <LineChart labels={months} min={yMin} fmt={b1} height={200}
-                  label={`روند AUM دوازده ماه: از ${fb(ext.aumHistory[0])} به ${fb(ext.aumHistory[11])} میلیارد`}
-                  series={[{ name: 'AUM (میلیارد تومان)', color: 'var(--chart-1)', values: hist, area: true }]} />
-                <Allocation compact items={[
-                  { label: 'صندوق طلا', value: ext.aumMix.gold, color: 'var(--warning-main)' },
-                  { label: 'درآمد ثابت', value: ext.aumMix.fixed, color: 'var(--chart-3)' },
-                  { label: 'ریال', value: ext.aumMix.rial, color: 'var(--chart-4)' },
-                ]} />
-              </>
-            ) : <Empty icon={ICON.funds} title="هنوز دارایی‌ای برای کارکنان این سازمان ثبت نشده است" sub="پس از فعال‌سازی قرارداد و ارسال اولین بسته نمایش داده می‌شود." />}
-          </Card>
+        <>
+          <div className="nm-grid side">
+            <Card title="AUM — ۱۲ ماه" actions={ext.aum > 0 ? <Pill tone={growth12 >= 0 ? 'success' : 'error'}>{growth12 >= 0 ? '+' : '−'}{pctFa(Math.abs(growth12))}</Pill> : undefined}>
+              {ext.aum > 0 ? (
+                <>
+                  <FreeLocked free={sp.free} locked={ext.locked} fmt={bn} />
+                  <LineChart labels={months} min={yMin} fmt={b1} height={200}
+                    label={`روند AUM دوازده ماه: از ${fb(ext.aumHistory[0])} به ${fb(ext.aumHistory[11])} میلیارد`}
+                    series={[{ name: 'AUM (میلیارد تومان)', color: 'var(--chart-1)', values: hist, area: true }]} />
+                  <Allocation compact items={[
+                    { label: 'صندوق طلا', value: ext.aumMix.gold, color: 'var(--warning-main)' },
+                    { label: 'درآمد ثابت', value: ext.aumMix.fixed, color: 'var(--chart-3)' },
+                    { label: 'ریال', value: ext.aumMix.rial, color: 'var(--chart-4)' },
+                  ]} />
+                </>
+              ) : <Empty icon={ICON.funds} title="هنوز دارایی‌ای برای کارکنان این سازمان ثبت نشده است" sub="پس از فعال‌سازی قرارداد و ارسال اولین بسته نمایش داده می‌شود." />}
+            </Card>
 
-          <Card title="اطلاعات قرارداد">
-            <KV rows={[
-              ['شروع قرارداد', <span key="s" className="num">{jDate(org.contractStart)}</span>],
-              ['پایان / تمدید', <span key="e" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span className="num">{jDate(org.contractEnd)}</span><Pill tone={daysLeft < 60 ? 'warning' : 'neutral'}>{daysLeft >= 0 ? `${faDigits(daysLeft)} روز` : 'منقضی'}</Pill></span>],
-              ['نسخه قرارداد', <span key="v" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>نسخه {faDigits(ext.version)}{lastVer && <span className="num mute">· {jDate(lastVer.at)}</span>}<button type="button" className="nm-more" onClick={() => pick('contract')}>تاریخچه</button></span>],
-              ['مدیر HR', hrHead],
-              ['ایمیل HR', <span key="m" className="ltr">{ext.hrEmail || '—'}</span>],
-              ['مدیر حساب (نمادنو)', ext.accountManager],
-            ]} />
-          </Card>
-        </div>
+            <Card title="اطلاعات قرارداد">
+              <KV rows={[
+                ['شروع قرارداد', <span key="s" className="num">{jDate(org.contractStart)}</span>],
+                ['پایان / تمدید', <span key="e" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span className="num">{jDate(org.contractEnd)}</span><Pill tone={daysLeft < 60 ? 'warning' : 'neutral'}>{daysLeft >= 0 ? `${faDigits(daysLeft)} روز` : 'منقضی'}</Pill></span>],
+                ['نسخه قرارداد', <span key="v" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>نسخه {faDigits(ext.version)}{lastVer && <span className="num mute">· {jDate(lastVer.at)}</span>}<button type="button" className="nm-more" onClick={() => pick('contract')}>تاریخچه</button></span>],
+                ['مدیر HR', hrHead],
+                ['ایمیل HR', <span key="m" className="ltr">{ext.hrEmail || '—'}</span>],
+                ['مدیر حساب (نمادنو)', ext.accountManager],
+              ]} />
+            </Card>
+          </div>
+          <OrgTreasuryCards orgId={org.id} orgName={org.name} />
+        </>
       )}
 
       {tab === 'contract' && (
@@ -325,7 +342,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
         </Card>
       )}
 
-      {tab === 'credit' && (
+      {FEATURES.orgCredit && tab === 'credit' && (
         <Card flush title="تسهیلات کارکنان" count={creditRows.length || undefined}>
           <Table
             columns={creditCols} rows={creditRows} rowKey={(r) => r.key} rowLabel={(r) => r.name} rowHref={(r) => routes.op.user(r.userId)}
@@ -361,7 +378,11 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
           </>
         )}
       >
-        <Note tone="warn">با تعلیق، ارسال بسته جدید و صدور تسهیلات برای {faDigits(org.employees)} کارمند متوقف می‌شود. دارایی کارکنان و اقساط جاری دست‌نخورده می‌ماند.</Note>
+        <Note tone="warn">
+          {FEATURES.orgCredit
+            ? <>با تعلیق، ارسال بسته جدید و صدور تسهیلات برای {faDigits(org.employees)} کارمند متوقف می‌شود. دارایی کارکنان و اقساط جاری دست‌نخورده می‌ماند.</>
+            : <>با تعلیق، ارسال بسته جدید برای {faDigits(org.employees)} کارمند متوقف می‌شود. دارایی کارکنان دست‌نخورده می‌ماند.</>}
+        </Note>
         <Field label="دلیل تعلیق (برای سازمان ارسال می‌شود)" htmlFor="org-susp-note" error={!reason.trim() ? 'دلیل تعلیق الزامی است.' : undefined}>
           <div className={'nm-ctl' + (!reason.trim() ? ' err' : '')}><input id="org-susp-note" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
         </Field>
@@ -405,7 +426,7 @@ function StaffInspector({ e, pu, rows, onClose }: { e: Employee; pu?: PlatformUs
       <Section title="دارایی" action={<BigNum value={money(total)} unit="تومان" />}>
         <FreeLocked free={Math.max(0, total - locked)} locked={locked} />
       </Section>
-      <Section title="تسهیلات">
+      {FEATURES.orgCredit && <Section title="تسهیلات">
         {rows.length ? (
           <List>
             {rows.map((r, i) => (
@@ -418,7 +439,7 @@ function StaffInspector({ e, pu, rows, onClose }: { e: Employee; pu?: PlatformUs
             ))}
           </List>
         ) : <Empty title="تسهیلات فعالی ثبت نشده است" />}
-      </Section>
+      </Section>}
     </Inspector>
   );
 }
