@@ -32,8 +32,6 @@ export interface OrgContractExt {
   // contract terms (Organization.settings holds the rest)
   cardPct: number;
   perPersonCap: Toman;
-  vestingMaxMonths: number;
-  milestoneMaxSteps: number;
   allowCollateral: boolean;
   allowInstallmentLock: boolean;
   financeApproval: boolean;

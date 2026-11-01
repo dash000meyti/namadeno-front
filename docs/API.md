@@ -326,6 +326,9 @@ POST   /api/v1/op/organizations          body: Partial<Organization> & { contrac
                                          → Organization (201, status «onboarding»)   · 422 missing_name | invalid_employees | missing_funds
 PATCH  /api/v1/op/organizations/:id      body: Partial<Organization> & { contract?: Partial<OrgContractExt>; changeNote?: string }
                                          → Organization; a change of settings/contract bumps the contract version (OrgContractExt.versions)
+       The contract only allows the receive policies (settings.lockPolicies: vesting / milestone); it sets no maximum savings
+       months or milestone steps. The organization sets the release date or the steps of each package (OrgContractExt
+       vestingMaxMonths / milestoneMaxSteps were removed).
 GET    /api/v1/op/users/:id              platform users without an app account get a real Portfolio built from their operator-side breakdown
 POST   /api/v1/op/users/:id/legal-hold   { holdingKind, amount, reference, reason } → Lock   · 422 missing_reference | invalid_amount | exceeds_free
                                          (locks from the FREE part only; adds a «lock» transaction + notification for app users)

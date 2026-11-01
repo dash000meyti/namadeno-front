@@ -29,16 +29,16 @@ const DEFAULT_MONTHS = [3, 6, 12];
 
 interface Draft {
   loanPct: string; months: number[]; cardPct: string; perCap: string; bnpl: boolean; cash: boolean;
-  vesting: boolean; vestMax: string; milestone: boolean; msMax: string; collateral: boolean; instLock: boolean; funds: string[];
+  vesting: boolean; milestone: boolean; collateral: boolean; instLock: boolean; funds: string[];
 }
-type NumKey = 'loanPct' | 'cardPct' | 'perCap' | 'vestMax' | 'msMax';
+type NumKey = 'loanPct' | 'cardPct' | 'perCap';
 type ErrKey = NumKey | 'months' | 'funds';
 
 function initial(o: Organization, e: OrgContractExt): Draft {
   return {
     loanPct: String(o.settings.loanEnabled ? o.settings.loanMaxPct : 0), months: [...o.settings.loanMonthsOptions].sort((a, b) => a - b),
     cardPct: String(o.settings.cardEnabled ? e.cardPct : 0), perCap: String(e.perPersonCap), bnpl: o.settings.installmentEnabled, cash: o.settings.cashWithdrawalAllowed,
-    vesting: o.settings.lockPolicies.includes('vesting'), vestMax: String(e.vestingMaxMonths), milestone: o.settings.lockPolicies.includes('milestone'), msMax: String(e.milestoneMaxSteps),
+    vesting: o.settings.lockPolicies.includes('vesting'), milestone: o.settings.lockPolicies.includes('milestone'),
     collateral: e.allowCollateral, instLock: e.allowInstallmentLock, funds: [...o.settings.allowedFunds],
   };
 }
@@ -52,13 +52,11 @@ const shown = (s: string) => (s.trim() === '' ? NaN : num(s));
 
 /** First problem of the draft (same order and messages as before), with the field it belongs to. */
 function check(d: Draft): { key: ErrKey; msg: string } | null {
-  const loan = num(d.loanPct), card = num(d.cardPct), cap = num(d.perCap), vest = num(d.vestMax), ms = num(d.msMax);
+  const loan = num(d.loanPct), card = num(d.cardPct), cap = num(d.perCap);
   if (!Number.isInteger(loan) || loan < 0 || loan > 70) return { key: 'loanPct', msg: 'سقف وام باید عددی بین ۰ تا ۷۰ درصد باشد.' };
   if (!Number.isInteger(card) || card < 0 || card > 50) return { key: 'cardPct', msg: 'اعتبار کارت باید عددی بین ۰ تا ۵۰ درصد باشد.' };
   if (!(cap > 0)) return { key: 'perCap', msg: 'سقف اعتبار هر نفر را وارد کنید.' };
   if (loan > 0 && d.months.length === 0) return { key: 'months', msg: 'حداقل یک گزینه بازپرداخت انتخاب کنید.' };
-  if (d.vesting && (!Number.isInteger(vest) || vest < 1 || vest > 24)) return { key: 'vestMax', msg: 'حداکثر مدت پس‌انداز باید بین ۱ تا ۲۴ ماه باشد.' };
-  if (d.milestone && (!Number.isInteger(ms) || ms < 2 || ms > 10)) return { key: 'msMax', msg: 'حداکثر مراحل باید بین ۲ تا ۱۰ باشد.' };
   if (d.funds.filter((f) => CONTRACT_FUND_IDS.includes(f)).length === 0) return { key: 'funds', msg: 'حداقل یک صندوق مجاز انتخاب کنید.' };
   return null;
 }
@@ -72,7 +70,7 @@ function describe(d: Draft, base: Draft): string[] {
   if (card !== num(base.cardPct)) changes.push(`اعتبار کارت ${faDigits(num(base.cardPct))} → ${faDigits(card)}٪`);
   if (cap !== num(base.perCap)) changes.push(`سقف اعتبار هر نفر ${faDigits(Math.round(num(base.perCap) / 1e6))} → ${faDigits(Math.round(cap / 1e6))} میلیون`);
   if (d.bnpl !== base.bnpl) changes.push(d.bnpl ? 'فعال‌سازی خرید اقساطی' : 'غیرفعال‌سازی خرید اقساطی');
-  if (d.vesting !== base.vesting || d.milestone !== base.milestone || d.collateral !== base.collateral || d.instLock !== base.instLock || d.vestMax !== base.vestMax || d.msMax !== base.msMax) changes.push('تغییر شیوه‌های دریافت و رزروها');
+  if (d.vesting !== base.vesting || d.milestone !== base.milestone || d.collateral !== base.collateral || d.instLock !== base.instLock) changes.push('تغییر شیوه‌های دریافت و رزروها');
   if (JSON.stringify([...d.funds].sort()) !== JSON.stringify([...base.funds].sort())) changes.push('تغییر صندوق‌های مجاز');
   return changes;
 }
@@ -96,7 +94,7 @@ export function useContractDraft(org: Organization, ext: OrgContractExt, onSaved
   const save = () => {
     const bad = check(d);
     if (bad) { setError(bad); toast(bad.msg, 'error'); return; }
-    const loan = num(d.loanPct), card = num(d.cardPct), cap = num(d.perCap), vest = num(d.vestMax), ms = num(d.msMax);
+    const loan = num(d.loanPct), card = num(d.cardPct), cap = num(d.perCap);
     const payload: OrgPatch = {
       id: org.id,
       settings: {
@@ -104,7 +102,7 @@ export function useContractDraft(org: Organization, ext: OrgContractExt, onSaved
         loanEnabled: loan > 0, loanMaxPct: loan, loanMonthsOptions: d.months, cardEnabled: card > 0, installmentEnabled: d.bnpl, cashWithdrawalAllowed: d.cash,
         lockPolicies: ['none', ...(d.vesting ? (['vesting'] as const) : []), ...(d.milestone ? (['milestone'] as const) : [])], allowedFunds: d.funds,
       },
-      contract: { cardPct: card, perPersonCap: cap, vestingMaxMonths: vest, milestoneMaxSteps: ms, allowCollateral: d.collateral, allowInstallmentLock: d.bnpl && d.instLock },
+      contract: { cardPct: card, perPersonCap: cap, allowCollateral: d.collateral, allowInstallmentLock: d.bnpl && d.instLock },
       changeNote: describe(d, base).join('، ') || undefined,
     };
     update.mutate(payload, {
@@ -124,11 +122,12 @@ export function ContractEditor({ c, funds, monthsOptions }: { c: ContractDraft; 
   const options = Array.from(new Set([...monthsOptions, ...d.months])).sort((a, b) => a - b);
   const offDefault = d.months.join(',') !== DEFAULT_MONTHS.join(',');
   // Receive policies («شیوه‌ی دریافت»: free / vesting / milestone) vs. reserves managed by Namadno (collateral / installment / legal).
-  type Policy = { t: LockType | 'none'; receive?: boolean; desc: string; on: boolean; toggle?: () => void; disabled?: boolean; max?: { key: 'vestMax' | 'msMax'; suffix: string; label: string } };
+  // The contract only allows a policy; the organization sets the release date or the steps of each package.
+  type Policy = { t: LockType | 'none'; receive?: boolean; desc: string; on: boolean; toggle?: () => void; disabled?: boolean };
   const allPolicies: Policy[] = [
     { t: 'none', receive: true, desc: 'همیشه مجاز · کل مبلغ بلافاصله آزاد', on: true, disabled: true },
-    { t: 'vesting', receive: true, desc: 'آزاد در تاریخ مشخص؛ حداکثر مدت پس‌انداز', on: d.vesting, toggle: () => set({ vesting: !d.vesting }), max: { key: 'vestMax', suffix: 'ماه', label: 'حداکثر مدت پس‌انداز' } },
-    { t: 'milestone', receive: true, desc: 'دریافت با تأیید هر مرحله؛ حداکثر تعداد مراحل', on: d.milestone, toggle: () => set({ milestone: !d.milestone }), max: { key: 'msMax', suffix: 'مرحله', label: 'حداکثر تعداد مراحل' } },
+    { t: 'vesting', receive: true, desc: 'آزاد در تاریخی که سازمان برای هر بسته تعیین می‌کند', on: d.vesting, toggle: () => set({ vesting: !d.vesting }) },
+    { t: 'milestone', receive: true, desc: 'دریافت با تأیید هر مرحله؛ مراحل را سازمان برای هر بسته تعیین می‌کند', on: d.milestone, toggle: () => set({ milestone: !d.milestone }) },
     { t: 'collateral', desc: 'پشتوانه‌ی وام و کارت از بخش آزاد', on: d.collateral, toggle: () => set({ collateral: !d.collateral }) },
     { t: 'installment', desc: d.bnpl ? 'هم‌زمان با خرید اقساطی' : 'نیازمند فعال بودن خرید اقساطی', on: d.bnpl && d.instLock, toggle: () => set({ instLock: !d.instLock }), disabled: !d.bnpl },
     { t: 'legal', desc: 'همیشه فعال · فقط بهره‌بردار', on: true, disabled: true },
@@ -159,15 +158,11 @@ export function ContractEditor({ c, funds, monthsOptions }: { c: ContractDraft; 
         [false, 'رزروهای مجاز در قرارداد', 'این رزروها را نمادنو مدیریت می‌کند؛ دارایی رزروشده مال کارمند می‌ماند و سود می‌گیرد.'],
       ] as const).map(([receive, title, footer]) => (
         <SettingsGroup key={title} title={title} footer={footer}>
-          {policies.filter((p) => !!p.receive === receive).map((p) => {
-            const mx = p.max;
-            return (
-              <SettingRow key={p.t} label={<LockTypeChip type={p.t} long />} desc={p.desc}>
-                {mx && p.on && <NumberInput label={mx.label} value={shown(d[mx.key])} onChange={(n) => setNum(mx.key, n)} suffix={mx.suffix} width={40} decimals invalid={bad(mx.key)} />}
-                <Switch on={p.on} onChange={() => p.toggle?.()} label={LOCK_META[p.t].label} disabled={p.disabled} />
-              </SettingRow>
-            );
-          })}
+          {policies.filter((p) => !!p.receive === receive).map((p) => (
+            <SettingRow key={p.t} label={<LockTypeChip type={p.t} long />} desc={p.desc}>
+              <Switch on={p.on} onChange={() => p.toggle?.()} label={LOCK_META[p.t].label} disabled={p.disabled} />
+            </SettingRow>
+          ))}
         </SettingsGroup>
       ))}
 

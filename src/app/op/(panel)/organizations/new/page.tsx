@@ -55,7 +55,7 @@ const withPasswords = (users: OrgUser[]) => users.map((u) => (u.tempPassword ? u
 interface Form {
   name: string; nid: string; sector: number; staff: string; rep: string; tel: string;
   loan: number; months: number[]; card: number; perCap: string; bnpl: boolean; cash: boolean; invite: boolean;
-  pol: { vesting: boolean; milestone: boolean; collateral: boolean; installment: boolean }; lock: number; msMax: number;
+  pol: { vesting: boolean; milestone: boolean; collateral: boolean; installment: boolean };
   funds: string[]; start: string; end: string; users: OrgUser[];
 }
 
@@ -65,7 +65,7 @@ const blank = (): Form => {
     name: '', nid: '', sector: 2, staff: '', rep: '', tel: '',
     // while facilities are «به‌زودی» (FEATURES.orgCredit off) the organization is created with them disabled
     loan: FAC ? 40 : 0, months: [6, 12, 18], card: FAC ? 25 : 0, perCap: '50000000', bnpl: FAC, cash: true, invite: true,
-    pol: { vesting: true, milestone: true, collateral: FAC, installment: FAC }, lock: 3, msMax: 5,
+    pol: { vesting: true, milestone: true, collateral: FAC, installment: FAC },
     funds: ['gold', 'fixed'], start: jDate(t), end: jDate(new Date(t.getTime() + 364 * 86400000)), users: [],
   };
 };
@@ -194,7 +194,7 @@ export default function OpOrgNewPage() {
         loanEnabled: FAC && f.loan > 0, loanMaxPct: FAC ? f.loan : 0, loanMonthsOptions: f.months, cardEnabled: FAC && f.card > 0, installmentEnabled: FAC && f.bnpl,
       },
       contract: {
-        cardPct: FAC ? f.card : 0, perPersonCap: Number(enDigits(f.perCap)), vestingMaxMonths: f.lock, milestoneMaxSteps: f.msMax,
+        cardPct: FAC ? f.card : 0, perPersonCap: Number(enDigits(f.perCap)),
         allowCollateral: FAC && f.pol.collateral, allowInstallmentLock: FAC && f.bnpl && f.pol.installment,
         nationalId: enDigits(f.nid), representative: { name: f.rep.trim(), phone: enDigits(f.tel) },
       },
@@ -229,7 +229,7 @@ export default function OpOrgNewPage() {
   const funds = contractFunds(fundsQ.data);
   const hasApprover = f.users.some((u) => u.role === 1);
   // Receive policies («شیوه‌ی دریافت»: free / vesting / milestone) vs. reserves managed by Namadno (collateral / installment / legal).
-  // the contract's caps (max vesting months / milestone steps) keep their defaults; they are not asked here
+  // the contract only allows a policy; the organization sets the release date or the steps of each package
   const polRows: { k: keyof Form['pol'] | 'legal' | 'none'; t: LockType | 'none'; receive?: boolean; sub: string }[] = [
     { k: 'none', t: 'none', receive: true, sub: 'همیشه مجاز · کل مبلغ بلافاصله آزاد' },
     { k: 'vesting', t: 'vesting', receive: true, sub: 'آزاد در تاریخ مشخص روی بسته‌های سازمانی' },

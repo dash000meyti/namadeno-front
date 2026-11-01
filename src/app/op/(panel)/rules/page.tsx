@@ -27,7 +27,6 @@ const DOCS = ['کارت ملی', 'سلفی', 'ویدیو'];
 const GROUPS: GroupDef[] = [
   { title: 'بسته‌های دارایی', d: IC.inbox, tone: 'primary', rows: [
     { kind: 'field', id: 'r-pkg-min-amount', label: 'حداقل مبلغ بسته', sub: 'کمتر از این مبلغ ارسال نمی‌شود', suffix: 'تومان', w: 100, min: 0 },
-    { kind: 'field', id: 'r-pkg-max-vesting', label: 'حداکثر مدت پس‌انداز بسته', sub: 'همچنین سقف کلی در «انواع رزرو دارایی»', suffix: 'ماه', w: 52, min: 1, max: 120 },
     { kind: 'switch', id: 'r-pkg-cfo-approval', label: 'نیاز به تأیید نهایی تأییدکننده‌ی سازمان', sub: 'برای بسته‌های بالای ۵۰۰ میلیون' },
   ] },
   { title: 'تسهیلات', d: IC.percent, tone: 'success', rows: [
@@ -51,9 +50,9 @@ const CREATORS: [string, string][] = [['system', 'سیستم'], ['org', 'ساز�
 type LimitDef = { kind: 'field'; id: string; label: string; suffix: string; w: number; min: number; max: number } | { kind: 'switch'; id: string; label: string };
 const LOCK_TYPES: { type: LockType; cond: string; limits: LimitDef[] }[] = [
   { type: 'collateral', cond: 'آزاد با تسویه وام یا تسویه اعتبار کارت · LTV بالای سقف = درخواست تکمیل پشتوانه', limits: [{ kind: 'field', id: 'r-lock-collateral-ltv', label: 'حداکثر نسبت پشتوانه', suffix: '٪ آزاد', w: 48, min: 1, max: 100 }] },
-  { type: 'vesting', cond: 'آزاد در تاریخ تعیین‌شده توسط سازمان؛ مثال: آزاد در ۱۴۰۵/۱۰/۱۵', limits: [{ kind: 'field', id: 'r-lock-vesting', label: 'حداکثر مدت پس‌انداز', suffix: 'ماه', w: 48, min: 1, max: 120 }] },
+  { type: 'vesting', cond: 'آزاد در تاریخی که سازمان برای هر بسته تعیین می‌کند؛ مثال: آزاد در ۱۴۰۵/۱۰/۱۵', limits: [] },
   { type: 'installment', cond: 'با پرداخت هر قسط، بخشی متناسب آزاد می‌شود', limits: [{ kind: 'field', id: 'r-lock-installment-share', label: 'حداکثر سهم از آزاد', suffix: '٪', w: 48, min: 1, max: 100 }] },
-  { type: 'milestone', cond: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود · جمع درصد مراحل باید ۱۰۰٪ باشد', limits: [{ kind: 'field', id: 'r-lock-milestone', label: 'حداکثر تعداد مراحل', suffix: 'مرحله', w: 48, min: 1, max: 20 }, { kind: 'field', id: 'r-lock-milestone-months', label: 'حداکثر مدت قرارداد', suffix: 'ماه', w: 48, min: 1, max: 120 }] },
+  { type: 'milestone', cond: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود · مراحل و سهم هر مرحله را سازمان برای هر بسته تعیین می‌کند (جمع ۱۰۰٪)', limits: [] },
   { type: 'legal', cond: 'تا رفع دستور مرجع / پایان بررسی ریسک · فقط در پنل بهره‌بردار', limits: [{ kind: 'switch', id: 'r-lock-legal-ref', label: 'شماره مرجع الزامی' }, { kind: 'switch', id: 'r-lock-legal-2nd', label: 'رفع با تأیید نفر دوم' }] },
 ];
 
