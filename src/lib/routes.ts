@@ -50,6 +50,8 @@ export const routes = {
   op: {
     login: '/op/login', overview: '/op', organizations: '/op/organizations', organization: (id: string) => `/op/organizations/${id}`, orgNew: '/op/organizations/new',
     funds: '/op/funds', fund: (id: string) => `/op/funds/${id}`, products: '/op/products', rules: '/op/rules',
-    users: '/op/users', user: (id: string) => `/op/users/${id}`, requests: '/op/requests', risk: '/op/risk', reports: '/op/reports', settings: '/op/settings',
+    users: '/op/users', user: (id: string) => `/op/users/${id}`, requests: '/op/requests', risk: '/op/risk', settings: '/op/settings',
+    // treasury and monitoring (the separate reports page was merged into the overview)
+    orders: '/op/orders', cash: '/op/cash', planning: '/op/planning', activity: '/op/activity',
   },
 };

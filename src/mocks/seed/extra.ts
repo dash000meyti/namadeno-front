@@ -11,5 +11,6 @@ import { seed_orgPackages } from './extra-org-packages';
 import { seed_opCore } from './extra-op-core';
 import { seed_opSystem } from './extra-op-system';
 import { seed_site } from './extra-site';
+import { seed_opTreasury } from './extra-op-treasury';
 
-export const extraSeeds: ((db: MockDB) => void)[] = [seed_appCore, seed_appMoney, seed_appCredit, seed_orgPeople, seed_orgPackages, seed_opCore, seed_opSystem, seed_site];
+export const extraSeeds: ((db: MockDB) => void)[] = [seed_appCore, seed_appMoney, seed_appCredit, seed_orgPeople, seed_orgPackages, seed_opCore, seed_opSystem, seed_site, seed_opTreasury];

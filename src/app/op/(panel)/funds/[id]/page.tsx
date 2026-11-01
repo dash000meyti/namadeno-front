@@ -1,18 +1,26 @@
 'use client';
 /**
- * Operator console — fund. Kit detail page: heading (fund tile, status/type pills, NAV refresh, edit, pause/resume/launch)
- * → stats → tabs: performance (NAV chart with range, recent NAVs + CSV export, today's orders, fund info),
- * locks (free/locked AUM by lock type), settings (trading and collateral groups + sticky save bar).
+ * Operator console — fund. Kit detail page: heading (fund tile, status / stock-state pills, «ثبت سفارش», more actions:
+ * NAV refresh, edit, pause/resume; launch for drafts) → stock stats → tabs:
+ *   موجودی     stock breakdown, free-stock trend vs the target band, 30-day forecast, the suggestion, recent movements
+ *   سفارش‌ها   this fund's orders to the fund («صدور» / «ابطال») + inspector with «ثبت تسویه» and «لغو سفارش»
+ *   عملکرد    NAV chart with range, recent NAVs + CSV export, users' orders today, fund info
+ *   رزروها     free / reserved AUM by reservation type
+ *   تنظیمات   trading and collateral groups + sticky save bar
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useOpFund } from '@/api/op';
 import { useRefreshNav, useUpdateFundX, type OpFund } from '@/api/op-system-extra';
+import {
+  useTreasuryOrders, useTreasuryPosition,
+  type OrderSide, type TreasuryOrder, type TreasuryPositionDetail,
+} from '@/api/op-treasury-extra';
 import type { Fund, LockType } from '@/types/domain';
 import {
-  ActionBar, Allocation, BigNum, Card, Chips, Confirm, Empty, ErrorBlock, FreeLocked, KV,
-  NumberInput, PageHeading, Pill, Section, SettingRow, SettingsGroup, SkeletonCard, StatStrip, Switch, Table, Tabs, Tile,
-  type Column, type Tone,
+  ActionBar, Allocation, BigNum, Card, Chips, Confirm, Empty, ErrorBlock, FreeLocked, KV, Legend, LineChart, MenuButton,
+  NumberInput, PageHeading, Pill, Section, SettingRow, SettingsGroup, SkeletonCard, StatStrip, Switch, Table, TableFoot, Tabs, Tile, Toolbar,
+  niceMax, usePaging, type Column, type Stat, type Tone,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { LockTypeChip } from '@/components/ui/LockBar';
@@ -21,37 +29,46 @@ import { bn, dayTime, dec, downloadCsv, errMsg, raw, spct } from '@/components/o
 import { IC, type ToneKey } from '@/components/op/system/ui';
 import { CATEGORY_LABEL, FUND_STATUS, FUND_UI, LOCK_ORDER, fundTitle, lockedOf } from '@/components/op/system/funds';
 import { FundEditDialog, NavChart } from '@/components/op/system/FundUi';
+import { OrderDialog } from '@/components/op/treasury/OrderDialog';
+import { STOCK_STATE, TI, amt, buyNowCap, daysText, unitsText } from '@/components/op/treasury/ui';
+import {
+  CoverageBlock, MovementInspector, OpLabel, PositionBreakdown, StatePill, SuggestionNote, minTargetOf, movementColumns, samt, sbn, useOrgNames,
+} from '@/components/op/funds/stock';
+import { OrderInspector, orderColumns } from '@/components/op/funds/orders';
 import { faDigits, jDate, jDayMonth, money } from '@/lib/format';
 import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 
-type Tab = 'perf' | 'locks' | 'settings';
+type Tab = 'stock' | 'orders' | 'perf' | 'locks' | 'settings';
+type OrderFilt = 'all' | TreasuryOrder['status'];
 const RANGES: [number, string][] = [[7, '۷ روز'], [30, '۳۰ روز'], [90, '۹۰ روز']];
+const STOCK_RANGES: [number, string][] = [[30, '۳۰ روز'], [90, '۹۰ روز']];
 const SETTLEMENTS: Fund['settlement'][] = ['T+0', 'T+1', 'T+2'];
 const PAUSE_BODY = 'خرید و فروش واحدهای این صندوق برای همهٔ کاربران متوقف می‌شود. واحدهای فعلی، سود و NAV و رزروها بدون تغییر باقی می‌مانند و هر زمان می‌توانید صندوق را دوباره فعال کنید.';
 
 /** Legacy tone key → kit tone. */
 const kt = (t: ToneKey): Tone => (t === 'default' ? 'neutral' : t);
 const trend = (n: number) => (n > 0 ? 'up' as const : n < 0 ? 'down' as const : undefined);
-const signed = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '') + money(Math.abs(n));
-
-/** A round axis floor under the lowest value, so day-to-day NAV moves stay visible. */
-
-/** NAV line (kit LineChart). Big NAVs read in thousands. LTR wrapper keeps the y-axis labels left of the plot in the RTL page. */
 
 interface LockRow { t: LockType; v: number; units: number; pct: number; holders: number }
+interface OrderPrefill { key: number; side?: OrderSide; amount?: number; source?: 'manual' | 'suggestion'; reason?: string }
+type Sel = { kind: 'move' | 'order'; id: string } | null;
 
 export default function OpFundPage() {
   const { id } = useParams<{ id: string }>();
   const toast = useToast();
   const q = useOpFund(id);
+  const pos = useTreasuryPosition(id);
   const refresh = useRefreshNav();
   const update = useUpdateFundX();
-  const [tab, setTab] = useState<Tab>('perf');
+  const [tab, setTabRaw] = useState<Tab>('stock');
   const [modal, setModal] = useState<'' | 'edit' | 'pause'>('');
+  const [order, setOrder] = useState<OrderPrefill | null>(null);
+  const [sel, setSel] = useState<Sel>(null);
   const f = q.data as OpFund | undefined;
+  const d = pos.data;
 
-  const crumbs = [{ label: 'صندوق‌ها', href: routes.op.funds }];
+  const crumbs = [{ label: 'موجودی صندوق‌ها', href: routes.op.funds }];
   if (q.isLoading) return <><PageHeading title="در حال بارگذاری…" crumbs={crumbs} /><StatStrip loading items={[]} /><SkeletonCard h={360} /></>;
   if (q.isError || !f) return <><PageHeading title="صندوق" crumbs={crumbs} /><ErrorBlock error={q.error} message={errMsg(q.error, 'صندوق پیدا نشد.')} onRetry={() => q.refetch()} /></>;
 
@@ -59,18 +76,22 @@ export default function OpFundPage() {
   const st = FUND_STATUS[f.status];
   const draft = f.status === 'coming_soon';
   const paused = f.status === 'paused';
-  const h = f.history ?? [];
-  const aum30 = h.length > 30 ? (h[h.length - 1].v / h[h.length - 31].v - 1) * 100 : 0;
+  const active = f.status === 'active';
   const locked = lockedOf(f);
   const free = Math.max(0, f.aum - locked);
   const lockedPct = f.aum ? (locked / f.aum) * 100 : 0;
   const d1 = f.navChangePct1d;
-  const delta = f.meta?.investorsDeltaMonth ?? 0;
   const lockRows: LockRow[] = LOCK_ORDER.filter((t) => (f.meta?.lockByType[t] ?? 0) > 0).map((t) => {
     const v = f.meta?.lockByType[t] ?? 0;
     return { t, v, units: f.nav ? v / f.nav : 0, pct: f.aum ? (v / f.aum) * 100 : 0, holders: f.meta?.holdersByType[t] ?? 0 };
   });
+  const openOrders = (d?.orders ?? []).filter((o) => o.status === 'placed');
+  const dueOrders = openOrders.filter((o) => o.dueNow).length;
+  const openAmount = openOrders.reduce((s, o) => s + o.amount, 0);
+  const attention = d?.state === 'shortfall' || d?.state === 'below';
 
+  const setTab = (t: Tab) => { setTabRaw(t); setSel(null); };
+  const openOrder = (o: Omit<OrderPrefill, 'key'> = {}) => setOrder({ key: Date.now(), ...o });
   const onRefresh = () => refresh.mutate({ fundId: f.id }, {
     onSuccess: () => toast(`NAV از هسته معاملات به‌روزرسانی شد — ${money(f.nav)} تومان`),
     onError: (e) => toast(errMsg(e), 'error'),
@@ -84,8 +105,34 @@ export default function OpFundPage() {
     { key: 't', label: 'نوع رزرو', width: 'minmax(0, 1.4fr)', render: (r) => <LockTypeChip type={r.t} long /> },
     { key: 'u', label: 'واحد', render: (r) => <span className="num">{money(r.units)}</span> },
     { key: 'v', label: 'ارزش (میلیارد تومان)', render: (r) => <span className="num" style={{ fontWeight: 600 }}>{bn(r.v)}</span> },
-    { key: 'p', label: 'سهم از AUM', render: (r) => <span className="num mute">{dec(r.pct)}٪</span> },
+    { key: 'p', label: 'سهم از موجودی', render: (r) => <span className="num mute">{dec(r.pct)}٪</span> },
     { key: 'h', label: 'دارندگان', render: (r) => <span className="num mute">{money(r.holders)} نفر</span> },
+  ];
+
+  const navStat: Stat = { label: 'NAV هر واحد', value: f.nav ? money(f.nav) : '—', unit: 'تومان', note: f.nav ? `${spct(d1, 2)} امروز` : 'در انتظار NAV اولیه', trend: trend(d1) };
+  const stats: Stat[] = d && d.state !== 'inactive' ? [
+    navStat,
+    { label: 'موجودی خزانه', value: sbn(d.heldValue), unit: 'میلیارد تومان', note: `${unitsText(d.heldUnits)} واحد` },
+    { label: 'تخصیص به کاربران', value: sbn(d.allocatedValue), unit: 'میلیارد تومان', note: `رزرو ${amt(d.reservedValue)} · ${money(f.investors)} دارنده` },
+    {
+      label: 'موجودی آزاد', value: sbn(d.availableValue), unit: 'میلیارد تومان', trend: attention ? 'warn' : undefined,
+      note: `پوشش ${daysText(d.coverageDays)}${d.target ? ` از هدف ${faDigits(d.target.targetDays)} روز` : ''}`,
+    },
+    {
+      label: 'سفارش‌های باز', value: faDigits(openOrders.length), unit: 'سفارش', onClick: () => setTab('orders'), active: tab === 'orders',
+      note: dueOrders ? `${faDigits(dueOrders)} سررسید تسویه · ${amt(openAmount)}` : openOrders.length ? `${amt(openAmount)} تومان` : 'سفارش بازی نیست', trend: dueOrders ? 'warn' : undefined,
+    },
+  ] : [
+    navStat,
+    { label: 'موجودی خزانه', value: bn(f.aum), unit: 'میلیارد تومان', note: draft ? 'پس از راه‌اندازی' : '—' },
+    { label: 'دارندگان واحد', value: money(f.investors), unit: 'نفر', note: '—' },
+    { label: 'واحدهای رزروشده', value: `${faDigits(Math.round(lockedPct))}٪`, unit: 'از کل واحدها', note: `${bn(locked)} میلیارد · ${faDigits(lockRows.length)} نوع رزرو` },
+  ];
+
+  const more = [
+    { label: refresh.isPending ? 'در حال به‌روزرسانی NAV…' : 'به‌روزرسانی NAV', onClick: onRefresh, disabled: refresh.isPending || draft },
+    { label: 'ویرایش اطلاعات صندوق', onClick: () => setModal('edit') },
+    ...(active ? ['sep' as const, { label: 'غیرفعال‌سازی موقت', onClick: () => setModal('pause'), danger: true, disabled: update.isPending }] : []),
   ];
 
   return (
@@ -95,31 +142,33 @@ export default function OpFundPage() {
         lead={<Tile d={ui.d} tone={draft ? 'neutral' : kt(ui.tone)} size="xl" />}
         title={fundTitle(f)}
         sub={<>{draft ? 'در انتظار مجوز' : f.description} · آخرین NAV <span className="num">{dayTime(f.meta?.lastNavAt)}</span></>}
-        pills={<><Pill tone={kt(st.tone)} dot>{st.label}</Pill><Pill>ETF {f.shortName}</Pill></>}
+        pills={<><Pill tone={kt(st.tone)} dot>{st.label}</Pill>{d && d.state !== 'inactive' && <StatePill p={d} />}<Pill>ETF {f.shortName}</Pill></>}
       >
-        <button type="button" className="nm-btn ghost" disabled={refresh.isPending || draft} onClick={onRefresh}>
-          <Icon d={IC.refresh} size={16} />{refresh.isPending ? 'در حال به‌روزرسانی…' : 'به‌روزرسانی NAV'}
-        </button>
-        <button type="button" className="nm-btn ghost" onClick={() => setModal('edit')}><Icon d={IC.pen} size={16} />ویرایش</button>
+        <MenuButton label="اقدام‌های دیگر" align="end" items={more} />
         {draft
           ? <button type="button" className="nm-btn" disabled={update.isPending} onClick={() => setStatus('active')}><Icon d={IC.play} size={15} />راه‌اندازی صندوق</button>
           : paused
             ? <button type="button" className="nm-btn line ok" disabled={update.isPending} onClick={() => setStatus('active')}><Icon d={IC.check} size={16} />فعال‌سازی مجدد</button>
-            : <button type="button" className="nm-btn line danger" disabled={update.isPending} onClick={() => setModal('pause')}><Icon d={IC.pause} size={16} />غیرفعال‌سازی موقت</button>}
+            : <button type="button" className="nm-btn" onClick={() => openOrder()}><Icon d={TI.plus} size={16} strokeWidth={2} />ثبت سفارش</button>}
       </PageHeading>
 
-      <StatStrip items={[
-        { label: 'NAV هر واحد', value: f.nav ? money(f.nav) : '—', unit: 'تومان', note: f.nav ? `${spct(d1, 2)} امروز` : 'در انتظار NAV اولیه', trend: trend(d1) },
-        { label: 'AUM', value: bn(f.aum), unit: 'میلیارد تومان', note: h.length > 30 ? `${spct(aum30)} در ۳۰ روز` : '—', trend: trend(aum30) },
-        { label: 'دارندگان واحد', value: money(f.investors), unit: 'نفر', note: `${signed(delta)} این ماه`, trend: trend(delta) },
-        { label: 'واحدهای رزروشده', value: `${faDigits(Math.round(lockedPct))}٪`, unit: 'از کل واحدها', note: `${bn(locked)} میلیارد · ${faDigits(lockRows.length)} نوع رزرو` },
-      ]} />
+      <StatStrip loading={pos.isLoading} items={stats} />
 
       <Tabs label="بخش‌های صندوق" size="lg" value={tab} onChange={setTab} items={[
+        { key: 'stock', label: 'موجودی' },
+        { key: 'orders', label: 'سفارش‌ها', count: openOrders.length || undefined, hot: dueOrders > 0 },
         { key: 'perf', label: 'عملکرد' },
         { key: 'locks', label: 'رزروها', count: lockRows.length },
         { key: 'settings', label: 'تنظیمات' },
       ]} />
+
+      {tab === 'stock' && (
+        pos.isLoading ? <SkeletonCard h={360} />
+          : pos.isError || !d ? <ErrorBlock error={pos.error} message={errMsg(pos.error, 'موجودی این صندوق دریافت نشد.')} onRetry={() => pos.refetch()} />
+            : <StockTab d={d} active={active} sel={sel} onSelect={setSel} onOrder={openOrder} />
+      )}
+
+      {tab === 'orders' && <OrdersTab fundId={f.id} p={d} canOrder={active} sel={sel} onSelect={setSel} onOrder={() => openOrder()} />}
 
       {tab === 'perf' && (
         <div className="nm-grid side">
@@ -144,7 +193,7 @@ export default function OpFundPage() {
       )}
 
       {tab === 'locks' && (
-        <Card flush title="تفکیک AUM — آزاد / رزرو" sub={`کل دارایی ${bn(f.aum)} میلیارد تومان`}
+        <Card flush title="تفکیک موجودی — آزاد / رزرو" sub={`کل موجودی ${bn(f.aum)} میلیارد تومان`}
           actions={locked > 0 ? <Pill tone="warning">{faDigits(Math.round(lockedPct))}٪ رزرو</Pill> : undefined}>
           <div className="nm-card-b" style={{ paddingTop: 4 }}><FreeLocked free={free} locked={locked} fmt={bn} unit="میلیارد" /></div>
           <Table columns={lockCols} rows={lockRows} rowKey={(r) => r.t} minWidth={620}
@@ -157,10 +206,162 @@ export default function OpFundPage() {
       {modal === 'edit' && <FundEditDialog f={f} onClose={() => setModal('')} />}
       <Confirm open={modal === 'pause'} onClose={() => setModal('')} danger busy={update.isPending} onConfirm={() => setStatus('paused')}
         title={`غیرفعال‌سازی موقت ${f.name}`} confirmLabel="غیرفعال‌سازی موقت" body={<span className="mute">{PAUSE_BODY}</span>} />
+      {order && <OrderDialog key={order.key} open onClose={() => setOrder(null)} fundId={f.id} side={order.side} amount={order.amount} source={order.source} reason={order.reason} />}
     </>
   );
 }
 
+// ───────────────────────── stock tab ─────────────────────────
+
+function StockTab({ d, active, sel, onSelect, onOrder }: {
+  d: TreasuryPositionDetail; active: boolean; sel: Sel; onSelect: (s: Sel) => void;
+  onOrder: (o: Omit<OrderPrefill, 'key'>) => void;
+}) {
+  const orgName = useOrgNames();
+  const pg = usePaging(d.movements, 8);
+  const fc = d.forecast as TreasuryPositionDetail['forecast'] | undefined;
+  const minTarget = fc?.minTarget ?? minTargetOf(d);
+  const s = d.suggestion;
+  const fs = fc?.suggestion;
+  const selMove = sel?.kind === 'move' ? d.movements.find((m) => m.id === sel.id) : undefined;
+
+  if (d.state === 'inactive') {
+    return <Card><Empty icon={TI.stock} title="این صندوق هنوز موجودی ندارد" sub="پس از راه‌اندازی و ثبت نخستین صدور، موجودی خزانه، تخصیص‌ها و موجودی آزاد اینجا نمایش داده می‌شود." /></Card>;
+  }
+  const projected = fc?.projectedEnd ?? 0;
+  return (
+    <>
+      {s && <SuggestionNote suggestion={s} onOrder={active ? () => onOrder({ side: s.side, amount: s.amount, source: 'suggestion', reason: s.reason }) : undefined} />}
+      <div className="nm-grid side">
+        <div className="nm-stack">
+          <FreeTrend d={d} minTarget={minTarget} />
+
+          {fc && (
+            <Card title="پیش‌بینی ۳۰ روز آینده" sub="تقاضا در برابر بازگشت به موجودی"
+              actions={<Pill tone={STOCK_STATE[fc.state].tone} dot>{STOCK_STATE[fc.state].label}</Pill>}
+              more={{ label: 'برنامه‌ریزی', href: routes.op.planning }}>
+              <KV rows={[
+                [<OpLabel key="a">موجودی آزاد اکنون</OpLabel>, <span key="a" className="num">{samt(fc.availableNow)} تومان</span>],
+                [<OpLabel key="b" op="+">صدور در راه</OpLabel>, <span key="b" className="num">{samt(fc.pendingBuy)} تومان</span>],
+                [<OpLabel key="d" op="−" sub="خرید کاربران و بسته‌های تازه">تقاضای پیش‌بینی‌شده</OpLabel>, <span key="d" className="num">{samt(fc.demand)} تومان</span>],
+                [<OpLabel key="r" op="+" sub="فروش کاربران، پس‌انداز آزادشده و بازپس‌گیری">بازگشت به موجودی</OpLabel>, <span key="r" className="num">{samt(fc.returns)} تومان</span>],
+                [<OpLabel key="e" op="=" strong>موجودی آزاد پایان دوره</OpLabel>, (
+                  <span key="e" className="num" style={{ fontWeight: 600, color: projected < 0 ? 'var(--error-text)' : projected < minTarget ? 'var(--warning-text)' : undefined }}>
+                    {samt(projected)} تومان
+                  </span>
+                )],
+                [<OpLabel key="m">حداقل هدف</OpLabel>, <span key="m" className="num mute">{samt(minTarget)} تومان</span>],
+              ]} />
+              {fs && (!s || s.side !== fs.side || s.amount !== fs.amount) && (
+                <SuggestionNote suggestion={fs} when="برای ۳۰ روز آینده" onOrder={active ? () => onOrder({ side: fs.side, amount: fs.side === 'buy' ? buyNowCap(d, fs.amount) : fs.amount, source: 'suggestion', reason: fs.reason }) : undefined} />
+              )}
+            </Card>
+          )}
+        </div>
+
+        <div className="nm-stack">
+          <Card title="تفکیک موجودی" actions={<BigNum value={sbn(d.heldValue)} unit="میلیارد" />}>
+            <PositionBreakdown p={d} />
+          </Card>
+          <Card title="پوشش و هدف" more={{ label: 'تغییر هدف', href: routes.op.planning }}>
+            <CoverageBlock p={d} minTarget={minTarget} />
+          </Card>
+        </div>
+      </div>
+
+      <Card flush title="جابه‌جایی‌های اخیر" count={d.movements.length} sub="ورود و خروج واحدهای این صندوق از موجودی آزاد">
+        <Table
+          columns={movementColumns({ orgName })} rows={pg.rows} rowKey={(m) => m.id} rowLabel={(m) => m.title}
+          onRowClick={(m) => onSelect(sel?.kind === 'move' && sel.id === m.id ? null : { kind: 'move', id: m.id })}
+          selectedKey={sel?.kind === 'move' ? sel.id : null}
+          empty={<Empty icon={TI.activity} title="جابه‌جایی‌ای برای این صندوق ثبت نشده است" />}
+          minWidth={640}
+        />
+        <TableFoot shown={pg.rows.length} total={d.movements.length} unit="جابه‌جایی" page={pg.page} pages={pg.pages} onPage={pg.setPage} />
+      </Card>
+
+      {selMove && <MovementInspector key={selMove.id} m={selMove} fundName={d.name} orgName={orgName} onClose={() => onSelect(null)} />}
+    </>
+  );
+}
+
+/** Free stock over 30/90 days against the current lower and upper edge of the target band. */
+function FreeTrend({ d, minTarget }: { d: TreasuryPositionDetail; minTarget: number }) {
+  const [range, setRange] = useState(90);
+  const pts = d.history.slice(-range);
+  const max = d.target?.maxFreeValue;
+  const free = pts.map((p) => p.available);
+  const lo = Math.min(0, ...free);
+  const series = [
+    { name: 'موجودی آزاد', color: 'var(--chart-2)', values: free, area: true },
+    ...(minTarget > 0 ? [{ name: 'حداقل هدف', color: 'var(--warning-main)', values: pts.map(() => minTarget), dashed: true }] : []),
+    ...(max ? [{ name: 'سقف هدف', color: 'var(--info-main)', values: pts.map(() => max), dashed: true }] : []),
+  ];
+  const first = free[0] ?? 0;
+  const last = free[free.length - 1] ?? 0;
+  return (
+    <Card title="روند موجودی آزاد" sub="میلیارد تومان · محدوده‌ی هدف فعلی"
+      actions={<Tabs label="بازه نمودار موجودی" value={range} onChange={setRange} items={STOCK_RANGES.map(([k, l]) => ({ key: k, label: l }))} />}>
+      {pts.length > 1 ? (
+        <div className="nm-stack" style={{ gap: 12 }}>
+          <LineChart label={`روند موجودی آزاد ${d.name} در ${faDigits(range)} روز`} height={230} labels={pts.map((p) => jDayMonth(p.t))}
+            min={lo < 0 ? -niceMax(-lo) : 0} fmt={(n) => sbn(n)} series={series} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <Legend items={series.map((x) => ({ label: x.name, color: x.color }))} />
+            <span className="mute num" style={{ fontSize: 12, marginRight: 'auto' }}>
+              {faDigits(range)} روز: {samt(first)} ← {samt(last)}
+            </span>
+          </div>
+        </div>
+      ) : <Empty icon={TI.stock} title="سابقه‌ای برای موجودی این صندوق ثبت نشده است" />}
+    </Card>
+  );
+}
+
+// ───────────────────────── orders tab ─────────────────────────
+
+function OrdersTab({ fundId, p, canOrder, sel, onSelect, onOrder }: {
+  fundId: string; p?: TreasuryPositionDetail; canOrder: boolean; sel: Sel; onSelect: (s: Sel) => void; onOrder: () => void;
+}) {
+  const orders = useTreasuryOrders({ fundId });
+  const [filt, setFilt] = useState<OrderFilt>('all');
+  const all = useMemo(() => orders.data ?? [], [orders.data]);
+  const rows = useMemo(() => all.filter((o) => filt === 'all' || o.status === filt), [all, filt]);
+  const pg = usePaging(rows, 10, filt);
+  const count = (s: TreasuryOrder['status']) => all.filter((o) => o.status === s).length;
+  const selOrder = sel?.kind === 'order' ? all.find((o) => o.id === sel.id) : undefined;
+  const due = all.filter((o) => o.dueNow).length;
+
+  return (
+    <>
+      <Card flush>
+        <Toolbar>
+          <Tabs label="وضعیت سفارش" value={filt} onChange={setFilt} items={[
+            { key: 'all', label: 'همه', count: all.length },
+            { key: 'placed', label: 'باز', count: count('placed'), hot: due > 0 },
+            { key: 'settled', label: 'تسویه‌شده', count: count('settled') },
+            { key: 'cancelled', label: 'لغوشده', count: count('cancelled') },
+          ]} />
+          <span className="grow" />
+          {canOrder && <button type="button" className="nm-btn sm ghost" onClick={onOrder}><Icon d={TI.plus} size={15} strokeWidth={2} />ثبت سفارش</button>}
+        </Toolbar>
+        <Table
+          columns={orderColumns} rows={pg.rows} rowKey={(o) => o.id} rowLabel={(o) => `سفارش ${o.code}`}
+          onRowClick={(o) => onSelect(sel?.kind === 'order' && sel.id === o.id ? null : { kind: 'order', id: o.id })}
+          selectedKey={sel?.kind === 'order' ? sel.id : null}
+          dimRow={(o) => o.status === 'cancelled'}
+          loading={orders.isLoading} error={orders.isError ? orders.error : undefined} onRetry={() => orders.refetch()}
+          empty={<Empty icon={TI.order} title={filt === 'all' ? 'برای این صندوق سفارشی ثبت نشده است' : 'سفارشی با این وضعیت نیست'} />}
+          minWidth={720}
+        />
+        <TableFoot shown={pg.rows.length} total={rows.length} unit="سفارش" page={pg.page} pages={pg.pages} onPage={pg.setPage} />
+      </Card>
+      {selOrder && <OrderInspector key={selOrder.id} o={selOrder} p={p} onClose={() => onSelect(null)} />}
+    </>
+  );
+}
+
+// ───────────────────────── performance ─────────────────────────
 function NavCard({ f }: { f: OpFund }) {
   const [range, setRange] = useState(90);
   const pts = (f.history ?? []).slice(-range);
@@ -209,7 +410,7 @@ function OrdersCard({ f }: { f: OpFund }) {
   const net = o.buyValue - o.sellValue;
   const when = f.settlement === 'T+0' ? 'امروز' : f.settlement === 'T+1' ? 'فردا' : 'پس‌فردا';
   return (
-    <Card title="سفارش‌های امروز" sub={<>تسویه {when} <span className="num ltr">{faDigits('10:00')}</span> (<span className="ltr">{f.settlement}</span>)</>}>
+    <Card title="سفارش‌های کاربران امروز" sub={<>تسویه {when} <span className="num ltr">{faDigits('10:00')}</span> (<span className="ltr">{f.settlement}</span>)</>}>
       {o.buyValue + o.sellValue > 0 ? (
         <Section title={`خالص ${net >= 0 ? 'ورودی' : 'خروجی'}`}
           action={<BigNum value={`${net >= 0 ? '+' : '−'}${bn(Math.abs(net))}`} unit="میلیارد تومان" style={{ color: net >= 0 ? 'var(--success-text)' : 'var(--error-text)' }} />}>
@@ -290,5 +491,3 @@ function FundSettings({ f, visible }: { f: OpFund; visible: boolean }) {
     </>
   );
 }
-
-/** Fund identity (name, symbol, type, manager, app description). Same dialog as the inspector on the funds list. */

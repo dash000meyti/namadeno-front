@@ -7,6 +7,7 @@ import { db, fund, newId, recalcHoldings, trackingCode, userData, type UserData 
 import { body, fail, latency, ok, p, qs, who } from '../http';
 import { now, jalaliToIso } from '@/lib/clock';
 import { faDigits, money } from '@/lib/format';
+import { onPackageAccepted, onUserCash, onUserTrade } from '../treasury';
 
 const nowIso = () => now().toISOString();
 
@@ -155,6 +156,7 @@ export const appHandlers = [
     pkg.status = 'accepted';
     pkg.acceptedAt = nowIso();
     pkg.acceptedSplit = split;
+    onPackageAccepted(ud, pkg, split); // treasury: the fund parts leave the free stock
     const tx = addTx(ud, { category: 'inbox', title: `دریافت ${pkg.title} — ${pkg.orgName}`, subtitle: 'تأیید دریافت', amount: pkg.amount, lockType: pkg.lockPolicy.type === 'none' ? undefined : pkg.lockPolicy.type, lockEvent: pkg.lockPolicy.type === 'none' ? undefined : 'locked' });
     // reflect on the organization side
     for (const list of Object.values(db().orgPackages)) {
@@ -212,11 +214,13 @@ export const appHandlers = [
     if (b.direction === 'buy') {
       if (!debit(ud, 'rial', b.amount)) return fail(422, 'insufficient_free', 'موجودی آزاد کیف پول ریالی کافی نیست.');
       credit(ud, f.kind, b.amount - fee);
+      onUserTrade(ud, f, 'buy', b.amount, fee);
       const tx = addTx(ud, { category: 'trade', title: 'خرید ' + f.name, subtitle: f.symbol, amount: -b.amount, units: (b.amount - fee) / f.nav, holdingKind: f.kind, details: [{ label: 'کارمزد', value: money(fee) + ' تومان' }, { label: 'NAV', value: money(f.nav) }] });
       return ok(tx);
     }
     if (!debit(ud, f.kind, b.amount)) return fail(422, 'insufficient_free', 'بخش آزاد این صندوق کافی نیست.');
     credit(ud, 'rial', b.amount - fee);
+    onUserTrade(ud, f, 'sell', b.amount, fee); // the units go back to the shared stock
     const tx = addTx(ud, { category: 'trade', title: 'فروش ' + f.name, subtitle: f.symbol + ' · واریز به کیف پول ریالی', amount: b.amount - fee, units: -(b.amount / f.nav), holdingKind: f.kind, status: 'pending', details: [{ label: 'کارمزد', value: money(fee) + ' تومان' }, { label: 'تسویه', value: f.settlement }] });
     return ok(tx);
   }),
@@ -229,6 +233,7 @@ export const appHandlers = [
     if (!(b.amount >= 10_000)) return fail(422, 'bad_amount', 'حداقل مبلغ واریز ۱۰٬۰۰۰ تومان است.');
     const dest = b.destination || 'rial';
     credit(ud, dest, b.amount);
+    onUserCash(ud, 'deposit', b.amount, dest);
     const tx = addTx(ud, { category: 'rial', title: dest === 'rial' ? 'واریز از کارت بانکی' : 'واریز و خرید ' + fund(dest).name, subtitle: 'شاپرک · ' + (dest === 'rial' ? 'کیف پول ریالی' : fund(dest).name), amount: b.amount, holdingKind: dest });
     return ok(tx);
   }),
@@ -238,6 +243,7 @@ export const appHandlers = [
     const b = await body<{ amount: number; bankAccountId?: string }>(request);
     if (!(b.amount > 0)) return fail(422, 'bad_amount', 'مبلغ معتبر نیست.');
     if (!debit(ud, 'rial', b.amount)) return fail(422, 'insufficient_free', 'مبلغ از موجودی قابل برداشت بیشتر است.');
+    onUserCash(ud, 'withdrawal', b.amount);
     const acc = ud.bankAccounts.find((a) => a.id === b.bankAccountId) ?? ud.bankAccounts.find((a) => a.isDefault);
     const tx = addTx(ud, { category: 'rial', title: 'برداشت به حساب بانکی', subtitle: acc ? acc.bankName : 'کیف پول ریالی', amount: -b.amount, holdingKind: 'rial', status: 'pending', details: acc ? [{ label: 'شبا', value: acc.iban }] : undefined });
     return ok(tx);

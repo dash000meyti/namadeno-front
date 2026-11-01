@@ -373,6 +373,97 @@ New endpoints
   POST  /api/v1/op/settings/sessions/revoke  → OpSettingsX (ends every session except the current one)
 ```
 
+### بهره‌بردار — خزانه، سفارش‌ها، نقدینگی، برنامه‌ریزی، فعالیت‌ها (`op-treasury-extra.ts`)
+
+نمادنو از صندوق‌ها واحد می‌خرد («صدور»)، آن‌ها را یک موجودی مشترک نگه می‌دارد، بخشی را به بسته‌های سازمان‌ها و کاربران تخصیص می‌دهد (بخشی رزروشده) و باقی «موجودی آزاد» است. پول از یک حساب ریالی پلتفرم می‌گذرد: واریز سازمان‌ها و کاربران ورودی، صدور خروجی، ابطال ورودی. نوع‌ها: `src/api/op-treasury-extra.ts` · موتور ماک: `src/mocks/treasury.ts` · seed: `src/mocks/seed/extra-op-treasury.ts`.
+
+```
+Identities (per fund, in units; value = units × current NAV)
+  held       units Namadno owns — changes ONLY when an order settles
+  allocated  baseline (people the mock does not model one by one) + Σ holdings of modelled people
+  reserved   baseline + Σ reservations of modelled people                        (always ≤ allocated)
+  committed  baseline + pending recipients of sent, not expired packages × split (free split → assumptions.defaultSplit)
+  available  = held − allocated − committed − pending redeem                      (negative = shortfall «کسری»)
+  demandPerDay (NET, Toman) = assumptions.demandPerDay + newPackagesPerMonth × split / 30 − assumptions.returnsPerDay
+  coverageDays = (availableValue + pendingBuyValue) / demandPerDay               (null when demandPerDay ≤ 0)
+  minTarget  = max(target.minFreeValue, demandPerDay × target.targetDays)       (TreasuryPosition.minTargetValue; reservedByType is in units)
+  state      inactive (fund not active) · shortfall (available < 0) · below (< minTarget) · surplus (> target.maxFreeValue) · ok
+  suggestion buy  = minTarget − (available + pending buy)   (rounded up to 0.1B; ≥ 10M)
+             redeem = available − maxFreeValue               (only when surplus; never under minTarget)
+Cash (Toman)
+  balance   = opening + Σ done entries          available = balance − tiedInOrders (open buys) − userWallets − committedRial
+
+Computed fields on existing resources (same names and shapes — values now come from the treasury so every screen agrees)
+  Fund.aum                 = held value                         GET /op/funds, /op/funds/:id, /funds …
+  Fund.meta.lockByType     = reserved value per reservation type
+  OrgContractExt.aum / locked / lockByType = baseline + the organization's modelled members; last aumHistory point = aum
+  GET /op/overview stats.aum = Σ held value · stats.lockedValue = Σ reserved value · stats.freeValue = aum − lockedValue
+                   stats.monthly[].aum (last = aum) · lockMix (% of reserved value per type)
+  Invariants (the mock warns in the console when broken): reserved ≤ allocated per fund ·
+  Σ organization fundValue ≤ Σ allocated value · Σ fund AUM = Σ held value = overview aum.
+
+Stock
+  GET   /api/v1/op/treasury/summary?range=7|30|90      → TreasurySummary { asOf, totals, coverageDays, positions[], cash, mix[], otherTargetPct?,
+                                                          byOrg[], individualsValue, flow{labels, allocated[], returned[], bought[], redeemed[]},
+                                                          aumMonthly[{month, aum, target?}], aumTarget{value, by, pct}, growth }
+  GET   /api/v1/op/treasury/positions                   → TreasuryPosition[]   (all funds, d.funds order)
+  GET   /api/v1/op/treasury/positions/:fundId           → TreasuryPositionDetail (+ history[90]{t, available, held}, movements[30], orders[], forecast (30 days; missing for inactive funds))  · 404 not_found
+  GET   /api/v1/op/treasury/movements?fundId&kind&limit → StockMovement[] newest first (limit default 50). units: + into free stock, − out of it
+Orders («صدور» = buy units, «ابطال» = redeem)
+  GET   /api/v1/op/treasury/orders?status&fundId&side   → TreasuryOrder[] (open first). status: placed | due (placed and settleAt ≤ now) | settled | cancelled
+  POST  /api/v1/op/treasury/orders/quote  body { fundId, side, amount }
+        → OrderQuote { units, fee, nav, settleAt, cashAvailableAfter, availableUnitsAfter, availableValueAfter, coverageDaysAfter, warnings[] }
+        → 422 bad_amount (< 10,000,000) | fund_unavailable (not active / no NAV) | bad_side. Conditions that would block the order appear in warnings[].
+  POST  /api/v1/op/treasury/orders        body { fundId, side, amount, note?, source?: 'manual'|'suggestion', recommendationId? }
+        → 201 TreasuryOrder (status placed; a buy ties its amount in cash; a redeem leaves the free stock at once)
+        → 422 bad_amount | fund_unavailable | insufficient_cash {available} | insufficient_stock {availableUnits, availableValue} | below_target {minFree, availableValue}
+        buy fee = amount × fund.feePct; units = (amount − fee) / NAV at settlement · redeem units = amount / NAV; proceeds = units × NAV − amount × meta.sellFeePct
+  POST  /api/v1/op/treasury/orders/:id/settle           → TreasuryOrder (held ±units, cash entry, stock movement, activity)  · 404 · 409 not_open
+  POST  /api/v1/op/treasury/orders/:id/cancel  body { reason? } → TreasuryOrder                                                 · 404 · 409 not_open
+Cash
+  GET   /api/v1/op/treasury/cash?range=30|90            → CashSummary { balance, tiedInOrders, userWallets, committedRial, available,
+                                                          expectedDeposits, expectedCount, overdueCount, overdueAmount, history[] }
+  GET   /api/v1/op/treasury/cash/entries?kind&status&orgId → CashEntry[] (balanceAfter on done entries; overdue flag). status: expected|done|cancelled|overdue
+  POST  /api/v1/op/treasury/deposits/:id/confirm  body { ref? } → CashEntry (expected → done, receivedAt, bank ref)  · 404 · 409 already_received
+  POST  /api/v1/op/treasury/deposits              body { orgId, amount, ref?, note? } → 201 CashEntry (done)          · 422 bad_amount | missing_org
+Organizations
+  GET   /api/v1/op/treasury/orgs/:id                    → OrgTreasuryDetail { row: OrgTreasuryRow, deposits: CashEntry[], upcoming: ForecastEvent[] (90 days) } · 404
+Targets + planning
+  GET   /api/v1/op/treasury/targets                     → TreasuryTargets { stock[], aum{value, by}, mix{fundId|other: %}, orgs{value, by}, users{value, by}, updatedAt, updatedBy }
+  PATCH /api/v1/op/treasury/targets  body TargetsPatch (any of stock[] (merged by fundId) | aum | mix | orgs | users) → TreasuryTargets
+        → 422 bad_mix (mix ≠ 100) | bad_target (unknown fund, minFreeValue < 0, targetDays ∉ 1…365, maxFreeValue ≤ minFreeValue, value ≤ 0) | bad_date (by not in the future)
+  GET   /api/v1/op/treasury/plan?horizon=30|60|90       → TreasuryPlan { horizon, from, to, buckets[] (weekly), perFund: FundForecast[], events: ForecastEvent[],
+                                                          recommendations[], progress: TargetProgress[], assumptions }
+        FundForecast: demand = user buys + expected new packages + planned packages/drafts (× split) over the horizon
+                      returns = user sells + savings releases × vestingSellBackPct + milestone dues × reclaimRate + committed × (1 − acceptanceRate)
+                      projectedEnd = available + pending buy − demand + returns → state + suggestion (same rules as the position)
+        Recommendation (buy): horizonAmount = the forecast's need over the horizon; amount / action.amount = what to order now =
+                      min(need, maxFreeValue − (available + pending buy), free cash left after more urgent funds); below 10M → action is a link to cash
+        events: planned packages and baseline releases (seed schedule) + live drafts, package expiries, open milestone steps, savings releases of
+                modelled people, open orders (settleAt) and expected deposits (dueAt; overdue ones keep their past date)
+Action queue + activity
+  GET   /api/v1/op/actions → ActionItem[] most severe first (critical → warning → info), then oldest. kinds:
+        stock_shortfall | stock_below | stock_surplus (cta order) · order_settle (cta settle_order) · deposit_overdue | deposit_expected (≤ 3 days; cta confirm_deposit) ·
+        request_sla (pending operator requests whose SLA ends within 4h; credit kinds hidden while FEATURES.orgCredit is off) · risk_alert (open high/critical) ·
+        milestone_due (approval steps due within 3 days) · org_onboarding · service_incident (open incidents)
+  GET   /api/v1/op/activity?actor=user|org|operator|system&category&orgId&userId&q&limit&offset
+        → ActivityPage { items[] newest first, total, counts{all, user, org, operator, system} (ignoring the actor filter), daily[14] }
+        userId matches the actor or any ref. Events are written by the flows below and by the treasury endpoints.
+        href fields may carry ?id= (requests, risk, orders, cash) or ?status=overdue (cash) for the pages to open the item.
+
+Live flows (the core handlers call the treasury engine)
+  org sends a package        → expected org_deposit (pkg.total, due in 3 days) + commitment + activity      (org.ts send)
+  org cancels a package      → its expected deposit becomes cancelled                                       (org.ts cancel)
+  employee accepts a package → committed ↓, allocated ↑ (free stock unchanged), allocate movement, activity  (app.ts accept)
+  user buys / sells a fund   → allocated ↑ / ↓ (a sale returns to the shared stock), movement, activity      (app.ts trades)
+  user deposit / withdrawal  → user_deposit / user_withdrawal cash entry (wallets move with the balance)     (app.ts deposits, withdrawals)
+  milestone step released    → reserved ↓, activity · reclaimed → reserved and allocated ↓, reclaim movement (back to free stock), activity (org.ts)
+
+Fixed mock clock: nothing settles on its own. «ثبت تسویه» and «ثبت دریافت» are manual in the mock; the real backend settles orders from the
+funds' trading core (NAV at settlement) and matches deposits from the bank statement. /op/reports and /op/reports/schedules remain but are
+no longer used by the console (reports were folded into the overview).
+```
+
 ### سایت عمومی (`site-extra.ts`)
 
 ```

@@ -7,6 +7,7 @@ import { now } from '@/lib/clock';
 import { faDigits, money } from '@/lib/format';
 import { DEFAULT_UNIT, isOrgRequest } from '@/lib/org';
 import { ledger } from './app';
+import { onPackageCancelled, onPackageSent, onStepSettled } from '../treasury';
 
 const nowIso = () => now().toISOString();
 const orgOf = (req: Request) => who(req, 'org_admin').orgId!;
@@ -103,6 +104,7 @@ export function releaseStep(pkg: OrgPackage, stepId: string, decidedBy = 'نیم
     rq.decidedAt = nowIso();
     rq.decidedBy = decidedBy;
   }
+  onStepSettled('released', pkg, step, decidedBy); // treasury: activity + baseline reservations
   return step;
 }
 
@@ -148,6 +150,7 @@ export function reclaimStep(orgId: string, pkg: OrgPackage, step: MilestoneStep,
     rq.decidedAt = nowIso();
     rq.decidedBy = decidedBy;
   }
+  onStepSettled('reclaimed', pkg, step, decidedBy, orgId); // treasury: the share goes back to the free stock
   return step;
 }
 
@@ -343,6 +346,7 @@ export const orgHandlers = [
     pkg.sentAt = nowIso();
     o.budgetUsed += pkg.total;
     deliver(pkg, id);
+    onPackageSent(id, pkg, o.admins.find((a) => a.id === who(request, 'org_admin').userId)?.name); // treasury: expected deposit
     return ok(pkg);
   }),
   http.post(p('/org/packages/:id/cancel'), async ({ request, params }) => {
@@ -350,6 +354,7 @@ export const orgHandlers = [
     const pkg = packages(orgOf(request)).find((x) => x.id === params.id);
     if (!pkg) return fail(404, 'not_found', 'بسته پیدا نشد.');
     pkg.status = 'cancelled';
+    onPackageCancelled(pkg); // treasury: its expected deposit is no longer expected
     return ok(pkg);
   }),
   http.post(p('/org/packages/:id/milestones/:stepId/release'), async ({ request, params }) => {

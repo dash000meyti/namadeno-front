@@ -1,233 +1,242 @@
 'use client';
 /**
- * /op/funds — kit list page: stats → funds table (status tabs, search) → inspector for the selected fund
- * (NAV trend, free/locked AUM by lock type, details; edit, launch, pause/resume). NAV refresh and «صندوق جدید» in the heading.
+ * /op/funds — «موجودی صندوق‌ها»: the treasury stock. Kit list page: heading («ثبت سفارش», NAV refresh, CSV) → stock stats
+ * → funds table (state tabs, search; gold and fixed income first) → inspector (stock breakdown, coverage vs the target
+ * band, the suggestion with a prefilled order, recent movements) → recent stock movements (row → movement inspector).
  */
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { useOpFunds } from '@/api/op';
-import { useRefreshNav, useUpdateFundX, type OpFund } from '@/api/op-system-extra';
-import type { Fund } from '@/types/domain';
+import { useRefreshNav } from '@/api/op-system-extra';
 import {
-  BigNum, Card, Confirm, Empty, FreeLocked, Ident, Inspector, KV, KeyStats, List, ListRow, Note,
-  PageHeading, Pill, SearchField, Section, Spark, StatStrip, Table, TableFoot, Tabs, Tile, Toolbar, Who, usePaging,
-  type Column, type Tone,
+  useStockMovements, useTreasuryPositions, useTreasurySummary,
+  type OrderSide, type StockMovement, type StockState, type TreasuryPosition,
+} from '@/api/op-treasury-extra';
+import {
+  Card, Empty, Ident, Inspector, KeyStats, List, ListRow, MenuButton, Meter, Note, PageHeading, Pill, SearchField, Section,
+  Select, StatStrip, Table, TableFoot, Tabs, Toolbar, Who, usePaging, type Column,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
-import { LockBar, LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
-import { bn, dayTime, dec, errMsg, pctT, spct } from '@/components/op/system/fmt';
-import { IC, type ToneKey } from '@/components/op/system/ui';
-import { CATEGORY_LABEL, FUND_STATUS, FUND_UI, LOCK_ORDER, fundTitle, lockedOf } from '@/components/op/system/funds';
-import { FundEditDialog, NavChart } from '@/components/op/system/FundUi';
+import { OrderDialog } from '@/components/op/treasury/OrderDialog';
+import { MOVE_KIND, STOCK_STATE, TI, amt, daysText } from '@/components/op/treasury/ui';
+import { dayTime, downloadCsv, errMsg, pctT, raw } from '@/components/op/system/fmt';
+import {
+  CORE_FUNDS, CoverageBlock, FundTile, MovementInspector, PositionBreakdown, StatePill, SuggestionNote, bnOr, minTargetOf,
+  moveActor, movementColumns, samt, sbn, sortPositions, useOrgNames,
+} from '@/components/op/funds/stock';
 import { faDigits, money } from '@/lib/format';
-import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
 
-type Filt = 'all' | Fund['status'];
-const PAGE = 10;
+type Filt = 'all' | Exclude<StockState, 'inactive'>;
 const TABS: { key: Filt; label: string }[] = [
-  { key: 'all', label: 'همه' }, { key: 'active', label: 'فعال' }, { key: 'paused', label: 'غیرفعال موقت' }, { key: 'coming_soon', label: 'پیش‌نویس' },
+  { key: 'all', label: 'همه' }, { key: 'shortfall', label: 'کسری' }, { key: 'below', label: 'زیر هدف' },
+  { key: 'ok', label: 'متعادل' }, { key: 'surplus', label: 'مازاد' },
 ];
-const PAUSE_BODY = 'خرید و فروش واحدهای این صندوق برای همهٔ کاربران متوقف می‌شود. واحدهای فعلی، سود و NAV و رزروها بدون تغییر باقی می‌مانند و هر زمان می‌توانید صندوق را دوباره فعال کنید.';
+type MoveFilt = 'all' | StockMovement['kind'];
+const PAGE = 10;
+const MOVE_PAGE = 8;
 
-/** Legacy tone key → kit tone. */
-const kt = (t: ToneKey): Tone => (t === 'default' ? 'neutral' : t);
-const trendTone = (n: number): Tone => (Math.abs(n) < 0.05 ? 'neutral' : n > 0 ? 'success' : 'error');
-const chg = (n: number) => (Math.abs(n) < 0.05 ? '۰٪' : spct(n));
-const dash = <span style={{ color: 'var(--text-disabled)' }}>—</span>;
-
-/** NAV change (percent) over the last `days` days of the price history. */
-function navChange(f: Fund, days = 30): number | null {
-  const h = f.history ?? [];
-  if (h.length < 2) return null;
-  const base = h[Math.max(0, h.length - 1 - days)].v;
-  return base ? (h[h.length - 1].v / base - 1) * 100 : null;
-}
-
-/** A round axis floor under the lowest value, so day-to-day NAV moves stay visible. */
-
-/** NAV line (kit LineChart). Big NAVs read in thousands. LTR wrapper keeps the y-axis labels left of the plot in the RTL page. */
-
-function FundTile({ f, size }: { f: Fund; size?: 'md' | 'xl' }) {
-  return <Tile d={FUND_UI[f.kind].d} tone={f.status === 'coming_soon' ? 'neutral' : kt(FUND_UI[f.kind].tone)} size={size} />;
-}
+type Sel = { kind: 'fund' | 'move'; id: string } | null;
+interface OrderPrefill { key: number; fundId?: string; side?: OrderSide; amount?: number; source?: 'manual' | 'suggestion'; reason?: string }
 
 export default function OpFundsPage() {
   const toast = useToast();
-  const funds = useOpFunds();
+  const positions = useTreasuryPositions();
+  const summary = useTreasurySummary(30);
   const refresh = useRefreshNav();
+  const orgName = useOrgNames();
   const [filt, setFilt] = useState<Filt>('all');
   const [q, setQ] = useState('');
-  const [sel, setSel] = useState<string | null>(null);
-  const list = useMemo(() => (funds.data ?? []) as OpFund[], [funds.data]);
+  const [moveKind, setMoveKind] = useState<MoveFilt>('all');
+  const moves = useStockMovements({ kind: moveKind, limit: 40 });
+  const [sel, setSel] = useState<Sel>(null);
+  const [order, setOrder] = useState<OrderPrefill | null>(null);
+  const openOrder = (o: Omit<OrderPrefill, 'key'> = {}) => setOrder({ key: Date.now(), ...o });
 
+  const list = useMemo(() => sortPositions(positions.data ?? []), [positions.data]);
   const needle = q.trim();
-  const rows = useMemo(() => list.filter((f) => (filt === 'all' || f.status === filt)
-    && (!needle || [f.name, f.symbol, f.shortName, f.meta?.manager ?? ''].some((s) => s.includes(needle)))), [list, filt, needle]);
+  const rows = useMemo(() => list.filter((p) => (filt === 'all' || p.state === filt)
+    && (!needle || [p.name, p.shortName, p.symbol].some((s) => s.includes(needle)))), [list, filt, needle]);
   const pg = usePaging(rows, PAGE, `${filt}|${needle}`);
-  const selFund = list.find((f) => f.id === sel);
+  const moveRows = moves.data ?? [];
+  const mpg = usePaging(moveRows, MOVE_PAGE, moveKind);
+  const count = (s: StockState) => list.filter((p) => p.state === s).length;
+  const nameOf = (id: string) => list.find((p) => p.fundId === id)?.shortName ?? id;
+  const toggle = (kind: 'fund' | 'move', id: string) => setSel((s) => (s?.kind === kind && s.id === id ? null : { kind, id }));
+  const selFund = sel?.kind === 'fund' ? list.find((p) => p.fundId === sel.id) : undefined;
+  const selMove = sel?.kind === 'move' ? moveRows.find((m) => m.id === sel.id) : undefined;
 
-  const count = (s: Fund['status']) => list.filter((f) => f.status === s).length;
-  const aum = list.reduce((s, f) => s + f.aum, 0);
-  const locked = list.reduce((s, f) => s + lockedOf(f), 0);
-  const lastNav = list.map((f) => f.meta?.lastNavAt ?? '').sort().pop();
+  const t = summary.data?.totals;
+  const attention = count('shortfall') + count('below');
+  const open = t ? t.pendingBuyValue + t.pendingRedeemValue : 0;
 
   const onRefresh = () => refresh.mutate({}, {
     onSuccess: (r) => toast(`NAV ${faDigits(r.funds.length)} صندوق فعال از هسته معاملات به‌روزرسانی شد`),
     onError: (e) => toast(errMsg(e), 'error'),
   });
+  const exportCsv = () => {
+    if (!list.length) return toast('داده‌ای برای خروجی وجود ندارد', 'info');
+    downloadCsv('namadno-treasury-stock', [
+      ['صندوق', 'نماد', 'NAV (تومان)', 'واحد موجودی', 'ارزش موجودی', 'تخصیص به کاربران', 'رزرو', 'تعهد بسته‌ها', 'در انتظار ابطال', 'موجودی آزاد', 'صدور در راه', 'پوشش (روز)', 'هدف (روز)', 'وضعیت'],
+      ...list.map((p) => [p.name, p.symbol, raw(p.nav), p.heldUnits.toFixed(2), raw(p.heldValue), raw(p.allocatedValue), raw(p.reservedValue), raw(p.committedValue), raw(p.pendingRedeemValue), raw(p.availableValue), raw(p.pendingBuyValue), p.coverageDays ?? '', p.target?.targetDays ?? '', STOCK_STATE[p.state].label]),
+    ]);
+    toast('خروجی موجودی صندوق‌ها (CSV) آماده شد');
+  };
   const clear = () => { setFilt('all'); setQ(''); };
 
-  const columns: Column<OpFund>[] = [
+  const columns: Column<TreasuryPosition>[] = [
     {
-      key: 'fund', label: 'صندوق', width: 'minmax(0, 1.6fr)',
-      render: (f) => <Ident lead={<FundTile f={f} />} title={f.name} sub={`${f.symbol} · ${f.status === 'coming_soon' ? 'در انتظار مجوز' : CATEGORY_LABEL[f.category]}`} />,
+      key: 'fund', label: 'صندوق', width: 'minmax(0, 1.5fr)',
+      render: (p) => <Ident lead={<FundTile fundId={p.fundId} inactive={p.state === 'inactive'} />} title={p.name} sub={`${p.symbol} · ${p.state === 'inactive' ? 'غیرفعال' : CORE_FUNDS.includes(p.fundId) ? 'صندوق اصلی' : `تسویه ${p.settlement}`}`} />,
     },
-    { key: 'nav', label: 'NAV (تومان)', width: '116px', render: (f) => (f.nav ? <span className="num" style={{ fontWeight: 600 }}>{money(f.nav)}</span> : dash) },
+    { key: 'nav', label: 'NAV (تومان)', width: '96px', align: 'end', render: (p) => (p.nav ? <span className="num">{money(p.nav)}</span> : bnOr(0)) },
+    { key: 'held', label: 'موجودی', width: '72px', align: 'end', render: (p) => <span className="num" style={{ fontWeight: 600 }}>{bnOr(p.heldValue)}</span> },
+    { key: 'alloc', label: 'تخصیص', width: '68px', align: 'end', render: (p) => <span className="num">{bnOr(p.allocatedValue)}</span> },
+    { key: 'res', label: 'رزرو', width: '60px', align: 'end', render: (p) => <span className="num mute">{bnOr(p.reservedValue)}</span> },
+    { key: 'com', label: 'تعهد', width: '56px', align: 'end', render: (p) => <span className="num mute">{bnOr(p.committedValue)}</span> },
     {
-      key: 'trend', label: 'تغییر ۳۰ روز', width: '144px', render: (f) => {
-        const ch = navChange(f);
-        if (ch == null) return dash;
-        return <><Spark values={(f.history ?? []).slice(-31).map((x) => x.v)} width={64} height={22} /><Pill tone={trendTone(ch)}>{chg(ch)}</Pill></>;
-      },
+      key: 'free', label: 'آزاد', width: '84px', align: 'end', col: true, render: (p) => (
+        <>
+          <span className="num" style={{ fontWeight: 600, color: p.availableValue < 0 ? 'var(--error-text)' : undefined }}>{p.state === 'inactive' ? bnOr(0) : sbn(p.availableValue)}</span>
+          {p.pendingBuyValue > 0 && <span className="sm">در راه <span className="num">{sbn(p.pendingBuyValue)}</span></span>}
+        </>
+      ),
     },
-    { key: 'aum', label: 'AUM (میلیارد)', width: '104px', render: (f) => (f.aum ? <span className="num">{bn(f.aum)}</span> : dash) },
-    { key: 'inv', label: 'دارندگان', width: '84px', render: (f) => (f.investors ? <span className="num">{money(f.investors)}</span> : dash) },
     {
-      key: 'lock', label: 'رزروشده (میلیارد)', width: '128px', col: true, render: (f) => {
-        if (!f.aum) return dash;
-        const l = lockedOf(f);
+      key: 'cov', label: 'پوشش', width: '96px', col: true, render: (p) => {
+        if (p.state === 'inactive') return bnOr(0);
+        const tg = p.target;
         return (
           <>
-            {l > 0 ? <span className="num">{bn(l)} <span className="sm">· {faDigits(Math.round((l / f.aum) * 100))}٪</span></span> : <span className="sm">همه آزاد</span>}
-            <span style={{ width: 96 }}><LockBar free={f.aum - l} locked={l} height={4} /></span>
+            <span className="num">{daysText(p.coverageDays)}{tg && <span className="sm"> / {faDigits(tg.targetDays)}</span>}</span>
+            {tg && p.coverageDays != null && <Meter value={p.coverageDays / tg.targetDays} tone={STOCK_STATE[p.state].tone} width={72} thin label={`پوشش ${daysText(p.coverageDays)} از هدف ${faDigits(tg.targetDays)} روز`} />}
           </>
         );
       },
     },
-    { key: 'st', label: 'وضعیت', width: '112px', render: (f) => <Pill tone={kt(FUND_STATUS[f.status].tone)} dot>{FUND_STATUS[f.status].label}</Pill> },
+    { key: 'st', label: 'وضعیت', width: '76px', render: (p) => <StatePill p={p} /> },
   ];
 
   return (
     <>
-      <PageHeading title="صندوق‌ها" crumbs={[{ label: 'محصول' }]} sub="صندوق‌های قابل معامله در اپ نمادنو، NAV روزانه و سهم آزاد و رزروشده‌ی دارایی هر صندوق">
-        <button type="button" className="nm-btn ghost" onClick={onRefresh} disabled={refresh.isPending}>
-          <Icon d={IC.refresh} size={17} />{refresh.isPending ? 'در حال به‌روزرسانی…' : 'به‌روزرسانی NAV'}
-        </button>
-        <button type="button" className="nm-btn" onClick={() => toast('درخواست تعریف صندوق جدید ثبت شد؛ پس از دریافت مجوز فعال می‌شود', 'info')}>
-          <Icon d={IC.plus} size={17} strokeWidth={2} />صندوق جدید
-        </button>
+      <PageHeading title="موجودی صندوق‌ها" crumbs={[{ label: 'خزانه' }]}
+        sub="واحدهایی که نمادنو در هر صندوق نگه می‌دارد؛ سهم تخصیص‌یافته به کاربران، رزرو، تعهد بسته‌های ارسالی و موجودی آزاد">
+        <MenuButton label="اقدام‌های دیگر" align="end" items={[
+          { label: refresh.isPending ? 'در حال به‌روزرسانی NAV…' : 'به‌روزرسانی NAV', onClick: onRefresh, disabled: refresh.isPending },
+          { label: 'خروجی CSV موجودی', onClick: exportCsv },
+          'sep',
+          { label: 'تعریف صندوق جدید', onClick: () => toast('درخواست تعریف صندوق جدید ثبت شد؛ پس از دریافت مجوز فعال می‌شود', 'info') },
+        ]} />
+        <button type="button" className="nm-btn" onClick={() => openOrder()}><Icon d={TI.plus} size={17} strokeWidth={2} />ثبت سفارش</button>
       </PageHeading>
 
-      {!funds.isError && (
-        <StatStrip loading={funds.isLoading} items={[
-          { label: 'دارایی تحت مدیریت', value: bn(aum), unit: 'میلیارد تومان', note: 'ارزش روز واحدهای همه‌ی صندوق‌ها' },
-          { label: 'صندوق‌های فعال', value: faDigits(count('active')), unit: 'صندوق', note: `از ${faDigits(list.length)} صندوق${count('coming_soon') ? ` · ${faDigits(count('coming_soon'))} پیش‌نویس` : ''}` },
-          { label: 'ارزش رزروشده', value: bn(locked), unit: 'میلیارد تومان', note: `${pctT(aum ? (locked / aum) * 100 : 0)} از دارایی صندوق‌ها` },
-          { label: 'آخرین به‌روزرسانی NAV', value: dayTime(lastNav), note: 'از هسته معاملات' },
-        ]} />
+      {!summary.isError && (
+        <StatStrip loading={!t} items={t ? [
+          {
+            label: 'ارزش موجودی', value: sbn(t.heldValue), unit: 'میلیارد تومان',
+            note: t.unrealizedPnl >= 0 ? `سود تحقق‌نیافته ${amt(t.unrealizedPnl)}` : `زیان تحقق‌نیافته ${amt(-t.unrealizedPnl)}`, trend: t.unrealizedPnl >= 0 ? 'up' : 'down',
+          },
+          { label: 'تخصیص به کاربران', value: sbn(t.allocatedValue), unit: 'میلیارد تومان', note: `${pctT(t.heldValue ? (t.allocatedValue / t.heldValue) * 100 : 0, 0)} موجودی · تعهد ${amt(t.committedValue)}` },
+          { label: 'رزروشده', value: sbn(t.reservedValue), unit: 'میلیارد تومان', note: `${pctT(t.allocatedValue ? (t.reservedValue / t.allocatedValue) * 100 : 0, 0)} تخصیص‌ها` },
+          {
+            label: 'موجودی آزاد', value: sbn(t.availableValue), unit: 'میلیارد تومان',
+            note: `پوشش ${daysText(summary.data?.coverageDays)}${attention ? ` · ${faDigits(attention)} زیر هدف` : ''}`, trend: attention ? 'warn' : undefined,
+          },
+          {
+            label: 'سفارش‌های باز', value: faDigits(t.openOrders), unit: 'سفارش', href: routes.op.orders,
+            note: t.dueOrders ? `${faDigits(t.dueOrders)} سررسید تسویه · ${amt(open)}` : open ? `${amt(open)} تومان` : 'سفارش بازی نیست', trend: t.dueOrders ? 'warn' : undefined,
+          },
+        ] : []} />
       )}
 
       <Card flush>
         <Toolbar>
-          <Tabs label="وضعیت صندوق" value={filt} onChange={setFilt} items={TABS.map((t) => ({ ...t, count: t.key === 'all' ? list.length : count(t.key) }))} />
+          <Tabs label="وضعیت موجودی" value={filt} onChange={setFilt}
+            items={TABS.map((x) => ({ ...x, count: x.key === 'all' ? list.length : count(x.key), hot: x.key === 'shortfall' || x.key === 'below' }))} />
           <span className="grow" />
           <SearchField value={q} onChange={setQ} placeholder="نام یا نماد صندوق" label="جستجوی صندوق" width={220} />
         </Toolbar>
         <Table
-          columns={columns} rows={pg.rows} rowKey={(f) => f.id} rowLabel={(f) => f.name}
-          onRowClick={(f) => setSel((s) => (s === f.id ? null : f.id))} selectedKey={sel}
-          dimRow={(f) => f.status === 'coming_soon'}
-          loading={funds.isLoading} error={funds.isError ? funds.error : undefined} onRetry={() => funds.refetch()}
-          empty={<Empty icon={IC.search} title="صندوقی با این فیلترها پیدا نشد" action={<button type="button" className="nm-btn sm ghost" onClick={clear}>پاک کردن فیلترها</button>} />}
-          minWidth={940}
+          columns={columns} rows={pg.rows} rowKey={(p) => p.fundId} rowLabel={(p) => p.name}
+          onRowClick={(p) => toggle('fund', p.fundId)} selectedKey={sel?.kind === 'fund' ? sel.id : null}
+          dimRow={(p) => p.state === 'inactive'}
+          loading={positions.isLoading} error={positions.isError ? positions.error : undefined} onRetry={() => positions.refetch()}
+          empty={<Empty icon={TI.stock} title="صندوقی با این فیلترها پیدا نشد" action={<button type="button" className="nm-btn sm ghost" onClick={clear}>پاک کردن فیلترها</button>} />}
+          minWidth={900}
         />
-        <TableFoot shown={pg.rows.length} total={rows.length} unit="صندوق" page={pg.page} pages={pg.pages} onPage={pg.setPage} />
+        <TableFoot shown={pg.rows.length} total={rows.length} unit="صندوق" page={pg.page} pages={pg.pages} onPage={pg.setPage}>
+          <span className="mute">مبالغ به میلیارد تومان · پوشش با احتساب صدورهای در راه</span>
+        </TableFoot>
       </Card>
 
-      {selFund && <FundInspector key={selFund.id} f={selFund} onClose={() => setSel(null)} />}
+      <Card flush title="جابه‌جایی‌های اخیر" sub="ورود و خروج واحدها از موجودی آزاد"
+        actions={<Select label="نوع جابه‌جایی" prefix="نوع" value={moveKind} onChange={setMoveKind} align="end"
+          options={[{ key: 'all', label: 'همه' }, ...(Object.keys(MOVE_KIND) as StockMovement['kind'][]).map((k) => ({ key: k, label: MOVE_KIND[k].label }))]} />}>
+        <Table
+          columns={movementColumns({ fundName: nameOf, orgName, showFund: true })} rows={mpg.rows} rowKey={(m) => m.id} rowLabel={(m) => m.title}
+          onRowClick={(m) => toggle('move', m.id)} selectedKey={sel?.kind === 'move' ? sel.id : null}
+          loading={moves.isLoading} error={moves.isError ? moves.error : undefined} onRetry={() => moves.refetch()}
+          empty={<Empty icon={TI.activity} title="جابه‌جایی‌ای ثبت نشده است" />}
+          minWidth={760}
+        />
+        <TableFoot shown={mpg.rows.length} total={moveRows.length} unit="جابه‌جایی" page={mpg.page} pages={mpg.pages} onPage={mpg.setPage} />
+      </Card>
+
+      {selFund && (
+        <FundStockInspector key={selFund.fundId} p={selFund} orgName={orgName} onClose={() => setSel(null)}
+          onOrder={(o) => openOrder({ fundId: selFund.fundId, ...o })} />
+      )}
+      {selMove && <MovementInspector key={selMove.id} m={selMove} fundName={list.find((p) => p.fundId === selMove.fundId)?.name ?? nameOf(selMove.fundId)} orgName={orgName} onClose={() => setSel(null)} />}
+
+      {order && <OrderDialog key={order.key} open onClose={() => setOrder(null)} fundId={order.fundId} side={order.side} amount={order.amount} source={order.source} reason={order.reason} />}
     </>
   );
 }
 
-function FundInspector({ f, onClose }: { f: OpFund; onClose: () => void }) {
-  const toast = useToast();
-  const update = useUpdateFundX();
-  const [modal, setModal] = useState<'' | 'edit' | 'pause'>('');
-  const st = FUND_STATUS[f.status];
-  const draft = f.status === 'coming_soon';
-  const paused = f.status === 'paused';
-  const locked = lockedOf(f);
-  const free = Math.max(0, f.aum - locked);
-  const hist = (f.history ?? []).slice(-31);
-  const ch = navChange(f);
-  const big = f.nav >= 1e6;
-  const lockRows = LOCK_ORDER.map((t) => ({ t, v: f.meta?.lockByType[t] ?? 0, holders: f.meta?.holdersByType[t] ?? 0 })).filter((r) => r.v > 0);
-
-  const setStatus = (status: Fund['status']) => update.mutate({ id: f.id, status }, {
-    onSuccess: () => { setModal(''); toast(status === 'paused' ? `${f.name} به‌صورت موقت غیرفعال شد؛ خرید و فروش متوقف است` : `${f.name} ${draft ? 'راه‌اندازی' : 'دوباره فعال'} شد`); },
-    onError: (e) => { setModal(''); toast(errMsg(e), 'error'); },
-  });
-
-  const statusBtn = draft
-    ? <button type="button" className="nm-btn" onClick={() => setStatus('active')} disabled={update.isPending}><Icon d={IC.play} size={15} />راه‌اندازی</button>
-    : paused
-      ? <button type="button" className="nm-btn line ok" onClick={() => setStatus('active')} disabled={update.isPending}><Icon d={IC.check} size={17} />فعال‌سازی مجدد</button>
-      : <button type="button" className="nm-btn line danger" onClick={() => setModal('pause')} disabled={update.isPending}><Icon d={IC.pause} size={17} />غیرفعال‌سازی موقت</button>;
-
+function FundStockInspector({ p, orgName, onClose, onOrder }: {
+  p: TreasuryPosition; orgName: (id: string) => string | undefined; onClose: () => void;
+  onOrder: (o: { side?: OrderSide; amount?: number; source?: 'manual' | 'suggestion'; reason?: string }) => void;
+}) {
+  const moves = useStockMovements({ fundId: p.fundId, limit: 5 });
+  const active = p.state !== 'inactive';
+  const s = p.suggestion;
   return (
-    <>
-      <Inspector
-        open onClose={onClose} title="جزئیات صندوق" label={`جزئیات ${f.name}`} href={routes.op.fund(f.id)}
-        footer={<><button type="button" className="nm-btn ghost" onClick={() => setModal('edit')}><Icon d={IC.pen} size={17} />ویرایش</button>{statusBtn}</>}
-      >
-        <Who
-          lead={<FundTile f={f} size="xl" />}
-          title={fundTitle(f)}
-          sub={draft ? 'در انتظار مجوز' : f.description}
-          pills={<><Pill tone={kt(st.tone)} dot>{st.label}</Pill><Pill>ETF {CATEGORY_LABEL[f.category]}</Pill></>}
-        />
-        <KeyStats items={[['NAV (تومان)', f.nav ? money(f.nav) : '—'], ['AUM', f.aum ? `${bn(f.aum)} میلیارد` : '—'], ['دارندگان', f.investors ? money(f.investors) : '—']]} />
+    <Inspector
+      open onClose={onClose} title="موجودی صندوق" label={`موجودی ${p.name}`} href={routes.op.fund(p.fundId)} hrefLabel="صفحه‌ی صندوق"
+      footer={active ? <button type="button" className={s ? 'nm-btn ghost' : 'nm-btn'} onClick={() => onOrder({})}><Icon d={TI.plus} size={16} strokeWidth={2} />ثبت سفارش</button> : undefined}
+    >
+      <Who
+        lead={<FundTile fundId={p.fundId} inactive={!active} size="xl" />}
+        title={`${p.name} — ${p.symbol}`}
+        sub={p.nav ? <>NAV <span className="num">{money(p.nav)}</span> تومان · تسویه <span className="ltr">{p.settlement}</span></> : 'در انتظار NAV اولیه'}
+        pills={<><StatePill p={p} />{CORE_FUNDS.includes(p.fundId) && <Pill tone="primary">صندوق اصلی</Pill>}</>}
+      />
 
-        {draft ? (
-          <Note tone="mute">انواع رزرو مجاز پس از راه‌اندازی: پشتوانه، پس‌انداز، مرحله‌ای، مسدودی قانونی</Note>
-        ) : (
-          <>
-            <Section title={`روند NAV · ۳۰ روز · ${big ? 'هزار تومان' : 'تومان'}`} action={ch != null && <Pill tone={trendTone(ch)}>{chg(ch)}</Pill>}>
-              {hist.length > 1
-                ? <NavChart points={hist} height={150} label={`روند NAV ${f.name} در ۳۰ روز`} />
-                : <span className="mute" style={{ fontSize: 12.5 }}>تاریخچه NAV برای این صندوق هنوز ثبت نشده است</span>}
-            </Section>
-
-            <Section title="دارایی تحت مدیریت" action={<BigNum value={bn(f.aum)} unit="میلیارد تومان" />}>
-              <FreeLocked free={free} locked={locked} fmt={bn} unit="میلیارد" />
-              {lockRows.length > 0 ? (
+      {!active ? (
+        <Note tone="mute">این صندوق هنوز فعال نیست؛ پس از راه‌اندازی، موجودی و سفارش‌های آن اینجا نمایش داده می‌شود.</Note>
+      ) : (
+        <>
+          <KeyStats items={[
+            ['موجودی', <span key="h" className="num">{amt(p.heldValue)}</span>],
+            ['آزاد', <span key="a" className="num" style={{ color: p.availableValue < 0 ? 'var(--error-text)' : undefined }}>{samt(p.availableValue)}</span>],
+            ['پوشش', <span key="c" className="num">{daysText(p.coverageDays)}</span>],
+          ]} />
+          {s && <SuggestionNote stack suggestion={s} onOrder={() => onOrder({ side: s.side, amount: s.amount, source: 'suggestion', reason: s.reason })} />}
+          <Section title="تفکیک موجودی"><PositionBreakdown p={p} /></Section>
+          <Section title="پوشش در برابر هدف"><CoverageBlock p={p} minTarget={minTargetOf(p)} /></Section>
+          <Section title="جابه‌جایی‌های اخیر" action={<Link className="nm-more" href={routes.op.fund(p.fundId)}>همه</Link>}>
+            {moves.isLoading ? <span className="mute" style={{ fontSize: 12.5 }}>در حال بارگذاری…</span>
+              : (moves.data ?? []).length ? (
                 <List>
-                  {lockRows.map((r) => (
-                    <ListRow key={r.t} lead={<LockTypeChip type={r.t} />} title={LOCK_META[r.t].label} sub={`${money(r.holders)} دارنده`}
-                      trail={<span className="num">{bn(r.v)} میلیارد</span>} />
+                  {(moves.data ?? []).map((m) => (
+                    <ListRow key={m.id} title={MOVE_KIND[m.kind].label} sub={<>{dayTime(m.at)} · {moveActor(m, orgName)}</>}
+                      trail={<span className="num" style={{ color: m.units > 0 ? 'var(--success-text)' : undefined }}>{m.units > 0 ? '+' : '−'}{amt(m.value)}</span>} />
                   ))}
                 </List>
-              ) : <span className="mute" style={{ fontSize: 12.5 }}>همهٔ واحدهای این صندوق آزاد است</span>}
-            </Section>
-          </>
-        )}
-
-        <Section title="مشخصات">
-          <KV rows={[
-            ['مدیر صندوق', f.meta?.manager || '—'],
-            ['تسویه', <span key="st" className="ltr">{f.settlement}</span>],
-            ['کارمزد خرید / فروش', <span key="fee" className="num">{dec(f.feePct, 2)}٪ / {dec(f.meta?.sellFeePct ?? f.feePct, 2)}٪</span>],
-            draft ? ['تاریخ راه‌اندازی', 'تعیین‌نشده'] : ['آخرین NAV', <span key="nav" className="num">{dayTime(f.meta?.lastNavAt)}</span>],
-          ]} />
-        </Section>
-      </Inspector>
-
-      {modal === 'edit' && <FundEditDialog f={f} onClose={() => setModal('')} />}
-      <Confirm open={modal === 'pause'} onClose={() => setModal('')} danger busy={update.isPending} onConfirm={() => setStatus('paused')}
-        title={`غیرفعال‌سازی موقت ${f.name}`} confirmLabel="غیرفعال‌سازی موقت" body={<span className="mute">{PAUSE_BODY}</span>} />
-    </>
+              ) : <span className="mute" style={{ fontSize: 12.5 }}>جابه‌جایی‌ای برای این صندوق ثبت نشده است</span>}
+          </Section>
+        </>
+      )}
+    </Inspector>
   );
 }
-
-/** Fund identity (name, symbol, type, manager, app description). Same dialog as the fund page. */

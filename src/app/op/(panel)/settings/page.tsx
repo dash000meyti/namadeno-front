@@ -37,7 +37,7 @@ export default function OpSettingsPage() {
   const down = issues.some((x) => x.status === 'down');
   return (
     <>
-      <PageHeading title="تنظیمات" crumbs={[{ label: 'سیستم' }]} sub="پلتفرم، تیم بهره‌بردار، امنیت، یکپارچه‌سازی، اعلان‌ها و پایش سرویس‌ها">
+      <PageHeading title="تنظیمات" sub="پلتفرم، تیم بهره‌بردار، امنیت، یکپارچه‌سازی، اعلان‌ها و پایش سرویس‌ها">
         <span className="mute" style={{ fontSize: 12.5 }}>نسخهٔ پلتفرم <span className="num ltr" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{faDigits(s?.platformVersion ?? '—', true)}</span></span>
       </PageHeading>
 

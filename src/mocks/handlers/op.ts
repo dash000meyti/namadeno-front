@@ -5,6 +5,7 @@ import { db, newId, recalcHoldings } from '../db';
 import { body, fail, latency, ok, p, qs } from '../http';
 import { now } from '@/lib/clock';
 import { ledger, portfolioOf } from './app';
+import { LOCK_TYPES, aumMonthlyLive, snapshot, totalsOf, treasuryOf } from '../treasury';
 
 const nowIso = () => now().toISOString();
 
@@ -32,19 +33,30 @@ export const opHandlers = [
   http.get(p('/op/overview'), async () => {
     await latency();
     const users = allUsers();
+    // managed assets, reserved value and the lock mix come from the treasury, so the overview matches every other screen
+    const tr = treasuryOf() ? snapshot() : null;
+    const tot = tr ? totalsOf(tr.positions, tr.t) : null;
+    const aum = tot?.heldValue ?? 412_600_000_000;
+    const lockedValue = tot?.reservedValue ?? 124_300_000_000;
+    const monthlyAum = tr ? aumMonthlyLive(tr).map((m) => m.aum) : [301, 308, 316, 339, 347, 366, 395, 412.6].map((v) => v * 1e9);
+    const byType = Object.fromEntries(LOCK_TYPES.map((k) => [k, tr ? tr.positions.reduce((s, p) => s + p.reservedByType[k] * p.nav, 0) : 0]));
+    const lockSum = Object.values(byType).reduce((s, v) => s + v, 0);
+    const lockMix = lockSum > 0
+      ? Object.fromEntries(LOCK_TYPES.map((k) => [k, Math.round((byType[k] / lockSum) * 100)]))
+      : { collateral: 46, vesting: 29, installment: 11, milestone: 9, legal: 5 };
     return ok({
       stats: {
-        aum: 412_600_000_000, users: 12_840, activeUsers: 9_310, organizations: db().organizations.length,
-        lockedValue: 124_300_000_000, freeValue: 288_300_000_000, loansOutstanding: 87_700_000_000,
+        aum, users: 12_840, activeUsers: 9_310, organizations: db().organizations.length,
+        lockedValue, freeValue: aum - lockedValue, loansOutstanding: 87_700_000_000,
         pendingRequests: db().requests.filter((r) => r.status === 'pending').length,
         openAlerts: db().riskAlerts.filter((a) => a.status === 'open' || a.status === 'investigating').length,
-        monthly: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان'].map((m, i) => ({ month: m, inflow: [18, 9, 12, 31, 14, 26, 38, 11][i] * 1e9, outflow: [6, 5, 7, 9, 8, 10, 12, 4][i] * 1e9, aum: [301, 308, 316, 339, 347, 366, 395, 412.6][i] * 1e9 })),
+        monthly: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان'].map((m, i) => ({ month: m, inflow: [18, 9, 12, 31, 14, 26, 38, 11][i] * 1e9, outflow: [6, 5, 7, 9, 8, 10, 12, 4][i] * 1e9, aum: monthlyAum[i] ?? aum })),
       },
       funds: db().funds.filter((f) => f.status === 'active').map(({ history, ...f }) => { void history; return f; }),
       recentRequests: db().requests.slice(0, 6),
       alerts: db().riskAlerts.slice(0, 5),
       topOrganizations: [...db().organizations].sort((a, b) => b.budgetUsed - a.budgetUsed).slice(0, 5),
-      lockMix: { collateral: 46, vesting: 29, installment: 11, milestone: 9, legal: 5 },
+      lockMix,
       usersSample: users.slice(0, 5),
     });
   }),

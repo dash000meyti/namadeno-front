@@ -131,7 +131,7 @@ export default function OpRulesPage() {
 
   return (
     <>
-      <PageHeading title="قوانین و محدودیت‌ها" crumbs={[{ label: 'محصول' }]} sub="قوانین سراسری برای همه‌ی سازمان‌ها؛ تغییرات فقط روی درخواست‌ها و قراردادهای جدید اعمال می‌شود">
+      <PageHeading title="قوانین و محدودیت‌ها" crumbs={[{ label: 'تنظیمات' }]} sub="قوانین سراسری برای همه‌ی سازمان‌ها؛ تغییرات فقط روی درخواست‌ها و قراردادهای جدید اعمال می‌شود">
         <Pill tone="primary">سراسری — همهٔ سازمان‌ها</Pill>
         <span className="mute" style={{ fontSize: 12.5 }}>نسخهٔ قوانین <span className="num" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{meta.data ? faDigits(meta.data.version) : '—'}</span></span>
       </PageHeading>

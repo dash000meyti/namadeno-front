@@ -54,7 +54,7 @@ export interface MockDB {
 }
 
 const STORAGE_KEY = 'nm-mock-db';
-export const DB_VERSION = 13;
+export const DB_VERSION = 14;
 
 let state: MockDB | null = null;
 

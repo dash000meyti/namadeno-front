@@ -1,7 +1,8 @@
 'use client';
 /**
- * /op/products — kit page: stats → products table → inspector with the product's default parameters (save in its footer)
- * → organization overrides table (rows open the organization contract). Supports ?edit=<productId> (opens the inspector).
+ * /op/products — credit products. While FEATURES.orgCredit is off the page is a calm «به‌زودی» notice (no actions).
+ * Behind the flag (ProductsPage): stats → products table → inspector with the product's default parameters (save in its
+ * footer) → organization overrides table (rows open the organization contract). Supports ?edit=<productId>.
  */
 import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,8 +10,8 @@ import { useOpOrganizations, useOpProducts } from '@/api/op';
 import { useUpdateProductX, type OpProduct, type ProductMeta } from '@/api/op-system-extra';
 import type { Organization } from '@/types/domain';
 import {
-  Ava, Card, Chips, Empty, Ident, Inspector, KeyStats, Note, NumberInput, PageHeading, Pill, SettingRow, SettingsGroup, StatStrip,
-  Switch, Table, TableFoot, Tile, Who, usePaging, type Column, type Tone,
+  Ava, Card, Chips, Empty, Ident, Inspector, KeyStats, List, ListRow, Note, NumberInput, PageHeading, Pill, SettingRow, SettingsGroup,
+  StatStrip, Switch, Table, TableFoot, Tile, Who, usePaging, type Column, type Tone,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { LockTypeChip } from '@/components/ui/LockBar';
@@ -19,13 +20,46 @@ import { bn, errMsg } from '@/components/op/system/fmt';
 import { IC, type ToneKey } from '@/components/op/system/ui';
 import { PRODUCT_STATUS, PRODUCT_UI, orgsWith, paramChips } from '@/components/op/system/products';
 import { faDigits, jDate, money } from '@/lib/format';
+import { FEATURES } from '@/lib/features';
 import { routes } from '@/lib/routes';
 
 /** Legacy tone key → kit tone. */
 const kt = (t: ToneKey): Tone => (t === 'default' ? 'neutral' : t);
-const HEAD = { title: 'محصولات اعتباری', crumbs: [{ label: 'محصول' }], sub: 'پارامترهای پیش‌فرض برای سازمان‌های جدید اعمال می‌شود؛ هر قرارداد می‌تواند آن‌ها را محدودتر کند' };
+const HEAD = { title: 'محصولات اعتباری', crumbs: [{ label: 'مشتریان' }], sub: 'پارامترهای پیش‌فرض برای سازمان‌های جدید اعمال می‌شود؛ هر قرارداد می‌تواند آن‌ها را محدودتر کند' };
 
 export default function OpProductsPage() {
+  return FEATURES.orgCredit ? <ProductsPage /> : <ProductsComingSoon />;
+}
+
+/** Products that arrive with the facilities feature (shown on the coming-soon page, no actions). */
+const SOON: { kind: OpProduct['kind']; title: string; sub: string }[] = [
+  { kind: 'loan', title: 'وام با پشتوانه‌ی دارایی', sub: 'وام به پشتوانه‌ی بخشی از دارایی آزاد؛ دارایی فروخته نمی‌شود و بازدهی آن ادامه دارد.' },
+  { kind: 'installment', title: 'اعتبار خرید', sub: 'خرید اقساطی و اعتبار کارت نمادنو، با پشتوانه‌ی دارایی همان کاربر.' },
+];
+
+function ProductsComingSoon() {
+  return (
+    <>
+      <PageHeading {...HEAD} sub="محصولات اعتباری نمادنو در حال آماده‌سازی است">
+        <Pill>به‌زودی</Pill>
+      </PageHeading>
+      <Card>
+        <Empty
+          icon={IC.card} tone="primary" title="محصولات اعتباری به‌زودی"
+          sub="با فعال شدن تسهیلات، پارامترهای پیش‌فرض هر محصول و پارامترهای اختصاصی قرارداد سازمان‌ها از همین صفحه مدیریت می‌شود."
+        />
+        <List>
+          {SOON.map((p) => (
+            <ListRow key={p.kind} lead={<Tile d={PRODUCT_UI[p.kind].d} tone={kt(PRODUCT_UI[p.kind].tone)} />} title={p.title}
+              sub={<span style={{ whiteSpace: 'normal' }}>{p.sub}</span>} trail={<Pill>به‌زودی</Pill>} />
+          ))}
+        </List>
+      </Card>
+    </>
+  );
+}
+
+function ProductsPage() {
   return (
     <Suspense fallback={<><PageHeading {...HEAD} /><StatStrip loading items={[]} /></>}>
       <ProductsInner />

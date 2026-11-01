@@ -81,9 +81,8 @@ export default function OpRiskPage() {
 
   return (
     <>
-      <PageHeading title="ریسک و تقلب" crumbs={[{ label: 'سیستم' }]} sub="رویدادهای مشکوک، مسدودی‌های قانونی و قوانین تشخیص در همه‌ی سازمان‌ها">
+      <PageHeading title="ریسک و تقلب" crumbs={[{ label: 'پایش' }]} sub="رویدادهای مشکوک، مسدودی‌های قانونی و قوانین تشخیص در همه‌ی سازمان‌ها">
         <span className="mute" style={{ fontSize: 12.5 }}>به‌روزرسانی خودکار هر <span className="num">{faDigits(30)}</span> ثانیه</span>
-        <Link href={routes.op.reports} className="nm-btn ghost"><Icon d={IC.reports} size={17} />گزارش ریسک</Link>
       </PageHeading>
 
       <StatStrip loading={risk.isLoading || insights.isLoading} items={[
