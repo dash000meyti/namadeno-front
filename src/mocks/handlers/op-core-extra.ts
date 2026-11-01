@@ -143,9 +143,10 @@ function portfolioFromMeta(m: PlatformUserMeta): Portfolio {
   return { total, free: total - locked, locked, changeToday: 0, changeTodayPct: 0, holdings: m.holdings, updatedAt: nowIso() };
 }
 
-function kycState(u: { kycLevel: number; flags?: string[] }): UserMetaRow['kyc'] {
-  if (u.flags?.includes('kyc_rejected')) return 'rejected';
-  return u.kycLevel < 2 ? 'pending' : 'ok';
+/** Deprecated field: identity is the app's automated levels (no review queue), so there is no pending / rejected state. */
+function kycState(u: { kycLevel: number }): UserMetaRow['kyc'] {
+  void u;
+  return 'ok';
 }
 
 function metaRow(holdings: Holding[], facilities: Facility[], kyc: UserMetaRow['kyc']): UserMetaRow {
@@ -328,7 +329,7 @@ export const opCoreHandlers: HttpHandler[] = [
       meta,
       totals: {
         users, newThisMonth: 860, locked, lockedPct: Math.round((locked / users) * 100),
-        kycPending: 236 + rows.filter((r) => r.kyc === 'pending').length, kycAvgDays: 1.8,
+        kycPending: 0, kycAvgDays: 0, // deprecated: no KYC review queue
         legal: 47 + rows.filter((r) => r.lockTypes.includes('legal')).length,
         suspended: 17 + statuses.filter((s) => s === 'suspended').length,
       },

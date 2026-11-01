@@ -1,7 +1,16 @@
 'use client';
 /**
- * Send wizard, step 3 — review, budget check and send. Kit wizard page: heading + steps → package settings
- * and recipients beside the approval card (chain, balance, confirmation) → sticky action bar with «تأیید و ارسال».
+ * Send wizard, step 3 — review, rial account / budget check and send. Kit wizard page: heading + steps → package settings,
+ * recipients (and «پرداخت» when needed) beside the approval card (chain, rial account, confirmation) → sticky action bar.
+ * Money: when «آزاد» of the organization's rial account covers the total, the package is sent at once (useSendPackage).
+ * Otherwise the «پرداخت» card collects the receipt («فیش واریز») for the shortfall: amount (pre-filled, min = the shortfall),
+ * the file (required) and an optional description; «ارسال فیش و ثبت بسته» (useSendPackageWithReceipt) puts the package in
+ * the queue («در انتظار تأیید واریز»): nothing reaches the recipients and nothing is blocked until Namadno approves the
+ * receipt — only the part «آزاد» covers is set aside for it. There is no payment deadline.
+ * A paid package whose fund parts Namadno's stock does not cover yet comes back `awaiting_stock` («در صف تأمین موجودی»):
+ * a toast says when it goes out at the latest (`stockEta`), then the sent page shows it.
+ * The annual budget cap («سقف بودجه‌ی سالانه», minus packages already in the queue) still blocks sending (over_budget).
+ * The sent page reads the package and its receipt.
  */
 import Link from 'next/link';
 import { Suspense, useState } from 'react';
@@ -9,8 +18,9 @@ import type { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ApiRequestError } from '@/api/client';
 import { useOrgContract, useOrgEmployees, useOrgMe, useOrgPackage, useSendPackage } from '@/api/org';
+import { useOrgAccount, useSendPackageWithReceipt } from '@/api/org-money-extra';
 import {
-  ActionBar, Ava, BigNum, Card, ErrorBlock, Ident, KV, List, ListRow, Note, Pill, Section, SkeletonCard, Table, TableFoot,
+  ActionBar, Ava, BigNum, Card, ErrorBlock, Field, Ident, KV, List, ListRow, Note, NumInput, NumberInput, Pill, Section, SkeletonCard, Table, TableFoot,
   type Column, type Tone,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
@@ -18,9 +28,12 @@ import { useToast } from '@/components/ui/Toast';
 import { LockTag, StepMark, WizardHeader, type StepState } from '@/components/org/packages/Stepper';
 import { I, allocationText, perPersonText, splitCompact } from '@/components/org/packages/meta';
 import { errMsg } from '@/components/org/packages/ui';
+import { MIN_DEPOSIT, NamadnoBank } from '@/components/org/money/AnnounceDepositDialog';
+import { OM } from '@/components/org/money/meta';
+import { ReceiptUpload } from '@/components/org/money/ReceiptUpload';
 import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
-import { faDigits, jDate, jDayMonth, money, relTime } from '@/lib/format';
+import { faDigits, jDate, jDateTime, jDayMonth, money, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
 import type { OrgPackage } from '@/types/domain';
 
@@ -33,13 +46,23 @@ function ReviewStep() {
   const draftId = sp.get('draft') ?? '';
   const { data: pkg, isLoading, isError, error, refetch } = useOrgPackage(draftId);
   const { data: contract } = useOrgContract();
+  const acctQ = useOrgAccount();
+  const acct = acctQ.data;
   const { data: me } = useOrgMe();
   const { data: emps } = useOrgEmployees();
   const send = useSendPackage();
+  const sendPaid = useSendPackageWithReceipt();
   const toast = useToast();
   const [ack, setAck] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [serverErr, setServerErr] = useState<{ code: string; message: string } | null>(null);
+  // «پرداخت»: receipt for what «آزاد» does not cover (`payAmount` null = not edited → the shortfall)
+  const [receipt, setReceipt] = useState<File | null>(null);
+  const [payAmount, setPayAmount] = useState<number | null>(null);
+  const [payNote, setPayNote] = useState('');
+  const [payErr, setPayErr] = useState<{ amount?: string; receipt?: string }>({});
+  // after a successful send the package is no longer a draft: keep a skeleton until the sent page opens
+  const [leaving, setLeaving] = useState(false);
 
   if (!draftId) {
     return (
@@ -50,33 +73,69 @@ function ReviewStep() {
     );
   }
   if (isError) return (<><WizardHeader step={3} /><ErrorBlock error={error} message="پیش‌نویس پیدا نشد" onRetry={() => refetch()} /></>);
-  if (isLoading || !pkg) return (<><WizardHeader step={3} draftId={draftId} /><div className="nm-grid side"><SkeletonCard h={480} /><SkeletonCard h={420} /></div></>);
+  if (isLoading || !pkg || leaving) return (<><WizardHeader step={3} draftId={draftId} /><div className="nm-grid side"><SkeletonCard h={480} /><SkeletonCard h={420} /></div></>);
   if (pkg.status !== 'draft') {
     return (
       <>
         <WizardHeader step={3} />
-        <Note tone="info" action={<Link href={routes.org.package(pkg.id)} className="nm-btn sm ghost">مشاهده بسته</Link>}>این بسته قبلاً ارسال شده است.</Note>
+        <Note tone="info" action={<Link href={routes.org.package(pkg.id)} className="nm-btn sm ghost">مشاهده بسته</Link>}>
+          {pkg.status === 'awaiting_payment' ? 'این بسته ثبت شده و در انتظار تأیید واریز است.'
+            : pkg.status === 'awaiting_stock' ? 'این بسته ثبت شده و در صف تأمین موجودی نمادنو است.'
+            : pkg.status === 'cancelled' ? 'این بسته لغو شده است.' : 'این بسته قبلاً ارسال شده است.'}
+        </Note>
       </>
     );
   }
 
   const n = pkg.recipients.length;
-  const remaining = contract ? contract.budgetYear - contract.budgetUsed : 0;
+  // annual budget cap (a yearly limit, not the account balance); packages in the queue will use it when delivered
+  const remaining = contract ? contract.budgetYear - contract.budgetUsed - (acct?.queuedTotal ?? 0) : 0;
   const over = !!contract && pkg.total > remaining;
   const remainAfter = splitCompact(Math.max(0, remaining - pkg.total));
   const remainNow = splitCompact(remaining);
+  // rial account: blocked from «آزاد»; whatever «آزاد» does not cover needs a deposit receipt («پرداخت»)
+  const free = acct ? Math.max(0, acct.free) : 0;
+  const fromFree = Math.min(pkg.total, free);
+  const toDeposit = acct ? Math.max(0, pkg.total - free) : 0;
+  const needReceipt = toDeposit > 0;
+  const minPay = Math.max(MIN_DEPOSIT, Math.ceil(toDeposit));
+  const pay = payAmount ?? minPay;
+  const payBad = needReceipt && !(pay >= minPay);
+  const freeNow = splitCompact(free);
+  const cmp = (v: number) => { const c = splitCompact(v); return `${c.value} ${c.unit}`.trim(); };
   const lp = pkg.lockPolicy;
   const per = perPersonText(pkg, money);
   const missing = !pkg.total ? 'مبلغ هر نفر تعیین نشده است.' : !n ? 'هیچ گیرنده‌ای انتخاب نشده است.' : '';
-  const canSend = ack && !over && !missing && !send.isPending;
+  const busy = send.isPending || sendPaid.isPending;
+  // the account decides the flow: wait for it (an error falls back to the plain send; the server asks for a receipt if needed)
+  const acctKnown = !!acct || acctQ.isError;
+  const canSend = ack && !over && !missing && !busy && acctKnown && (!needReceipt || (!!receipt && !payBad));
   const empOf = (id: string) => emps?.find((e) => e.id === id);
   const units = new Set(pkg.recipients.map((r) => empOf(r.employeeId)?.department).filter(Boolean)).size;
   const adminName = me?.admin.name ?? 'نیما رضایی';
 
   const chain: { label: string; sub: string; state: StepState; s: string; tone: Tone }[] = [
     { label: me?.admin.role ?? 'کارشناس', sub: `${adminName} · ${relTime(pkg.createdAt, now())}`, state: ack ? 'done' : 'current', s: ack ? 'تأیید شد' : 'در انتظار', tone: ack ? 'success' : 'warning' },
-    { label: 'کنترل بودجه سازمان', sub: over ? 'کسری موجودی حساب سازمان' : `موجودی ${remainNow.value} ${remainNow.unit} تومان`, state: !ack ? 'pending' : over ? 'current' : 'done', s: over ? 'کسری بودجه' : 'کافی', tone: over ? 'error' : 'success' },
-    { label: 'ارسال به کارکنان', sub: 'بلافاصله پس از تأیید شما · صندوق ورودی و اعلان', state: canSend ? 'current' : 'pending', s: 'آماده ارسال', tone: canSend ? 'warning' : 'neutral' },
+    needReceipt ? {
+      label: 'تأیید فیش توسط نمادنو',
+      sub: over ? 'بیش از سقف بودجه‌ی سالانه' : receipt ? `فیش ${cmp(pay)} تومان · پس از ثبت بررسی می‌شود` : `برای ${cmp(toDeposit)} تومان باقی‌مانده فیش واریز لازم است`,
+      state: !ack ? 'pending' : 'current',
+      s: over ? 'بیش از سقف' : receipt ? 'فیش آماده' : 'نیاز به فیش',
+      tone: over ? 'error' : receipt ? 'info' : 'warning',
+    } : {
+      label: 'کنترل حساب ریالی و سقف بودجه',
+      sub: over ? 'بیش از سقف بودجه‌ی سالانه' : !acct ? 'در حال بررسی حساب ریالی سازمان…' : `از «آزاد» ${cmp(fromFree)} تومان بلاک می‌شود`,
+      state: !ack ? 'pending' : over ? 'current' : 'done',
+      s: over ? 'بیش از سقف' : 'کافی',
+      tone: over ? 'error' : 'success',
+    },
+    {
+      label: 'ارسال به کارکنان',
+      sub: needReceipt ? 'پس از تأیید فیش · صندوق ورودی و اعلان' : 'بلافاصله پس از تأیید شما · صندوق ورودی و اعلان',
+      state: canSend && !needReceipt ? 'current' : 'pending',
+      s: needReceipt ? 'پس از تأیید فیش' : 'آماده ارسال',
+      tone: canSend && !needReceipt ? 'warning' : 'neutral',
+    },
   ];
 
   const defs: [string, ReactNode][] = [
@@ -88,17 +147,29 @@ function ReviewStep() {
     ['مهلت تأیید', <span key="e" className="num">{pkg.expiresAt ? jDate(pkg.expiresAt) : 'بدون مهلت'}</span>],
   ];
 
+  const onError = (e: unknown) => {
+    const code = e instanceof ApiRequestError ? e.code : 'error';
+    if (code === 'bad_amount' && needReceipt) { setPayErr({ amount: errMsg(e) }); return; }
+    if ((code === 'bad_receipt' || code === 'missing_receipt') && needReceipt) { setPayErr({ receipt: errMsg(e) }); return; }
+    if (code === 'receipt_required') acctQ.refetch(); // «آزاد» changed meanwhile: the «پرداخت» card appears
+    setServerErr({ code, message: errMsg(e) });
+    toast(errMsg(e), 'error');
+  };
   const confirm = () => {
     if (!canSend) return;
     setServerErr(null);
-    send.mutate(pkg.id, {
-      onSuccess: (p) => router.push(routes.org.newSent(p.id)),
-      onError: (e) => {
-        const code = e instanceof ApiRequestError ? e.code : 'error';
-        setServerErr({ code, message: errMsg(e) });
-        toast(errMsg(e), 'error');
+    setPayErr({});
+    const done = {
+      onSuccess: (p: OrgPackage) => {
+        // paid, but Namadno's fund stock is short: it waits in the queue and goes out automatically
+        if (p.status === 'awaiting_stock') toast(`بسته ثبت شد؛ پس از تأمین موجودی نمادنو${p.stockEta ? ` (حداکثر تا ${jDateTime(p.stockEta)})` : ''} ارسال می‌شود`, 'info');
+        setLeaving(true);
+        router.push(routes.org.newSent(p.id));
       },
-    });
+      onError,
+    };
+    if (needReceipt && receipt) sendPaid.mutate({ packageId: pkg.id, amount: pay, receipt, note: payNote.trim() || undefined }, done);
+    else send.mutate(pkg.id, done);
   };
 
   const list = showAll ? pkg.recipients : pkg.recipients.slice(0, SHOW);
@@ -144,6 +215,34 @@ function ReviewStep() {
               )}
             </TableFoot>
           </Card>
+
+          {needReceipt && (
+            <Card id="pk-pay" title="پرداخت" sub="فیش واریز برای مبلغ باقی‌مانده" actions={<Pill tone={receipt ? 'info' : 'warning'} dot>{receipt ? 'فیش انتخاب شد' : 'فیش لازم است'}</Pill>}>
+              <Note tone="warn" icon={OM.deposit}>
+                «آزاد» حساب ریالی <span className="num">{money(free)}</span> تومان است؛ برای <span className="num">{money(toDeposit)}</span> تومان باقی‌مانده فیش واریز لازم است.
+              </Note>
+              <NamadnoBank />
+              <div className="nm-grid c2">
+                <Field
+                  label="مبلغ واریز" htmlFor="pay-amount"
+                  error={payErr.amount ?? (payBad ? `مبلغ واریز دست‌کم ${money(minPay)} تومان است.` : undefined)}
+                  help={`دست‌کم ${money(minPay)} تومان؛ بیشتر از آن به «آزاد» اضافه می‌شود`}
+                >
+                  <NumberInput
+                    id="pay-amount" label="مبلغ واریز" value={pay} suffix="تومان" full invalid={payBad || !!payErr.amount}
+                    onChange={(v) => { setPayAmount(Number.isFinite(v) ? Math.max(0, Math.min(1e13, v)) : NaN); setPayErr((x) => ({ ...x, amount: undefined })); }}
+                  />
+                </Field>
+                <Field label="توضیحات (اختیاری)" htmlFor="pay-note">
+                  <NumInput id="pay-note" label="توضیحات واریز" value={payNote} onChange={(v) => setPayNote(v.slice(0, 200))} text full placeholder="شماره پیگیری، نوع انتقال…" />
+                </Field>
+              </div>
+              <ReceiptUpload value={receipt} onChange={(f) => { setReceipt(f); setPayErr((x) => ({ ...x, receipt: undefined })); }} error={payErr.receipt} disabled={busy} />
+              <Note tone="mute" icon={OM.clock}>
+                بسته پس از ثبت در صف «در انتظار تأیید واریز» می‌ماند: همکاران باخبر نمی‌شوند و چیزی بلاک نمی‌شود. با تأیید فیش توسط نمادنو، بسته برای آن‌ها ارسال می‌شود.
+              </Note>
+            </Card>
+          )}
         </div>
 
         <Card title="تأیید و ارسال">
@@ -154,11 +253,25 @@ function ReviewStep() {
               ))}
             </List>
           </Section>
-          <Section title="منبع و موجودی">
+          <Section title="حساب ریالی سازمان" action={<span className="num">{acct ? `آزاد ${freeNow.value} ${freeNow.unit}`.trim() : '…'}</span>}>
             <BigNum value={money(pkg.total)} unit="تومان" />
-            <span style={{ fontSize: 12.5, lineHeight: 1.7, color: over ? 'var(--error-text)' : 'var(--text-secondary)' }}>
-              {over ? `از موجودی حساب سازمان (${remainNow.value} ${remainNow.unit}) بیشتر است` : `از حساب سازمان (موجودی ${remainNow.value} ${remainNow.unit}) رزرو می‌شود · باقی‌مانده ${remainAfter.value} ${remainAfter.unit}`}
+            <span style={{ fontSize: 12.5, lineHeight: 1.7, color: 'var(--text-secondary)' }}>
+              {!acct ? 'در حال دریافت حساب ریالی سازمان…'
+                : needReceipt
+                  ? <>تا تأیید فیش چیزی بلاک نمی‌شود{fromFree > 0 ? <>؛ <span className="num" style={{ color: 'var(--text-primary)' }}>{money(fromFree)}</span> تومان از «آزاد» برای این بسته کنار گذاشته می‌شود</> : null}. با تأیید فیش، مبلغ بسته بلاک و برای همکاران ارسال می‌شود.</>
+                  : <>از «آزاد» <span className="num" style={{ color: 'var(--text-primary)' }}>{money(fromFree)}</span> تومان بلاک می‌شود و تا دریافت همکاران بلاک می‌ماند.</>}
             </span>
+            {needReceipt && (
+              <Note tone="warn" action={<a href="#pk-pay" className="nm-btn sm ghost">پرداخت</a>}>
+                برای <span className="num">{money(toDeposit)}</span> تومان باقی‌مانده فیش واریز را در کارت «پرداخت» بارگذاری کنید؛ بسته پس از تأیید فیش ارسال می‌شود.
+              </Note>
+            )}
+            {contract && (
+              <span style={{ fontSize: 12, lineHeight: 1.6, color: over ? 'var(--error-text)' : 'var(--text-secondary)' }}>
+                سقف بودجه‌ی سالانه: باقی‌مانده <span className="num">{`${remainNow.value} ${remainNow.unit}`.trim()} تومان</span>
+                {over ? '؛ مبلغ بسته بیشتر است' : <> · پس از این بسته <span className="num" style={{ color: 'var(--text-primary)' }}>{`${remainAfter.value} ${remainAfter.unit}`.trim()} تومان</span></>}
+              </span>
+            )}
           </Section>
           <button type="button" className="nm-check" aria-pressed={ack} onClick={() => setAck(!ack)}>
             <i>{ack && <Icon d={I.check} size={13} strokeWidth={3} />}</i>اطلاعات بسته را بررسی کردم و درست است
@@ -177,12 +290,15 @@ function ReviewStep() {
         <>
           <Link href={routes.org.newSettings(pkg.id)} className="nm-btn text"><Icon d={I.chevR} size={16} />مرحله قبل</Link>
           <button type="button" className="nm-btn" onClick={confirm} disabled={!canSend}>
-            <Icon d={I.send} size={16} />{send.isPending ? 'در حال ارسال…' : 'تأیید و ارسال به کارکنان'}
+            <Icon d={I.send} size={16} />
+            {needReceipt ? (sendPaid.isPending ? 'در حال ارسال فیش…' : 'ارسال فیش و ثبت بسته') : (send.isPending ? 'در حال ارسال…' : 'تأیید و ارسال به کارکنان')}
           </button>
         </>
       )}>
         <span><b className="num" style={{ color: 'var(--text-primary)' }}>{faDigits(n)}</b> نفر · جمع <b className="num" style={{ color: 'var(--text-primary)' }}>{money(pkg.total)}</b> تومان</span>
-        {over && <Pill tone="error" dot>کسری بودجه</Pill>}
+        {over && <Pill tone="error" dot>بیش از سقف بودجه‌ی سالانه</Pill>}
+        {!over && needReceipt && !receipt && <a href="#pk-pay" style={{ textDecoration: 'none' }}><Pill tone="warning" dot>فیش واریز برای {cmp(toDeposit)} تومان لازم است</Pill></a>}
+        {!over && needReceipt && receipt && <Pill tone="info" dot>فیش {cmp(pay)} تومان · پس از تأیید نمادنو ارسال می‌شود</Pill>}
         {!ack && <Pill tone="warning" dot>تأیید اطلاعات بسته لازم است</Pill>}
       </ActionBar>
     </>

@@ -22,3 +22,21 @@ export const useHoldingStats = (kind: string, enabled = true) =>
     queryFn: () => get<HoldingStats>(`/me/holdings/${kind}/stats`),
     enabled: enabled && !!kind && kind !== 'rial',
   });
+
+/**
+ * Fixed withdrawal caps of the rial wallet (set by the operator in /op/rules) and what is left of them. Within the caps a
+ * withdrawal goes through at once (no approval); above them POST /me/withdrawals answers 422 over_daily_limit /
+ * over_monthly_limit. `null` = no cap. Days and months are Jalali. Only the free («آزاد») part is withdrawable anyway.
+ */
+export interface WithdrawLimits {
+  daily: Toman | null;
+  monthly: Toman | null;
+  usedToday: Toman;
+  usedMonth: Toman;
+  remainingToday: Toman | null;
+  remainingMonth: Toman | null;
+}
+
+/** GET /me/withdrawals/limits — under ['me', …] so a withdrawal refreshes it. */
+export const useWithdrawLimits = () =>
+  useQuery({ queryKey: ['me', 'withdrawals', 'limits'] as const, queryFn: () => get<WithdrawLimits>('/me/withdrawals/limits') });

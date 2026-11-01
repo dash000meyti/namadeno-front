@@ -1,7 +1,8 @@
 'use client';
 /**
  * Operator console — organization page. Kit detail page: heading (logo, status, products, actions) → key numbers → sections:
- * overview (AUM trend, contract facts, «خزانه و تعهدات»: members' stock, commitments, deposits, upcoming events),
+ * overview (AUM trend, contract facts, the organization's rial account with «ثبت واریز», deposit receipts with «بررسی», members' stock,
+ * upcoming events — OrgTreasuryCards),
  * contract (terms editor + approval chain + versions, sticky save bar), staff (row → inspector), packages,
  * credit (row → user profile; hidden while FEATURES.orgCredit is off), panel users (row → user profile; add by national ID).
  * Suspend / add panel user in dialogs.
@@ -23,10 +24,9 @@ import { LockBar } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
 import { ContractEditor, VersionList, useContractDraft } from '@/components/op/core/ContractEditor';
 import { OrgTreasuryCards } from '@/components/op/cash/OrgTreasuryCards';
-import { scaled } from '@/components/op/cash/money';
-import { amt } from '@/components/op/treasury/ui';
+import { noteAmounts, scaled } from '@/components/op/cash/money';
 import { ICON, ORG_STATUS, PRODUCT_META, errMsg, fb, fm, orgProducts, pctFa, signedPct, splitPct } from '@/components/op/core/ui';
-import { enDigits, faDigits, jDate, jMonthYear, maskMobile, maskNationalId, money, nidOk, relTime } from '@/lib/format';
+import { enDigits, faDigits, jDate, jDateTime, jDayMonth, jMonthYear, maskMobile, maskNationalId, money, nidOk, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { routes } from '@/lib/routes';
 import { ORG_ROLES, roleLabel } from '@/lib/org';
@@ -62,6 +62,10 @@ function pkgKind(p: OrgPackage): string {
 function pkgStatus(p: OrgPackage): [string, Tone] {
   if (p.status === 'draft') return ['پیش‌نویس', 'neutral'];
   if (p.status === 'cancelled') return ['لغوشده', 'error'];
+  // in the queue: delivered (and blocked) only once Namadno approves its deposit receipt
+  if (p.status === 'awaiting_payment') return ['در انتظار تأیید واریز', 'warning'];
+  // paid; waits in «صف تأمین» for Namadno's fund stock and is sent automatically by `stockEta`
+  if (p.status === 'awaiting_stock') return ['در انتظار تأمین موجودی', 'warning'];
   const pend = p.milestoneProgress?.findIndex((s) => s.status === 'pending_approval') ?? -1;
   if (pend >= 0) return [`مرحله ${faDigits(pend + 1)} در انتظار`, 'warning'];
   if (p.status === 'completed') return ['تکمیل‌شده', 'info'];
@@ -117,7 +121,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
   const platform = new Map((usersQ.data ?? []).map((u) => [u.id, u]));
   const monthsOptions = products.data?.find((p) => p.kind === 'loan')?.monthsOptions ?? [3, 6, 12, 18];
   const growth12 = ext.aumHistory[0] > 0 ? ((ext.aumHistory[11] - ext.aumHistory[0]) / ext.aumHistory[0]) * 100 : 0;
-  const sentPkgs = packages.filter((p) => p.status !== 'draft');
+  const sentPkgs = packages.filter((p) => p.status !== 'draft' && p.status !== 'awaiting_payment' && p.status !== 'awaiting_stock');
   const yearTotal = sentPkgs.filter((p) => p.sentAt && new Date(p.sentAt).getTime() > now().getTime() - 365 * DAY).reduce((s, p) => s + p.total, 0);
   const recips = sentPkgs.flatMap((p) => p.recipients);
   const acceptRate = recips.length ? (recips.filter((r) => r.status === 'accepted').length / recips.length) * 100 : 0;
@@ -194,7 +198,9 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
         const accepted = p.recipients.filter((r) => r.status === 'accepted').length;
         const ms = p.lockPolicy.type === 'milestone' && p.milestoneProgress;
         const msPct = ms ? p.milestoneProgress!.filter((s) => s.status === 'released').reduce((a, s) => a + s.sharePct, 0) : 0;
-        const pct = p.status === 'draft' ? 0 : ms ? msPct : p.recipients.length ? (accepted / p.recipients.length) * 100 : 0;
+        const pct = p.status === 'draft' || p.status === 'awaiting_payment' || p.status === 'awaiting_stock' ? 0 : ms ? msPct : p.recipients.length ? (accepted / p.recipients.length) * 100 : 0;
+        if (p.status === 'awaiting_payment') return <span className="sm">در صف · هنوز ارسال نشده</span>;
+        if (p.status === 'awaiting_stock') return <span className="sm" title={p.stockEta ? `ارسال تا ${jDateTime(p.stockEta)}` : undefined}>در صف{p.stockEta ? <> · تا <span className="num">{jDayMonth(p.stockEta)}</span></> : ' تأمین موجودی'}</span>;
         return (
           <>
             <Meter value={pct / 100} tone="success" width={110} thin />
@@ -203,7 +209,7 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
         );
       },
     },
-    { key: 'at', label: 'تاریخ', width: '92px', render: (p) => <span className="num sm">{p.sentAt ? jDate(p.sentAt) : '—'}</span> },
+    { key: 'at', label: 'تاریخ', width: '92px', render: (p) => <span className="num sm">{p.sentAt ? jDate(p.sentAt) : p.submittedAt ? jDate(p.submittedAt) : '—'}</span> },
     { key: 'st', label: 'وضعیت', width: '132px', render: (p) => { const [l, t] = pkgStatus(p); return <Pill tone={t} dot>{l}</Pill>; } },
   ];
   type CreditRow = OrgCreditRow & { key: string };
@@ -246,11 +252,11 @@ function OrgView({ detail, ext }: { detail: OpOrganizationDetail; ext: OrgContra
         ...(FEATURES.orgCredit ? [{ label: 'وام‌های فعال', value: faDigits(ext.credit.activeLoans), unit: 'وام', note: `مانده ${bn(ext.credit.outstanding)} · ${faDigits(ext.credit.overdue)} معوق` }] : []),
         { label: 'دارایی رزروشده کارکنان', value: fb(ext.locked), unit: 'میلیارد', note: `${faDigits(typeCount)} نوع رزرو · ${pctFa(sp.lockedPct)} از AUM` },
         tr ? {
-          label: 'واریز در انتظار', ...scaled(tr.depositsExpected),
-          note: tr.depositsOverdue > 0 ? `دیرکرد ${amt(tr.depositsOverdue)} تومان` : tr.commitments > 0 ? `تعهد باز ${amt(tr.commitments)} تومان` : 'بدون تعهد باز',
-          trend: tr.depositsOverdue > 0 ? 'down' as const : undefined,
+          label: 'حساب ریالی · آزاد', ...scaled(tr.rial.free),
+          note: (([b, p]) => (tr.rial.pending > 0 ? `بلاک ${b} · فیش در انتظار تأیید ${p}` : tr.rial.queuedCount > 0 ? `بلاک ${b} · ${faDigits(tr.rial.queuedCount)} بسته در صف` : `بلاک ${b}`))(noteAmounts(tr.rial.free, [tr.rial.blocked, tr.rial.pending])),
+          trend: tr.rial.pending > 0 ? 'warn' as const : undefined,
           href: `${routes.op.cash}?org=${encodeURIComponent(org.id)}`,
-        } : { label: 'واریز در انتظار', value: '—', note: treasury.isError ? 'دریافت نشد' : 'در حال بارگذاری…' },
+        } : { label: 'حساب ریالی', value: '—', note: treasury.isError ? 'دریافت نشد' : 'در حال بارگذاری…' },
       ]} />
 
       <Tabs label="بخش‌های سازمان" size="lg" value={tab} onChange={pick} items={[

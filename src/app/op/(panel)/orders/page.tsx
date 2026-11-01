@@ -19,7 +19,7 @@ import {
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { OrderDialog } from '@/components/op/treasury/OrderDialog';
-import { SEVERITY, SIDE, TI, amt, fundUi, orderStatus, unitsText } from '@/components/op/treasury/ui';
+import { SEVERITY, SIDE, TI, amt, fundUi, isNeed, orderStatus, unitsText } from '@/components/op/treasury/ui';
 import { OrderInspector } from '@/components/op/orders/OrderInspector';
 import { scaled } from '@/components/op/cash/money';
 import { downloadCsv, pctT, raw } from '@/components/op/system/fmt';
@@ -29,6 +29,7 @@ import { now } from '@/lib/clock';
 import { routes } from '@/lib/routes';
 
 type Status = 'placed' | 'due' | 'settled' | 'cancelled' | 'all';
+const ORDER_REC_KINDS = new Set<string>(['buy', 'redeem', 'settle', 'rebalance']);
 const STATUSES: Status[] = ['placed', 'due', 'settled', 'cancelled', 'all'];
 const PAGE = 10;
 const SEV_RANK: Record<Severity, number> = { critical: 0, warning: 1, info: 2 };
@@ -124,13 +125,14 @@ function OrdersInner() {
       seen.add(p.fundId);
       out.push({
         key: `pos-${p.fundId}`, fundId: p.fundId, side: p.suggestion.side, amount: p.suggestion.amount, reason: p.suggestion.reason, plan: false,
-        severity: p.state === 'shortfall' ? 'critical' : p.state === 'below' ? 'warning' : 'info',
+        // «نیاز به خرید»: items wait in the queue for this fund's stock
+        severity: isNeed(p.state) ? 'critical' : p.state === 'below' ? 'warning' : 'info',
       });
     }
     return out.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity]);
   }, [plan.data, positions.data, pos]);
-  /** «پیگیری واریزهای معوق» when the suggested buys need more cash than is free (plan recommendation). */
-  const collect = plan.data?.recommendations.find((r) => r.kind === 'collect_deposit');
+  /** A cash note of the plan (a link-only recommendation outside the order kinds) — tolerated, not produced any more. */
+  const collect = plan.data?.recommendations.find((r) => !ORDER_REC_KINDS.has(r.kind) && r.action.type === 'link');
 
   // ── list ──
   const needle = enDigits(q.trim()).toLowerCase();

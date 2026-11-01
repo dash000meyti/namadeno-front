@@ -36,7 +36,8 @@ export default function OpPanelLayout({ children }: { children: React.ReactNode 
   const acts = actions ?? [];
   const requests = pending?.length ?? 0;
   const dueOrders = acts.filter((a) => a.kind === 'order_settle').length;
-  const overdueDeposits = acts.filter((a) => a.kind === 'deposit_overdue').length;
+  // organizations' deposit receipts waiting for the operator's review
+  const receipts = acts.filter((a) => a.kind === 'deposit_review').length;
   const urgent = acts.filter((a) => a.severity !== 'info').length;
 
   const groups: NavGroup[] = [
@@ -48,7 +49,7 @@ export default function OpPanelLayout({ children }: { children: React.ReactNode 
     { title: 'خزانه', items: [
       { label: 'موجودی صندوق‌ها', short: 'موجودی', href: routes.op.funds, tone: 'success', d: I.stock },
       { label: 'سفارش‌ها', href: routes.op.orders, tone: 'primary', d: I.order, badge: dueOrders },
-      { label: 'نقدینگی', href: routes.op.cash, tone: 'warning', d: I.cash, badge: overdueDeposits },
+      { label: 'نقدینگی', href: routes.op.cash, tone: 'warning', d: I.cash, badge: receipts },
       { label: 'برنامه‌ریزی و اهداف', short: 'برنامه‌ریزی', href: routes.op.planning, tone: 'secondary', d: I.plan },
     ] },
     { title: 'مشتریان', items: [
@@ -67,7 +68,8 @@ export default function OpPanelLayout({ children }: { children: React.ReactNode 
   const search: SearchItem[] = [
     { title: 'موجودی صندوق‌ها', sub: 'خزانه · تخصیص، رزرو و موجودی آزاد', kind: 'صفحه', d: I.stock, href: routes.op.funds },
     { title: 'سفارش‌ها', sub: dueOrders ? `${faDigits(dueOrders)} سفارش سررسید تسویه` : 'صدور و ابطال واحد', kind: 'صفحه', d: I.order, href: routes.op.orders },
-    { title: 'نقدینگی', sub: overdueDeposits ? `${faDigits(overdueDeposits)} واریز با دیرکرد` : 'حساب ریالی و واریز سازمان‌ها', kind: 'صفحه', d: I.cash, href: routes.op.cash },
+    { title: 'نقدینگی', sub: receipts ? `${faDigits(receipts)} فیش در انتظار تأیید` : 'ریال، ریال رزرو و حساب ریالی سازمان‌ها', kind: 'صفحه', d: I.cash, href: routes.op.cash },
+    { title: 'خزانه‌ی ریالی', sub: 'ریال · ریال رزرو · کیف پول کاربران', kind: 'صفحه', d: I.cash, href: routes.op.funds },
     { title: 'برنامه‌ریزی و اهداف', sub: 'پیش‌بینی تقاضا و هدف‌ها', kind: 'صفحه', d: I.plan, href: routes.op.planning },
     { title: 'فعالیت‌ها', sub: 'کاربران، سازمان‌ها و تیم نمادنو', kind: 'صفحه', d: I.activity, href: routes.op.activity },
     { title: 'درخواست‌ها', sub: `${faDigits(requests)} در انتظار بررسی`, kind: 'صفحه', d: I.inbox, href: routes.op.requests },

@@ -1,7 +1,8 @@
 'use client';
 /**
  * Operator console — user profile. Kit detail page: heading with avatar + status pills + actions → stats → tabs → cards.
- * Holdings with free/locked split, lock items (legal hold apply/remove), transactions, facilities, risk, audit log, notes.
+ * Holdings with free/locked split (the rial wallet first, «کیف پول ریالی»), the user's rial movements, lock items (legal
+ * hold apply/remove), transactions, facilities, risk, audit log, notes.
  * «اعتبار و دسترسی» also shows the account's organization-panel access (one Namadno account for the app and the panel).
  */
 import { useState } from 'react';
@@ -10,6 +11,7 @@ import { useParams } from 'next/navigation';
 import type { AssetKind, Holding, Lock, LockType, PlatformUser, RiskAlert, Transaction } from '@/types/domain';
 import { useApplyLegalHold, useOpUser, useRemoveLegalHold, useSetUserStatus } from '@/api/op';
 import { useAddUserNote, useOpUserExtra, type Facility, type UserNote } from '@/api/op-core-extra';
+import { useRialMoves } from '@/api/op-treasury-extra';
 import {
   Allocation, Ava, BigNum, Card, Chips, Dialog, Empty, ErrorBlock, Field, FreeLocked, KV, List, ListRow, Meter, Note, NumInput,
   PageHeading, Pill, Ring, Section, SkeletonCard, StatStrip, Table, Tabs, Tile, type Column, type Tone,
@@ -17,8 +19,10 @@ import {
 import { Icon } from '@/components/ui/Icon';
 import { LockBar, LockTypeChip } from '@/components/ui/LockBar';
 import { useToast } from '@/components/ui/Toast';
-import { ICON, LOCK_COL, errMsg, fm, pctFa } from '@/components/op/core/ui';
+import { ICON, LOCK_COL, errMsg, fm, idLevel, pctFa } from '@/components/op/core/ui';
 import { UserActivityCard } from '@/components/op/activity/UserActivityCard';
+import { RialMoveRow, walletSign } from '@/components/op/cash/rial';
+import { TI } from '@/components/op/treasury/ui';
 import { enDigits, faDigits, jDate, jDayMonth, maskNationalId, money, relTime, signedMoney, time, units } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { ASSET_META, HOURGLASS, LOCK_META } from '@/lib/locks';
@@ -34,8 +38,9 @@ const SEVERITY: Record<RiskAlert['severity'], [string, Tone]> = { low: ['کم', 
 const FAC_STATUS: Record<Facility['status'], [string, Tone]> = { current: ['جاری', 'success'], late: ['معوق', 'error'], blocked: ['متوقف', 'neutral'], settled: ['تسویه‌شده', 'neutral'] };
 
 const band = (s: number) => (!s ? 'بدون امتیاز' : s >= 740 ? 'عالی' : s >= 670 ? 'خوب' : s >= 580 ? 'متوسط' : 'ضعیف');
-const kycOf = (u: PlatformUser) => (u.flags.includes('kyc_rejected') ? 'rejected' : u.kycLevel < 2 ? 'pending' : 'ok');
-const assetName = (k: AssetKind) => ASSET_META[k]?.name ?? k;
+const assetName = (k: AssetKind) => (k === 'rial' ? 'کیف پول ریالی' : ASSET_META[k]?.name ?? k);
+/** Holding name on the operator screens: the rial holding is the user's «کیف پول ریالی». */
+const holdName = (h: Pick<Holding, 'kind' | 'name'>) => (h.kind === 'rial' ? 'کیف پول ریالی' : h.name);
 
 function txType(t: Transaction): [string, Tone] {
   switch (t.category) {
@@ -67,6 +72,7 @@ export default function OpUserPage() {
   const applyHold = useApplyLegalHold();
   const removeHold = useRemoveLegalHold();
   const addNote = useAddUserNote();
+  const movesQ = useRialMoves({ userId: id, limit: 8 });
   const [tab, setTab] = useState<Tab>('assets');
   const [modal, setModal] = useState<'' | 'note' | 'legal'>('');
   const [noteText, setNoteText] = useState('');
@@ -86,7 +92,13 @@ export default function OpUserPage() {
   const x = extra.data;
   const facilities = x?.facilities ?? [];
   const notes = x?.notes ?? [];
-  const holdings: Holding[] = pf?.holdings.filter((h) => h.value > 0 || h.locks.length) ?? [];
+  // the rial wallet always comes first
+  const holdings: Holding[] = (pf?.holdings.filter((h) => h.kind === 'rial' || h.value > 0 || h.locks.length) ?? [])
+    .slice().sort((a, b) => (a.kind === 'rial' ? 0 : 1) - (b.kind === 'rial' ? 0 : 1));
+  const rialH = holdings.find((h) => h.kind === 'rial');
+  const rialValue = rialH?.value ?? user.rialValue ?? 0;
+  const rialLocked = rialH?.locked ?? user.rialLocked ?? 0;
+  const moves = movesQ.data ?? [];
   const total = pf?.total ?? user.portfolioValue;
   const locked = pf?.locked ?? user.lockedValue;
   const free = pf?.free ?? user.freeValue;
@@ -94,7 +106,7 @@ export default function OpUserPage() {
   const lockRows = holdings.flatMap((h) => h.locks.map((l) => ({ l, h })));
   const legalOn = lockRows.some(({ l }) => l.type === 'legal') || user.flags.includes('legal_hold');
   const lockedHoldings = holdings.filter((h) => h.locked > 0).length;
-  const kyc = kycOf(user);
+  const idl = idLevel(user.kycLevel);
   const blocked = user.status === 'suspended';
   const acct: [string, Tone] = blocked ? ['مسدود موقت', 'error'] : user.status === 'invited' ? ['در انتظار فعال‌سازی', 'warning'] : ['فعال', 'success'];
   const loanSum = facilities.filter((f) => f.kind === 'loan').reduce((s, f) => s + f.amount, 0);
@@ -105,9 +117,9 @@ export default function OpUserPage() {
   const capacity = Math.floor((free * loanPct) / 100 / 10000) * 10000;
   const byType = (['collateral', 'vesting', 'milestone', 'installment', 'legal'] as LockType[]).map((t) => ({ t, amount: lockRows.filter(({ l }) => l.type === t).reduce((s, { l }) => s + l.amount, 0) })).filter((b) => b.amount > 0);
   const groups = [
+    { label: 'کیف پول ریالی', color: 'var(--grey-500)', value: holdings.filter((h) => h.kind === 'rial').reduce((s, h) => s + h.value, 0) },
     { label: 'صندوق طلا', color: 'var(--warning-main)', value: holdings.filter((h) => h.kind === 'gold').reduce((s, h) => s + h.value, 0) },
     { label: 'درآمد ثابت', color: 'var(--secondary-main)', value: holdings.filter((h) => h.kind === 'fixed').reduce((s, h) => s + h.value, 0) },
-    { label: 'ریال', color: 'var(--grey-500)', value: holdings.filter((h) => h.kind === 'rial').reduce((s, h) => s + h.value, 0) },
     { label: 'سایر صندوق‌ها', color: 'var(--primary-main)', value: holdings.filter((h) => !['gold', 'fixed', 'rial'].includes(h.kind)).reduce((s, h) => s + h.value, 0) },
   ].filter((g) => g.value > 0);
 
@@ -124,7 +136,7 @@ export default function OpUserPage() {
     setLhTried(true);
     if (!lhH || lhErrors.amount || lhErrors.ref) return;
     applyHold.mutate({ userId: user.id, holdingKind: lhH.kind as 'rial' | 'gold' | 'fixed', amount: lhAmt, reference: enDigits(lhRef).replace(/\D/g, ''), reason: LH_REASONS[lhReason] }, {
-      onSuccess: () => { setModal(''); setTab('locks'); toast(`مسدودی قانونی ${money(lhAmt)} روی «${lhH.name}» اعمال شد`); },
+      onSuccess: () => { setModal(''); setTab('locks'); toast(`مسدودی قانونی ${money(lhAmt)} روی «${holdName(lhH)}» اعمال شد`); },
       onError: (e) => setLhErr(errMsg(e)),
     });
   };
@@ -151,7 +163,7 @@ export default function OpUserPage() {
   const flags: { title: string; sub: string; when: string; level: string; tone: Tone; d: string }[] = [
     ...alerts.map((a) => ({ title: a.title, sub: `${a.id}${a.amount ? ' · ' + money(a.amount) + ' تومان' : ''} · امتیاز ${faDigits(a.score)}`, when: relTime(a.createdAt, now()), level: SEVERITY[a.severity][0], tone: SEVERITY[a.severity][1], d: ICON.alert })),
     ...(x?.devices.newDevice ? [{ title: 'ورود از دستگاه جدید', sub: `${x.devices.city} · تأیید با OTP`, when: relTime(x.devices.lastLoginAt, now()), level: 'کم', tone: 'warning' as Tone, d: ICON.alert }] : []),
-    ...(loanF && coll ? [{ title: 'نسبت پشتوانه', sub: `LTV ${pctFa((loanF.used / Math.max(1, coll.value)) * 100)} از سقف ۷۰٪ ${coll.name}`, when: 'لحظه‌ای', level: 'سالم', tone: 'success' as Tone, d: ICON.shield }] : []),
+    ...(loanF && coll ? [{ title: 'نسبت پشتوانه', sub: `LTV ${pctFa((loanF.used / Math.max(1, coll.value)) * 100)} از سقف ۷۰٪ ${holdName(coll)}`, when: 'لحظه‌ای', level: 'سالم', tone: 'success' as Tone, d: ICON.shield }] : []),
     ...(loanF ? [{ title: 'پرداخت اقساط', sub: `${faDigits(loanF.paidCount ?? 0)} قسط پرداخت‌شده${loanF.status === 'late' ? ' · دارای تأخیر' : ' · بدون تأخیر'}`, when: `${faDigits(loanF.paidCount ?? 0)} ماه`, level: loanF.status === 'late' ? 'منفی' : 'مثبت', tone: (loanF.status === 'late' ? 'error' : 'primary') as Tone, d: ICON.clock }] : []),
   ];
 
@@ -160,7 +172,7 @@ export default function OpUserPage() {
     {
       key: 'name', label: 'دارایی', width: 'minmax(0, 1.4fr)', render: (h) => {
         const nav = h.units ? h.value / h.units : 0;
-        return <span className="nm-ident"><Tile d={KIND_ICON[h.kind] ?? ICON.funds} tone={KIND_TONE[h.kind] ?? 'neutral'} /><span className="nm-col"><b>{h.name}</b><small>{h.kind === 'rial' ? 'تومان' : `${units(h.units ?? 0, 1)} واحد · NAV ${money(nav)}`}</small></span></span>;
+        return <span className="nm-ident"><Tile d={KIND_ICON[h.kind] ?? ICON.funds} tone={KIND_TONE[h.kind] ?? 'neutral'} /><span className="nm-col"><b>{holdName(h)}</b><small>{h.kind === 'rial' ? 'تومان' : `${units(h.units ?? 0, 1)} واحد · NAV ${money(nav)}`}</small></span></span>;
       },
     },
     { key: 'total', label: 'کل', width: '112px', render: (h) => <span className="num" style={{ fontWeight: 600 }}>{money(h.value)}</span> },
@@ -171,7 +183,7 @@ export default function OpUserPage() {
   type LockRow = { l: Lock; h: Holding };
   const lockCols: Column<LockRow>[] = [
     { key: 'type', label: 'نوع', width: '96px', render: ({ l }) => <LockTypeChip type={l.type} /> },
-    { key: 'asset', label: 'دارایی', width: '128px', col: true, render: ({ l, h }) => { const nav = h.units ? h.value / h.units : 0; return <><b className="el" style={{ fontWeight: 600 }}>{h.name}</b><span className="sm">{h.kind === 'rial' || !nav ? 'تومان' : `${units(l.amount / nav)} واحد`}</span></>; } },
+    { key: 'asset', label: 'دارایی', width: '128px', col: true, render: ({ l, h }) => { const nav = h.units ? h.value / h.units : 0; return <><b className="el" style={{ fontWeight: 600 }}>{holdName(h)}</b><span className="sm">{h.kind === 'rial' || !nav ? 'تومان' : `${units(l.amount / nav)} واحد`}</span></>; } },
     { key: 'amount', label: 'مبلغ رزرو', width: '108px', render: ({ l }) => <span className="num" style={{ fontWeight: 600 }}>{money(l.amount)}</span> },
     { key: 'by', label: 'ایجادکننده', width: '112px', col: true, render: ({ l }) => { const [by, role] = lockBy(l, user.orgName); return <><b className="el" style={{ fontWeight: 600, fontSize: 12.5 }}>{by}</b><span className="sm el">{role}</span></>; } },
     {
@@ -206,7 +218,8 @@ export default function OpUserPage() {
     { key: 'st', label: 'وضعیت', width: '104px', render: (t) => t.status === 'success' ? <Pill tone="success" dot>موفق</Pill> : t.status === 'pending' ? <Pill tone="warning" dot>در حال تسویه</Pill> : <Pill tone="error" dot>ناموفق</Pill> },
   ];
 
-  const kycPill = kyc === 'ok' ? <Pill tone="success" icon={ICON.shield}>KYC تأیید · سطح {faDigits(user.kycLevel)}</Pill> : kyc === 'pending' ? <Pill tone="warning" icon={ICON.shield}>KYC در انتظار · سطح {faDigits(user.kycLevel)}</Pill> : <Pill tone="error" icon={ICON.shield}>KYC ردشده</Pill>;
+  // identity = the app's three automated levels (read-only; no documents or review)
+  const kycPill = <Pill tone={idl.tone} icon={ICON.shield} title={idl.sub}>{idl.label}</Pill>;
 
   return (
     <>
@@ -225,6 +238,7 @@ export default function OpUserPage() {
 
       <StatStrip items={[
         { label: 'دارایی کل', value: fm(total), unit: 'میلیون تومان', note: `آزاد ${pctFa(freePct)} · رزرو ${pctFa(100 - freePct)}` },
+        { label: 'کیف پول ریالی', value: fm(rialValue), unit: 'میلیون', note: rialLocked > 0 ? `آزاد ${fm(Math.max(0, rialValue - rialLocked))} م · رزرو ${fm(rialLocked)} م` : 'همه آزاد' },
         { label: 'دارایی آزاد', value: fm(free), unit: 'میلیون', note: 'قابل فروش و برداشت' },
         { label: 'رزروشده', value: fm(locked), unit: 'میلیون', note: pf ? `${faDigits(lockRows.length)} قلم در ${faDigits(lockedHoldings)} دارایی` : 'جزئیات در دسترس نیست' },
         { label: 'تسهیلات فعال', value: fm(loanSum + cardSum + bnplSum), unit: 'میلیون', note: [loanSum && `وام ${fm(loanSum)} م`, cardSum && `کارت ${fm(cardSum)} م`, bnplSum && `اقساطی ${fm(bnplSum)} م`].filter(Boolean).join(' · ') || 'بدون تسهیلات' },
@@ -241,13 +255,21 @@ export default function OpUserPage() {
 
       {tab === 'assets' && (
         <div className="nm-grid side">
-          <Card flush title="دارایی‌ها" count={holdings.length} actions={lockRows.length > 0 && <button type="button" className="nm-more" onClick={() => setTab('locks')}>{faDigits(lockRows.length)} قلم رزرو<Icon d={ICON.chevL} size={14} /></button>}>
-            <Table columns={holdCols} rows={holdings} rowKey={(h) => h.kind} empty={<Empty title="دارایی ثبت نشده" sub="جزئیات کیف پول‌های این کاربر در دسترس نیست؛ خلاصه از رکورد کاربر پلتفرم نمایش داده می‌شود." />} />
-            <div style={{ padding: '14px 20px 18px', borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}><b style={{ fontSize: 13 }}>جمع دارایی</b><BigNum value={money(total)} unit="تومان" style={{ marginRight: 'auto' }} /></div>
-              <FreeLocked free={free} locked={locked} />
-            </div>
-          </Card>
+          <div className="nm-stack">
+            <Card flush title="دارایی‌ها" count={holdings.length} actions={lockRows.length > 0 && <button type="button" className="nm-more" onClick={() => setTab('locks')}>{faDigits(lockRows.length)} قلم رزرو<Icon d={ICON.chevL} size={14} /></button>}>
+              <Table columns={holdCols} rows={holdings} rowKey={(h) => h.kind} empty={<Empty title="دارایی ثبت نشده" sub="جزئیات کیف پول‌های این کاربر در دسترس نیست؛ خلاصه از رکورد کاربر پلتفرم نمایش داده می‌شود." />} />
+              <div style={{ padding: '14px 20px 18px', borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}><b style={{ fontSize: 13 }}>جمع دارایی</b><BigNum value={money(total)} unit="تومان" style={{ marginRight: 'auto' }} /></div>
+                <FreeLocked free={free} locked={locked} />
+              </div>
+            </Card>
+            <Card title="گردش ریالی کاربر" count={moves.length || undefined} sub="کیف پول ریالی · آخرین گردش‌ها">
+              {movesQ.isError ? <ErrorBlock error={movesQ.error} flat onRetry={() => movesQ.refetch()} />
+                : movesQ.isLoading ? <span className="mute" style={{ fontSize: 12.5 }}>در حال بارگذاری…</span>
+                : moves.length ? <List>{moves.map((m) => <RialMoveRow key={m.id} m={m} sign={walletSign(m)} />)}</List>
+                : <Empty icon={TI.wallet} title="گردش ریالی ثبت نشده است" sub="دریافت بسته، خرید و فروش از موجودی نمادنو، واریز و برداشت کیف پول اینجا می‌آیند." />}
+            </Card>
+          </div>
           <div className="nm-stack">
             <Card title="ترکیب دارایی" actions={<Pill tone="warning">رزرو {pctFa(100 - freePct)}</Pill>}>
               {groups.length ? <Allocation items={groups} /> : <Empty title="دارایی ثبت نشده" />}
@@ -307,7 +329,7 @@ export default function OpUserPage() {
               const kind: [string, Tone, string] = f.kind === 'loan' ? ['وام', 'info', ICON.percent] : card ? ['اعتبار کارت', 'primary', ICON.card] : ['خرید اقساطی', 'success', ICON.bag];
               const pct = card ? (f.amount ? f.used / f.amount : 0) : tot ? paid / tot : 0;
               const rows: [string, string][] = card
-                ? [['استفاده‌شده', money(f.used)], ['تسویه خودکار', f.nextDue ? `${jDayMonth(f.nextDue.at)} · کیف پول ریالی` : '—'], ['رزرو تسویه', reserve ? `${reserve.h.name} · ${money(reserve.l.amount)}` : '—']]
+                ? [['استفاده‌شده', money(f.used)], ['تسویه خودکار', f.nextDue ? `${jDayMonth(f.nextDue.at)} · کیف پول ریالی` : '—'], ['رزرو تسویه', reserve ? `${holdName(reserve.h)} · ${money(reserve.l.amount)}` : '—']]
                 : [['پرداخت‌شده', `${faDigits(paid)} از ${faDigits(tot)} · ${faDigits(tot - paid)} قسط مانده`], ['قسط بعدی', f.nextDue ? `${money(f.nextDue.amount)} · ${jDayMonth(f.nextDue.at)}` : `مانده ${money(f.used)}`], ['پشتوانه', f.collateral ? `${assetName(f.collateral.holdingKind)} · ${money(f.collateral.amount)}` : '—']];
               return (
                 <Card key={f.id} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Tile d={kind[2]} tone={kind[1]} />{f.title}</span>} actions={<Pill tone={s[1]} dot>{s[0]}</Pill>}>
@@ -368,7 +390,7 @@ export default function OpUserPage() {
         {lhH ? (
           <>
             <Field label="دارایی">
-              <Chips label="دارایی" value={lhH.kind} onChange={(k) => { setLhKind(k); setLhErr(''); }} options={lhOptions.map((h) => ({ key: h.kind, label: h.name }))} />
+              <Chips label="دارایی" value={lhH.kind} onChange={(k) => { setLhKind(k); setLhErr(''); }} options={lhOptions.map((h) => ({ key: h.kind, label: holdName(h) }))} />
             </Field>
             <Section>
               <div style={{ padding: '12px 14px', borderRadius: 12, background: 'var(--bg-neutral)' }}><FreeLocked free={lhH.free} locked={lhH.locked} /></div>
@@ -383,7 +405,7 @@ export default function OpUserPage() {
               </Field>
             </div>
             <Field label="دلیل"><Chips label="دلیل مسدودی" value={lhReason} onChange={setLhReason} options={LH_REASONS.map((r, i) => ({ key: i, label: r }))} /></Field>
-            <Note tone="err">مبلغ از بخش آزاد «{lhH.name}» کسر و مسدود می‌شود؛ تا رفع دستور مرجع قابل فروش یا برداشت نیست. کاربر اعلان «مسدودی قانونی» می‌بیند.</Note>
+            <Note tone="err">مبلغ از بخش آزاد «{holdName(lhH)}» کسر و مسدود می‌شود؛ تا رفع دستور مرجع قابل فروش یا برداشت نیست. کاربر اعلان «مسدودی قانونی» می‌بیند.</Note>
             {lhErr && <span role="alert" style={{ fontSize: 12, color: 'var(--error-text)', fontWeight: 600 }}>{lhErr}</span>}
           </>
         ) : <span className="mute">این کاربر دارایی آزادی برای مسدودسازی ندارد.</span>}

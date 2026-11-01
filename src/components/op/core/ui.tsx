@@ -118,3 +118,19 @@ export function parseJalali(text: string): string | null {
   }
   return null;
 }
+
+/**
+ * Identity verification = the app's three automated levels (no documents, no manual review, no KYC queue):
+ * ۱ شاهکار (mobile ↔ national id) · ۲ ثبت احوال (national id + birth date) · ۳ سجام. Read-only on the operator screens.
+ */
+export const ID_LEVEL_NAME = ['—', 'شاهکار', 'ثبت احوال', 'سجام'] as const;
+export const idLevel = (level: number) => {
+  const l = Math.max(0, Math.min(3, Math.round(level || 0)));
+  return {
+    level: l,
+    label: l ? `احراز هویت سطح ${faDigits(l)} از ۳` : 'احراز هویت انجام نشده',
+    short: l ? `سطح ${faDigits(l)}` : '—',
+    sub: ID_LEVEL_NAME[l],
+    tone: (l === 3 ? 'success' : 'neutral') as 'success' | 'neutral',
+  };
+};

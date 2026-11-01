@@ -77,8 +77,6 @@ export default function OrgEmployeePage() {
   const freeTotal = Math.max(0, total - lockedTotal);
   const locks = holdings.flatMap((h) => h.locks.map((l) => ({ l, h })));
   const lockHoldingsN = holdings.filter((h) => h.locked > 0).length;
-  const kyc = x?.facts.kycLevel ?? 0;
-  const kycPill: [string, Tone] = kyc === 3 ? ['KYC تأیید‌شده', 'success'] : kyc ? [`KYC سطح ${faDigits(kyc)}`, 'info'] : ['KYC انجام نشده', 'neutral'];
   const score = x?.facts.score ?? 0;
 
   // milestone contract
@@ -228,7 +226,7 @@ export default function OrgEmployeePage() {
         lead={<Ava letter={emp.avatarLetter} id={emp.id} size="xl" />}
         title={emp.fullName}
         sub={<>واحد {emp.department}{emp.jobTitle ? ` · ${emp.jobTitle}` : ''} · کد پرسنلی <span className="num">{faDigits(emp.employeeCode)}</span> · عضو از {jMonthYear(emp.joinedAt)}</>}
-        pills={<><Pill tone={EMP_TONE[emp.status]} dot>{EMP_STATUS[emp.status].label}</Pill><Pill tone={kycPill[1]}>{kycPill[0]}</Pill>{score > 0 && <Pill tone="primary">امتیاز اعتباری {faDigits(score)}</Pill>}</>}
+        pills={<><Pill tone={EMP_TONE[emp.status]} dot>{EMP_STATUS[emp.status].label}</Pill>{score > 0 && <Pill tone="primary">امتیاز اعتباری {faDigits(score)}</Pill>}</>}
       >
         {!inactive
           ? <button type="button" className="nm-btn line danger" disabled={update.isPending} onClick={() => setConfirmSuspend(true)}><Icon d={I.ban} size={16} />تعلیق</button>

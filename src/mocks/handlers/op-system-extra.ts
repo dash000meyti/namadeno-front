@@ -64,7 +64,7 @@ function sectionOf(id: string) {
   if (id.startsWith('r-pkg')) return 'بسته‌ها';
   if (id.startsWith('r-limit-withdraw') || id.startsWith('r-withdraw')) return 'برداشت';
   if (id.startsWith('r-credit')) return 'تسهیلات';
-  if (id.startsWith('r-kyc')) return 'KYC';
+  if (id.startsWith('r-kyc')) return 'احراز هویت';
   if (id.startsWith('r-lock')) return 'رزرو دارایی';
   if (id.startsWith('r-risk')) return 'ریسک';
   return 'محدودیت‌ها';

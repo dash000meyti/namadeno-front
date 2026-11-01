@@ -3,6 +3,8 @@
  * /op/requests — operator review queue for all organizations. Kit list page:
  * stats → list card (kind tabs, status / sort selects, search, table with quick approve / reject) → inspector
  * (requester, amount · SLA · risk, details, risk factors, manual review checklist, approve / reject with reason / refer to risk).
+ * Withdrawals are not reviewed here (they go through within the fixed daily / monthly caps of /op/rules), and identity is
+ * verified automatically in the app (شاهکار، ثبت احوال، سجام): there are no withdrawal or KYC requests.
  */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,27 +26,25 @@ import { now } from '@/lib/clock';
 import { routes } from '@/lib/routes';
 
 const KIND: Record<RequestKind, string> = {
-  loan: 'وام', installment: 'خرید اقساطی', cash_withdrawal: 'برداشت', profile_change: 'KYC', credit_increase: 'افزایش اعتبار', milestone_release: 'دریافت مرحله',
+  // cash_withdrawal / profile_change are no longer produced (labels kept for old records)
+  loan: 'وام', installment: 'خرید اقساطی', cash_withdrawal: 'برداشت', profile_change: 'تغییر اطلاعات', credit_increase: 'افزایش اعتبار', milestone_release: 'دریافت مرحله',
 };
-type TabKey = 'all' | 'loan' | 'bnpl' | 'wd' | 'kyc' | 'other';
+type TabKey = 'all' | 'loan' | 'bnpl' | 'other';
 const TABS: { key: TabKey; label: string; kinds: RequestKind[] | null }[] = [
   { key: 'all', label: 'همه', kinds: null },
   { key: 'loan', label: 'وام', kinds: ['loan'] },
   { key: 'bnpl', label: 'خرید اقساطی', kinds: ['installment'] },
-  { key: 'wd', label: 'برداشت', kinds: ['cash_withdrawal'] },
-  { key: 'kyc', label: 'KYC', kinds: ['profile_change'] },
   { key: 'other', label: 'سایر', kinds: ['credit_increase'] },
 ];
 const CHECKS: Record<RequestKind, string[]> = {
-  loan: ['هویت با KYC تطابق دارد', 'بخش آزاد برای رزرو پشتوانه کافی است', 'سقف قرارداد سازمان رعایت شده', 'وام فعال همزمان ندارد', 'قسط کمتر از ۴۰٪ ورودی ماهانه'],
+  loan: ['احراز هویت سطح ۲ در اپ کامل است', 'بخش آزاد برای رزرو پشتوانه کافی است', 'سقف قرارداد سازمان رعایت شده', 'وام فعال همزمان ندارد', 'قسط کمتر از ۴۰٪ ورودی ماهانه'],
   installment: ['فروشگاه طرف قرارداد و فعال است', 'فاکتور کالا با مبلغ تطابق دارد', 'بخش آزاد برای رزرو اقساطی کافی است', 'سقف خرید اقساطی سازمان رعایت شده'],
-  cash_withdrawal: ['شبای مقصد به نام کاربر است', 'مبلغ فقط از بخش آزاد است (نه رزروشده یا مسدود)', 'الگوی برداشت غیرعادی نیست', 'دستگاه و IP شناخته‌شده است'],
-  profile_change: ['تصویر کارت ملی خوانا است', 'تطابق چهره بالای ۸۵٪', 'استعلام شاهکار موفق', 'کد پرسنلی در لیست سازمان است'],
-  credit_increase: ['هویت با KYC تطابق دارد', 'بخش آزاد برای رزرو اعتبار کافی است', 'سقف قرارداد سازمان رعایت شده', 'سابقه بازپرداخت کارت سالم است'],
+  cash_withdrawal: [],
+  profile_change: [],
+  credit_increase: ['احراز هویت سطح ۲ در اپ کامل است', 'بخش آزاد برای رزرو اعتبار کافی است', 'سقف قرارداد سازمان رعایت شده', 'سابقه بازپرداخت کارت سالم است'],
   milestone_release: ['تحویل مرحله توسط سازمان تأیید شده', 'مستندات تحویل پیوست شده', 'مبلغ با سهم مرحله در قرارداد تطابق دارد'],
 };
 const REASONS: [string, string][] = [
-  ['مدارک ناقص', 'مدارک ارسالی شما کامل نیست. لطفاً از بخش حساب من مدارک را دوباره بارگذاری کنید.'],
   ['ریسک بالا', 'درخواست شما در بررسی امنیتی تأیید نشد. برای پیگیری با پشتیبانی تماس بگیرید.'],
   ['خارج از سقف قرارداد', 'مبلغ درخواست از سقف تعیین‌شده در قرارداد سازمان شما بیشتر است.'],
   ['سایر', ''],

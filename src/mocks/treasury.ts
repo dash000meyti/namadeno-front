@@ -8,23 +8,37 @@
  *   allocated  = baseline (unmodelled population) + Σ holdings of modelled people (app users + operator-seeded users)
  *   reserved   = baseline + Σ reservations of modelled people
  *   committed  = baseline + pending recipients of sent packages × split
- *   available  = held − allocated − committed − pending redeem   (negative = shortfall)
- * Cash: balance = opening + Σ done entries; available = balance − tied in buy orders − user wallets − committed rial.
+ *   available  = held − allocated − committed − pending redeem   (never negative)
+ * Nothing goes negative anywhere: what the fund stock or Namadno's free rial cannot cover waits in the queue («صف تأمین»):
+ *   packages «در انتظار تأمین موجودی» (`awaiting_stock`), users' purchases and accepted fund parts waiting for stock, users'
+ *   sales waiting for free rial. The queue is served oldest first as soon as it is covered (fillQueues, run on every request);
+ *   new demand is served only from what is left after the queue. queued − available = «نیاز به خرید» (state need_buy).
+ * Rial (everything users and organizations do is in rial; funds are back-office policy):
+ *   bank       = opening + Σ done cash entries
+ *   org rial   balance = approved deposits − paid to recipients + reclaimed shares; blocked = pending recipients of its
+ *              sent packages (whole amounts, plus the unmodelled baseline) — always ≤ balance: a package is sent only when paid;
+ *              setAside = the part of «آزاد» kept for its packages waiting for receipt approval; free = (balance − blocked − setAside)⁺
+ *   «ریال رزرو» held = Σ blocked          «ریال» held = bank − «ریال رزرو» held
+ *   Namadno free rial (cash available) = «ریال» held − user wallets − organizations' free and set-aside − tied in buy orders
+ *   Organizations deposit by receipt («فیش واریز»): pending until the operator approves (→ balance) or rejects; never overdue.
+ *   A package «آزاد» does not cover waits in a queue (`awaiting_payment`): nothing is delivered or blocked, only the part
+ *   «آزاد» covered is set aside; when its receipt is approved it is delivered. Nothing is ever unfunded.
  *
  * Imports only db.ts and lib. Core handlers call the small flow hooks at the bottom (onPackageSent …).
  */
-import type { AllocationSplit, Fund, Holding, InboxPackage, LockType, MilestoneStep, OrgPackage } from '@/types/domain';
+import type { AllocationSplit, Fund, Holding, InboxPackage, Lock, LockPolicy, LockType, MilestoneStep, OrgPackage, Organization } from '@/types/domain';
 import type {
   ActionItem, ActivityEvent, ActivityFilter, ActivityPage, ActorKind, CashEntry, CashSummary, ForecastBucket, ForecastEvent,
-  FundForecast, Horizon, OrderQuote, OrderSide, OrgTreasuryDetail, OrgTreasuryRow, Recommendation, Severity, StockMovement,
+  FundForecast, Horizon, OrderQuote, OrderSide, OrgRialAccount, OrgTreasuryDetail, OrgTreasuryRow, QueueItem, ReceiptFile, Recommendation,
+  RialMove, RialTreasury, Severity, StockMovement,
   StockState, StockSuggestion, TargetProgress, TargetsPatch, TreasuryAssumptions, TreasuryOrder, TreasuryPlan, TreasuryPosition,
   TreasuryPositionDetail, TreasurySummary, TreasuryTargets, TreasuryTotals,
 } from '@/api/op-treasury-extra';
 import type { OrgContractExt } from '@/api/op-core-extra';
 import type { FundMeta } from '@/api/op-system-extra';
-import { db, newId, type MockDB, type UserData } from './db';
+import { db, newId, recalcHoldings, type MockDB, type UserData } from './db';
 import { daysFromNow, jalaliToIso, now } from '@/lib/clock';
-import { faDigits, money, units } from '@/lib/format';
+import { faDigits, jDate, jDateTime, money, units } from '@/lib/format';
 import { FEATURES } from '@/lib/features';
 import { isOrgRequest } from '@/lib/org';
 import { routes } from '@/lib/routes';
@@ -38,6 +52,36 @@ export const SYSTEM_ACTOR = 'سامانه';
 const DAY = 86_400_000;
 
 export type StoredOrder = Omit<TreasuryOrder, 'dueNow'>;
+
+/**
+ * A user's purchase / accepted fund part waiting for stock, or a sale waiting for Namadno's free rial. The money of a
+ * waiting purchase has already left the wallet (still the user's: counted in userWallets); a waiting sale's units are
+ * already back in the stock and its rial is paid when free rial covers it. No `userId` = aggregated unmodelled users.
+ */
+export interface StockWait {
+  id: string;
+  kind: 'buy' | 'accept' | 'sell';
+  fundId: string;
+  /** buy / accept: value of the units to deliver · sell: rial to pay. */
+  value: number;
+  /** buy: the fee already taken (part of the money in transit). */
+  fee?: number;
+  /** sell: units given back. */
+  units?: number;
+  userId?: string;
+  userName: string;
+  orgId?: string;
+  count?: number;
+  title: string;
+  at: string;
+  eta: string;
+  status: 'waiting' | 'filled';
+  filledAt?: string;
+  txId?: string;
+  packageId?: string;
+  /** accept: the reservation of the package to put on the units when they arrive. */
+  lock?: { title: string; sourceId: string; policy: LockPolicy };
+}
 export interface BaseOrg {
   value: number;
   fundValue: number;
@@ -55,6 +99,8 @@ export interface TreasuryStore {
     /** Toman per fund id, plus 'rial'. */
     commitToman: Record<string, number>;
     userRial: number;
+    /** Reserved part of `userRial` (e.g. card collateral of unmodelled users). */
+    userRialReserved?: number;
     orgs: Record<string, BaseOrg>;
     activeUsers: number;
     users: number;
@@ -64,8 +110,15 @@ export interface TreasuryStore {
   held: Record<string, { units: number; cost: number }>;
   orders: StoredOrder[];
   cash: { opening: number; entries: CashEntry[] };
+  /**
+   * Organizations' rial accounts: `balance` moves with deposits, payouts to recipients and reclaims;
+   * `blockedBase` = blocked money of packages the mock does not model one by one (other organizations).
+   */
+  orgRial?: Record<string, { balance: number; blockedBase: number }>;
   movements: StockMovement[];
   activity: ActivityEvent[];
+  /** Users' purchases / accepted fund parts waiting for stock and sales waiting for free rial (see StockWait). */
+  waits?: StockWait[];
   targets: TreasuryTargets;
   assumptions: TreasuryAssumptions;
   /** 90 daily points, oldest first; the last point is replaced by the live value when served. */
@@ -74,6 +127,8 @@ export interface TreasuryStore {
     held: Record<string, number[]>;
     balance: number[];
     cashAvailable: number[];
+    /** «ریال رزرو» held per day. */
+    reserve?: number[];
     flow: { allocated: number[]; returned: number[]; bought: number[]; redeemed: number[] };
   };
   /** Managed assets per month this year; the last one is served live. */
@@ -141,12 +196,14 @@ export interface Agg {
   units: Record<string, number>;
   reserved: Record<string, Record<LockType, number>>;
   rial: number;
+  /** Reserved part of the modelled rial wallets. */
+  rialLocked: number;
   org: Record<string, OrgAgg>;
 }
 const emptyOrgAgg = (): OrgAgg => ({ value: 0, fundValue: 0, reserved: 0, reservedByType: zeroLocks(), people: 0 });
 
 export function modelledAgg(d: MockDB): Agg {
-  const agg: Agg = { units: {}, reserved: {}, rial: 0, org: {} };
+  const agg: Agg = { units: {}, reserved: {}, rial: 0, rialLocked: 0, org: {} };
   for (const m of members(d)) {
     const o = m.orgId ? (agg.org[m.orgId] ??= emptyOrgAgg()) : undefined;
     if (o) o.people += 1;
@@ -154,6 +211,7 @@ export function modelledAgg(d: MockDB): Agg {
       const lockSum = sum(h.locks.map((l) => l.amount));
       if (h.kind === 'rial') {
         agg.rial += h.value;
+        agg.rialLocked += Math.min(h.value, lockSum);
         if (o) { o.value += h.value; o.reserved += lockSum; for (const l of h.locks) o.reservedByType[l.type] += l.amount; }
         continue;
       }
@@ -211,6 +269,276 @@ export function commitments(d: MockDB, A: TreasuryAssumptions): Commit {
   return c;
 }
 
+
+// ───────────────────────── Queue («صف تأمین»): nothing goes negative ─────────────────────────
+
+const waitsOf = (t: TreasuryStore) => (t.waits ??= []);
+
+/** Fund parts (Toman) of a package by its split — what it takes from the stock (gold / fixed). */
+export function packageParts(pkg: Pick<OrgPackage, 'total' | 'allocationMode' | 'fixedSplit' | 'cashAllowed'>, A: TreasuryAssumptions): Record<string, number> {
+  const sp = splitOf(pkg, A);
+  const out: Record<string, number> = {};
+  if (sp.gold > 0) out.gold = (pkg.total * sp.gold) / 100;
+  if (sp.fixed > 0) out.fixed = (pkg.total * sp.fixed) / 100;
+  return out;
+}
+
+/** The latest promise for an item waiting on a fund: its settlement + one working day (72h for T+2). */
+export function etaFor(f?: Fund): string {
+  const days = (f ? settlementDays(f) : 2) + 1;
+  return new Date(now().getTime() + days * DAY).toISOString();
+}
+
+interface Waiting { id: string; at: string; eta: string; parts: Record<string, number>; rial: number; pkg?: { orgId: string; p: OrgPackage }; wait?: StockWait }
+
+/** Everything waiting for stock or free rial, oldest first. */
+function waiting(d: MockDB, t: TreasuryStore): Waiting[] {
+  const out: Waiting[] = [];
+  for (const [orgId, list] of Object.entries(d.orgPackages)) {
+    for (const p of list) {
+      if (p.status !== 'awaiting_stock') continue;
+      out.push({ id: p.id, at: p.stockQueuedAt ?? p.submittedAt ?? p.createdAt, eta: p.stockEta ?? etaFor(), parts: packageParts(p, t.assumptions), rial: 0, pkg: { orgId, p } });
+    }
+  }
+  for (const w of waitsOf(t)) {
+    if (w.status !== 'waiting') continue;
+    out.push(w.kind === 'sell'
+      ? { id: w.id, at: w.at, eta: w.eta, parts: {}, rial: w.value, wait: w }
+      : { id: w.id, at: w.at, eta: w.eta, parts: { [w.fundId]: w.value }, rial: 0, wait: w });
+  }
+  return out.sort((a, b) => a.at.localeCompare(b.at));
+}
+
+export interface Queued { fund: Record<string, { value: number; count: number; needBy?: string }>; rial: { value: number; count: number; needBy?: string } }
+const earlier = (a?: string, b?: string) => (!a ? b : !b ? a : a < b ? a : b);
+function queuedOf(d: MockDB, t: TreasuryStore): Queued {
+  const q: Queued = { fund: {}, rial: { value: 0, count: 0 } };
+  for (const w of waiting(d, t)) {
+    for (const [f, v] of Object.entries(w.parts)) {
+      const x = (q.fund[f] ??= { value: 0, count: 0 });
+      x.value += v; x.count += w.wait?.count ?? 1; x.needBy = earlier(x.needBy, w.eta);
+    }
+    if (w.rial) { q.rial.value += w.rial; q.rial.count += w.wait?.count ?? 1; q.rial.needBy = earlier(q.rial.needBy, w.eta); }
+  }
+  return q;
+}
+
+/** The queue as list rows (one row per fund part of a package), oldest first; optionally one fund or 'rial'. */
+export function queueItems(d: MockDB, fundId?: string): QueueItem[] {
+  const t = T(d);
+  const out: QueueItem[] = [];
+  for (const w of waiting(d, t)) {
+    if (w.pkg) {
+      const { orgId, p } = w.pkg;
+      for (const [f, v] of Object.entries(w.parts)) {
+        out.push({ id: `${p.id}:${f}`, kind: 'package', fundId: f, value: r0(v), title: `«${p.title}» · ${faDigits(p.recipients.length)} همکار`, orgId, orgName: orgName(d, orgId), packageId: p.id, at: w.at, eta: w.eta });
+      }
+      continue;
+    }
+    const x = w.wait!;
+    out.push({ id: x.id, kind: x.kind, fundId: x.kind === 'sell' ? 'rial' : x.fundId, value: r0(x.value), title: x.title, orgId: x.orgId, orgName: orgName(d, x.orgId), userId: x.userId, userName: x.userName, packageId: x.packageId, count: x.count, at: x.at, eta: x.eta });
+  }
+  return fundId ? out.filter((i) => i.fundId === fundId) : out;
+}
+
+/** Free stock a new demand may use now: what is left after the queue (Toman, ≥ 0). */
+export function stockRoom(s: Snapshot, fundId: string) {
+  const p = s.positions.find((x) => x.fundId === fundId);
+  return p ? Math.max(0, p.availableValue - p.queuedValue) : 0;
+}
+/** Namadno's free rial a new payout may use now: what is left after the sales waiting for it. */
+export const rialRoom = (s: Snapshot) => Math.max(0, s.cash.available - s.queued.rial.value);
+
+/** Whether the stock (after the queue) covers a package's fund parts now; otherwise what is missing and the promise. */
+export function stockCheck(d: MockDB, pkg: Pick<OrgPackage, 'total' | 'allocationMode' | 'fixedSplit' | 'cashAllowed'>): { ok: boolean; eta: string; missing: Record<string, number> } {
+  const t = treasuryOf(d);
+  if (!t) return { ok: true, eta: nowIso(), missing: {} };
+  const s = snapshot(d);
+  const missing: Record<string, number> = {};
+  let eta = nowIso();
+  for (const [f, v] of Object.entries(packageParts(pkg, t.assumptions))) {
+    const room = stockRoom(s, f);
+    if (v <= room + 1) continue;
+    missing[f] = r0(v - room);
+    const e = etaFor(d.funds.find((x) => x.id === f));
+    if (e > eta) eta = e;
+  }
+  return { ok: !Object.keys(missing).length, eta, missing };
+}
+
+let deliverQueued: ((orgId: string, pkgId: string) => boolean) | null = null;
+/** org.ts registers how a package leaves the stock queue (sent, inbox items, budget, activity). */
+export function registerPackageDelivery(fn: (orgId: string, pkgId: string) => boolean) { deliverQueued = fn; }
+
+let filling = false;
+/**
+ * Serves the queue oldest first while the stock / free rial covers it (strict order per fund: an item that does not fit
+ * keeps its place and what arrives goes to it first). Run on every request; returns whether anything was fulfilled.
+ */
+export function fillQueues(d: MockDB = db()): boolean {
+  const t = treasuryOf(d);
+  if (!t || filling) return false;
+  const items = waiting(d, t);
+  if (!items.length) return false;
+  filling = true;
+  try {
+    const s = snapshot(d);
+    const room: Record<string, number> = Object.fromEntries(s.positions.map((p) => [p.fundId, p.availableValue]));
+    let rial = s.cash.available;
+    let changed = false;
+    for (const it of items) {
+      const fits = Object.entries(it.parts).every(([f, v]) => v <= (room[f] ?? 0) + 1) && it.rial <= rial + 1;
+      for (const [f, v] of Object.entries(it.parts)) room[f] = (room[f] ?? 0) - v;
+      rial -= it.rial;
+      if (!fits) continue;
+      if (it.pkg) { if (deliverQueued?.(it.pkg.orgId, it.pkg.p.id)) changed = true; continue; }
+      if (it.wait) { fulfilWait(d, t, it.wait); changed = true; }
+    }
+    return changed;
+  } finally {
+    filling = false;
+  }
+}
+
+function holdingFor(d: MockDB, ud: UserData, fundId: string): Holding {
+  let h = ud.holdings.find((x) => x.kind === fundId);
+  if (!h) {
+    const f = d.funds.find((x) => x.id === fundId);
+    h = { kind: fundId as Holding['kind'], fundId, name: f?.name ?? fundId, units: 0, value: 0, free: 0, locked: 0, change: 0, changePct: 0, locks: [] };
+    ud.holdings.push(h);
+  }
+  return h;
+}
+function notifyUser(ud: UserData, title: string, body: string, href?: string) {
+  ud.notifications.unshift({ id: newId('nt'), at: nowIso(), read: false, title: faDigits(title), body: faDigits(body), tone: 'success', icon: 'check', href });
+}
+/** The reservation of an accepted package, put on units that arrived later (same as on acceptance). */
+function lockOf(fundId: string, value: number, l: NonNullable<StockWait['lock']>): Lock | null {
+  const base = { id: newId('lk'), holdingKind: fundId as Lock['holdingKind'], amount: value, title: l.title, createdAt: nowIso(), sourceId: l.sourceId };
+  if (l.policy.type === 'vesting') return { ...base, type: 'vesting', condition: 'آزاد در ' + jDate(l.policy.releaseAt), releaseAt: l.policy.releaseAt };
+  if (l.policy.type === 'milestone') {
+    return {
+      ...base, type: 'milestone', condition: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود', contractTotal: value,
+      steps: l.policy.steps.map((x, i) => ({ id: `ms-${i + 1}`, title: x.title, sharePct: x.sharePct, dueDate: x.dueDate, requiresApproval: x.requiresApproval !== false, status: i === 0 ? 'pending_approval' : 'future' })),
+    };
+  }
+  return null;
+}
+
+/** A waiting purchase gets its units (or a waiting sale its rial): the user is notified, the transaction completes. */
+function fulfilWait(d: MockDB, t: TreasuryStore, w: StockWait) {
+  const at = nowIso();
+  w.status = 'filled';
+  w.filledAt = at;
+  const f = d.funds.find((x) => x.id === w.fundId);
+  const ud = w.userId ? d.users[w.userId] : undefined;
+  const tx = ud && w.txId ? ud.transactions.find((x) => x.id === w.txId) : undefined;
+  const done = (label: string) => {
+    if (!tx) return;
+    tx.status = 'success';
+    // an accepted package: only this fund's «در انتظار تأمین …» line becomes «تحویل …»; a trade: its waiting lines go
+    const waitLabel = `در انتظار تأمین ${f?.shortName ?? w.fundId}`;
+    const keep = (x: { label: string }) => (w.kind === 'accept' ? x.label !== waitLabel : x.label !== 'تأمین تا' && x.label !== 'وضعیت' && x.label !== 'واریز تا');
+    tx.details = [...(tx.details ?? []).filter(keep), { label: w.kind === 'accept' ? `تحویل ${f?.shortName ?? ''}`.trim() : label, value: faDigits(jDateTime(at)) }];
+  };
+  if (w.kind === 'sell') {
+    if (ud) { const h = holdingFor(d, ud, 'rial'); h.value += w.value; recalcHoldings(ud); }
+    else t.base.userRial += w.value;
+    done('واریز');
+    if (ud) notifyUser(ud, `واریز فروش ${f?.shortName ?? ''}`.trim(), `${money(w.value)} تومان به کیف پول ریالی شما واریز شد.`, w.txId ? routes.app.transaction(w.txId) : routes.app.history());
+    logActivity({
+      actor: { kind: 'system', name: SYSTEM_ACTOR }, orgId: w.orgId, orgName: orgName(d, w.orgId), category: 'trade', kind: 'queue_sale_paid',
+      title: `پرداخت فروش در صف · ${w.userName}`, sub: `${f?.shortName ?? ''} · از ریال آزاد نمادنو`, amount: w.value, fundId: w.fundId, tone: 'success',
+      href: w.userId ? routes.op.user(w.userId) : routes.op.cash, refs: w.userId ? [{ type: 'user', id: w.userId }] : undefined,
+    });
+    return;
+  }
+  const u = toUnits(w.value, f?.nav ?? 0);
+  if (ud) {
+    const h = holdingFor(d, ud, w.fundId);
+    h.units = (h.units ?? 0) + u;
+    const l = w.lock ? lockOf(w.fundId, w.value, w.lock) : null;
+    if (l) h.locks.push(l);
+    recalcHoldings(ud);
+  } else {
+    t.base.allocatedUnits[w.fundId] = (t.base.allocatedUnits[w.fundId] ?? 0) + u;
+  }
+  pushMovement(t, {
+    fundId: w.fundId, kind: w.kind === 'accept' ? 'allocate' : 'user_buy', units: -u, value: w.value,
+    title: `تحویل از صف · ${w.title}`, orgId: w.orgId, userId: w.userId, userName: w.userName, packageId: w.packageId,
+  });
+  done('تحویل');
+  if (ud) notifyUser(ud, `${f?.name ?? 'صندوق'} تحویل شد`, `${money(w.value)} تومان ${f?.name ?? ''} به دارایی شما اضافه شد.`, routes.app.asset(w.fundId));
+  logActivity({
+    actor: { kind: 'system', name: SYSTEM_ACTOR }, orgId: w.orgId, orgName: orgName(d, w.orgId), category: 'trade', kind: 'queue_filled',
+    title: `تحویل از صف تأمین · ${f?.shortName ?? w.fundId}`, sub: `${w.userName}${w.count ? ` · ${faDigits(w.count)} سفارش` : ''} · ${w.title}`,
+    amount: w.value, fundId: w.fundId, units: ru(u), tone: 'success', href: routes.op.fund(w.fundId),
+    refs: w.userId ? [{ type: 'user', id: w.userId }] : undefined,
+  });
+}
+
+/** app.ts — a purchase the stock does not cover (after the queue): the money is already taken, the units come later. */
+export function queueBuy(ud: UserData, f: Fund, value: number, fee: number, txId: string): StockWait {
+  const t = T(db());
+  const w: StockWait = {
+    id: newId('qw'), kind: 'buy', fundId: f.id, value, fee, userId: ud.profile.id, userName: ud.profile.fullName, orgId: ud.profile.orgId || undefined,
+    title: `خرید ${f.name}`, at: nowIso(), eta: etaFor(f), status: 'waiting', txId,
+  };
+  waitsOf(t).push(w);
+  logActivity({
+    actor: { kind: 'user', id: ud.profile.id, name: ud.profile.fullName }, orgId: w.orgId, orgName: ud.profile.orgName || undefined, category: 'trade', kind: 'queue_buy',
+    title: `خرید ${f.name} · در صف تأمین`, sub: `موجودی آزاد کافی نبود · تحویل تا ${faDigits(jDateTime(w.eta))}`, amount: value, fundId: f.id, tone: 'warning',
+    href: routes.op.fund(f.id), refs: [{ type: 'user', id: ud.profile.id }],
+  });
+  return w;
+}
+
+/** app.ts — the fund part of an accepted package the stock does not cover yet (its reservation goes on when it arrives). */
+export function queueAccept(ud: UserData, pkg: InboxPackage, fundId: string, value: number): StockWait {
+  const d = db();
+  const t = T(d);
+  const f = d.funds.find((x) => x.id === fundId);
+  const lock = pkg.lockPolicy.type === 'vesting' || pkg.lockPolicy.type === 'milestone' ? { title: pkg.title, sourceId: pkg.packageId, policy: pkg.lockPolicy } : undefined;
+  const w: StockWait = {
+    id: newId('qw'), kind: 'accept', fundId, value, userId: ud.profile.id, userName: ud.profile.fullName, orgId: pkg.orgId,
+    title: `سهم ${f?.shortName ?? fundId} «${pkg.title}»`, at: nowIso(), eta: etaFor(f), status: 'waiting', packageId: pkg.packageId, lock,
+  };
+  waitsOf(t).push(w);
+  return w;
+}
+
+/** app.ts — a sale Namadno's free rial does not cover (after the queue): the units are back in the stock, the rial comes later. */
+export function queueSell(ud: UserData, f: Fund, proceeds: number, unitsBack: number, txId: string): StockWait {
+  const t = T(db());
+  const w: StockWait = {
+    id: newId('qw'), kind: 'sell', fundId: f.id, value: proceeds, units: unitsBack, userId: ud.profile.id, userName: ud.profile.fullName, orgId: ud.profile.orgId || undefined,
+    title: `فروش ${f.name}`, at: nowIso(), eta: etaFor(f), status: 'waiting', txId,
+  };
+  waitsOf(t).push(w);
+  logActivity({
+    actor: { kind: 'user', id: ud.profile.id, name: ud.profile.fullName }, orgId: w.orgId, orgName: ud.profile.orgName || undefined, category: 'trade', kind: 'queue_sell',
+    title: `فروش ${f.name} · در صف واریز`, sub: `ریال آزاد نمادنو کافی نبود · واریز تا ${faDigits(jDateTime(w.eta))}`, amount: proceeds, fundId: f.id, tone: 'warning',
+    href: routes.op.cash, refs: [{ type: 'user', id: ud.profile.id }],
+  });
+  return w;
+}
+
+/** app.ts — room for one recipient's fund part on acceptance: free stock after the queue + this recipient's own commitment. */
+export function acceptRoom(ud: UserData, pkg: InboxPackage, fundId: string): number {
+  const d = db();
+  const t = treasuryOf(d);
+  if (!t) return Infinity;
+  const s = snapshot(d);
+  const op = pkg.orgId ? (d.orgPackages[pkg.orgId] ?? []).find((x) => x.id === pkg.packageId) : undefined;
+  let own = 0;
+  if (op && op.status === 'sent') {
+    const r = op.recipients.find((x) => x.employeeId === ud.profile.id && x.status === 'pending');
+    const sp = splitOf(op, t.assumptions) as Record<string, number>;
+    if (r) own = (r.amount * (1 - reclaimedPct(op) / 100) * (sp[fundId] ?? 0)) / 100;
+  }
+  return stockRoom(s, fundId) + own;
+}
+
 // ───────────────────────── Positions ─────────────────────────
 
 /** Expected new packages per day for a fund (Toman) from the monthly assumption. */
@@ -228,21 +556,25 @@ const sellFeePct = (f: Fund) => (f as Fund & { meta?: FundMeta }).meta?.sellFeeP
 const minTargetOf = (net: number, target?: { minFreeValue: number; targetDays: number }) =>
   target ? Math.max(target.minFreeValue, Math.max(0, net) * target.targetDays) : 0;
 
-function stateOf(active: boolean, availableValue: number, minTarget: number, max?: number): StockState {
+/** `freeValue` = free stock after the queue; below zero = items wait for this fund → «نیاز به خرید». */
+function stateOf(active: boolean, freeValue: number, minTarget: number, max?: number): StockState {
   if (!active) return 'inactive';
-  if (availableValue < -1) return 'shortfall';
+  if (freeValue < -1) return 'need_buy';
+  const availableValue = freeValue;
   if (minTarget > 0 && availableValue < minTarget) return 'below';
   if (max && availableValue > max) return 'surplus';
   return 'ok';
 }
 
-function suggestionOf(state: StockState, freeValue: number, minTarget: number, max: number | undefined, coverage: number | null, targetDays: number | undefined, horizon?: number): StockSuggestion | undefined {
-  if (state === 'shortfall' || state === 'below') {
+function suggestionOf(state: StockState, freeValue: number, minTarget: number, max: number | undefined, coverage: number | null, targetDays: number | undefined, horizon?: number, queue?: { count: number; needBy?: string }): StockSuggestion | undefined {
+  if (state === 'need_buy' || state === 'shortfall' || state === 'below') {
     const amount = roundUp(Math.max(minTarget, 0) - freeValue);
     if (amount < MIN_ORDER) return undefined;
     const when = horizon ? `تا ${faDigits(horizon)} روز آینده` : 'اکنون';
-    const reason = state === 'shortfall'
-      ? `تخصیص‌ها و تعهدات ${when} از موجودی بیشتر است؛ این مبلغ موجودی را به حداقل هدف برمی‌گرداند.`
+    const reason = state === 'need_buy' || state === 'shortfall'
+      ? (horizon
+        ? `${when} تقاضا از موجودی آزاد بیشتر می‌شود؛ این مبلغ را از پیش بخرید تا چیزی در صف تأمین نماند و موجودی به حداقل هدف برسد.`
+        : `${faDigits(queue?.count ?? 0)} مورد در صف تأمین این صندوق است${queue?.needBy ? ` (تحویل تا ${faDigits(jDateTime(queue.needBy))})` : ''}؛ این مبلغ صف را تأمین می‌کند و موجودی را به حداقل هدف برمی‌گرداند.`)
       : coverage !== null && targetDays
         ? `موجودی آزاد ${when} حدود ${faDigits(Math.floor(coverage))} روز نیاز را پوشش می‌دهد؛ هدف ${faDigits(targetDays)} روز است.`
         : `موجودی آزاد ${when} از حداقل هدف (${bn(minTarget)} تومان) کمتر است.`;
@@ -256,7 +588,7 @@ function suggestionOf(state: StockState, freeValue: number, minTarget: number, m
   return undefined;
 }
 
-function position(d: MockDB, t: TreasuryStore, f: Fund, agg: Agg, com: Commit): TreasuryPosition {
+function position(d: MockDB, t: TreasuryStore, f: Fund, agg: Agg, com: Commit, q: Queued): TreasuryPosition {
   const A = t.assumptions;
   const nav = f.nav > 0 ? f.nav : 0;
   const v = (u: number) => r0(u * nav);
@@ -275,17 +607,22 @@ function position(d: MockDB, t: TreasuryStore, f: Fund, agg: Agg, com: Commit): 
   const net = active ? netDemand(f.id, A) : 0;
   const availableValue = v(available);
   const pendingBuyValue = v(pendingBuy);
-  const coverageDays = active && net > 0 ? r1(Math.max(0, (availableValue + pendingBuyValue) / net)) : null;
+  // the queue waits for this fund: new demand only gets what is left after it
+  const qf = q.fund[f.id];
+  const queuedValue = r0(qf?.value ?? 0);
+  const afterQueue = availableValue - queuedValue;
+  const coverageDays = active && net > 0 ? r1(Math.max(0, (afterQueue + pendingBuyValue) / net)) : null;
   const target = t.targets.stock.find((s) => s.fundId === f.id);
   const minTarget = minTargetOf(net, target);
-  const state = stateOf(active, availableValue, minTarget, target?.maxFreeValue);
-  const suggestion = suggestionOf(state, availableValue + pendingBuyValue, minTarget, target?.maxFreeValue, coverageDays, target?.targetDays);
+  const state = stateOf(active, afterQueue, minTarget, target?.maxFreeValue);
+  const suggestion = suggestionOf(state, afterQueue + pendingBuyValue, minTarget, target?.maxFreeValue, coverageDays, target?.targetDays, undefined, qf);
   return {
     fundId: f.id, name: f.name, shortName: f.shortName, symbol: f.symbol, nav, status: f.status, settlement: f.settlement,
     heldUnits: ru(held), allocatedUnits: ru(allocated), reservedUnits: ru(reserved), reservedByType, committedUnits: ru(committed),
     pendingBuyUnits: ru(pendingBuy), pendingRedeemUnits: ru(pendingRedeem), availableUnits: ru(available),
     heldValue: v(held), allocatedValue: v(allocated), reservedValue: v(reserved), committedValue: v(committed), availableValue,
     pendingBuyValue, pendingRedeemValue: v(pendingRedeem),
+    queuedValue, queuedCount: qf?.count ?? 0, needBuyValue: Math.max(0, r0(-afterQueue)), needBy: qf?.needBy,
     avgCost: held > 0 ? r0(cost / held) : 0, unrealizedPnl: r0(held * nav - cost),
     demandPerDay: r0(net), coverageDays, target, minTargetValue: target ? r0(minTarget) : undefined, state, suggestion,
   };
@@ -293,14 +630,15 @@ function position(d: MockDB, t: TreasuryStore, f: Fund, agg: Agg, com: Commit): 
 
 // ───────────────────────── Snapshot ─────────────────────────
 
-export interface Snapshot { d: MockDB; t: TreasuryStore; agg: Agg; com: Commit; positions: TreasuryPosition[]; cash: CashSummary }
+export interface Snapshot { d: MockDB; t: TreasuryStore; agg: Agg; com: Commit; queued: Queued; positions: TreasuryPosition[]; cash: CashSummary }
 
 export function snapshot(d: MockDB = db()): Snapshot {
   const t = T(d);
   const agg = modelledAgg(d);
   const com = commitments(d, t.assumptions);
-  const positions = d.funds.map((f) => position(d, t, f, agg, com));
-  return { d, t, agg, com, positions, cash: cashSummary(d, t, agg, com, 30) };
+  const queued = queuedOf(d, t);
+  const positions = d.funds.map((f) => position(d, t, f, agg, com, queued));
+  return { d, t, agg, com, queued, positions, cash: cashSummary(d, t, agg, com, 30) };
 }
 
 export function totalsOf(positions: TreasuryPosition[], t: TreasuryStore): TreasuryTotals {
@@ -322,26 +660,171 @@ function coverageAll(positions: TreasuryPosition[]) {
 
 // ───────────────────────── Cash ─────────────────────────
 
-const isOverdue = (e: CashEntry) => e.status === 'expected' && (e.dueAt ?? e.at) < nowIso();
+/** Receipts are reviewed by the operator — a deposit is never overdue (kept for the deprecated `overdue` fields). */
+const isOverdue = (_e: CashEntry) => { void _e; return false; };
+
+// ───────────────────────── Organization rial accounts ─────────────────────────
+
+/** The organization's stored account (created on first use). */
+export const orgAcct = (t: TreasuryStore, orgId: string) => ((t.orgRial ??= {})[orgId] ??= { balance: 0, blockedBase: 0 });
+
+/** Pending recipients of an organization's sent (not expired) packages, Toman. Packages in the queue block nothing. */
+function blockedModelled(d: MockDB, orgId: string) {
+  const at = nowIso();
+  let total = 0;
+  for (const pkg of d.orgPackages[orgId] ?? []) {
+    if (pkg.status !== 'sent' || (pkg.expiresAt && pkg.expiresAt < at)) continue;
+    const left = 1 - reclaimedPct(pkg) / 100;
+    for (const r of pkg.recipients) if (r.status === 'pending') total += r.amount * left;
+  }
+  return total;
+}
+
+/** The organization's packages in a queue — waiting for receipt approval or for Namadno's stock — optionally without one. */
+const queueOf = (d: MockDB, orgId: string, exceptPkg?: string) =>
+  (d.orgPackages[orgId] ?? []).filter((p) => (p.status === 'awaiting_payment' || p.status === 'awaiting_stock') && p.id !== exceptPkg);
+/** What «آزاد» covered of a queued package when it was submitted (kept for it until its receipt is approved). */
+const setAsideOf = (p: OrgPackage) => Math.max(0, Math.min(p.total, p.funding?.fromFree ?? 0));
+
+/** balance, blocked (sent packages), set aside (queue) and free of one organization; optionally without one queued package. */
+function orgMoney(d: MockDB, t: TreasuryStore, orgId: string, exceptPkg?: string) {
+  const acc = t.orgRial?.[orgId];
+  const balance = r0(acc?.balance ?? 0);
+  const blocked = r0((acc?.blockedBase ?? 0) + blockedModelled(d, orgId));
+  const queue = queueOf(d, orgId, exceptPkg);
+  const setAside = r0(Math.min(Math.max(0, balance - blocked), sum(queue.map(setAsideOf))));
+  return { balance, blocked, setAside, free: Math.max(0, balance - blocked - setAside), queue };
+}
+
+function accountOf(d: MockDB, t: TreasuryStore, o: Organization): OrgRialAccount {
+  const m = orgMoney(d, t, o.id);
+  const exp = t.cash.entries.filter((e) => e.kind === 'org_deposit' && e.status === 'expected' && e.orgId === o.id);
+  return {
+    orgId: o.id, orgName: o.name, status: o.status, balance: m.balance, blocked: m.blocked, free: m.free, setAside: m.setAside,
+    queuedTotal: sum(m.queue.map((p) => p.total)), queuedCount: m.queue.length, unfunded: 0,
+    pending: sum(exp.map((e) => e.amount)), pendingCount: exp.length,
+  };
+}
+
+/** Every organization's rial account with Namadno. */
+export function orgAccounts(d: MockDB, t: TreasuryStore, com: Commit): OrgRialAccount[] {
+  void com; // blocked money = the organization's sent packages (same packages as the stock commitments)
+  return d.organizations.map((o) => accountOf(d, t, o));
+}
+
+/** The organization's free rial, without one queued package (to see whether «آزاد» covers it). */
+export function orgFreeFor(d: MockDB, orgId: string, exceptPkg?: string) {
+  const t = treasuryOf(d);
+  return t ? orgMoney(d, t, orgId, exceptPkg).free : 0;
+}
 
 export function cashSummary(d: MockDB, t: TreasuryStore, agg: Agg, com: Commit, range: number): CashSummary {
   const done = t.cash.entries.filter((e) => e.status === 'done');
   const balance = r0(t.cash.opening + sum(done.map((e) => e.amount)));
   const tiedInOrders = sum(t.orders.filter((o) => o.status === 'placed' && o.side === 'buy').map((o) => o.amount));
-  const userWallets = r0(t.base.userRial + agg.rial);
+  // purchases waiting for stock: the money left the wallets but is still the users' (in transit)
+  const transit = sum((t.waits ?? []).filter((w) => w.status === 'waiting' && w.kind !== 'sell').map((w) => w.value + (w.fee ?? 0)));
+  const userWallets = r0(t.base.userRial + agg.rial + transit);
   const committedRial = r0((t.base.commitToman.rial ?? 0) + com.rial);
-  const available = balance - tiedInOrders - userWallets - committedRial;
+  const accounts = orgAccounts(d, t, com);
+  const orgFree = sum(accounts.map((a) => a.free));
+  const orgSetAside = sum(accounts.map((a) => a.setAside));
+  const reserve = sum(accounts.map((a) => Math.min(Math.max(0, a.balance), a.blocked)));
+  // Namadno's own free rial: what is left of the bank after users', organizations' and tied money
+  const available = balance - tiedInOrders - userWallets - orgFree - orgSetAside - reserve;
   const exp = t.cash.entries.filter((e) => e.status === 'expected' && e.kind === 'org_deposit');
   const overdue = exp.filter(isOverdue);
   const n = Math.max(1, Math.min(HISTORY_DAYS, range));
   const bal = live(t.history.balance, balance).slice(-n);
   const av = live(t.history.cashAvailable, available).slice(-n);
   return {
-    balance, tiedInOrders, userWallets, committedRial, available,
+    balance, tiedInOrders, userWallets, committedRial, orgFree, orgSetAside, reserve, unfunded: 0, available,
     expectedDeposits: sum(exp.map((e) => e.amount)), expectedCount: exp.length,
     overdueCount: overdue.length, overdueAmount: sum(overdue.map((e) => e.amount)),
     history: bal.map((b, i) => ({ t: historyDay(HISTORY_DAYS - n + i), balance: b, available: av[i] ?? 0 })),
   };
+}
+
+/** «ریال» and «ریال رزرو»: the bank account split by whose money it is. */
+export function rialTreasury(s: Snapshot, range = 30): RialTreasury {
+  const { d, t, agg, com } = s;
+  const c = cashSummary(d, t, agg, com, range);
+  const byOrg = orgAccounts(d, t, com);
+  const target = t.targets.rial;
+  // sales waiting for free rial → «نیاز به تأمین ریال»
+  const queuedValue = r0(s.queued.rial.value);
+  const needValue = Math.max(0, r0(queuedValue - c.available));
+  const state: StockState = needValue > 1 || c.available < -1 ? 'need_buy'
+    : target && c.available < target.minFreeValue ? 'below'
+      : target?.maxFreeValue && c.available > target.maxFreeValue ? 'surplus' : 'ok';
+  const n = c.history.length;
+  const res = live(t.history.reserve, c.reserve).slice(-n);
+  return {
+    bank: c.balance,
+    main: {
+      held: c.balance - c.reserve, users: c.userWallets, usersReserved: r0((t.base.userRialReserved ?? 0) + agg.rialLocked),
+      orgFree: c.orgFree, orgSetAside: c.orgSetAside, tied: c.tiedInOrders, available: c.available,
+      queuedValue, queuedCount: s.queued.rial.count, needValue, target, state,
+    },
+    reserve: { held: c.reserve, blocked: sum(byOrg.map((a) => a.blocked)), unfunded: 0, expected: c.expectedDeposits, state: 'ok' },
+    byOrg,
+    history: c.history.map((h, i) => ({ t: h.t, bank: h.balance, available: h.available, reserve: res[i] ?? c.reserve })),
+  };
+}
+
+export const RIAL_LABEL = 'ریال';
+export const RESERVE_LABEL = 'ریال رزرو';
+const acctLabel = (name?: string) => `حساب ${name ?? 'سازمان'}`;
+const walletLabel = (name?: string) => (name ? `کیف پول ${name}` : 'کیف پول کاربران');
+
+/**
+ * Rial movements between the treasuries and wallets, newest first — derived from the bank ledger (deposits,
+ * withdrawals, orders, fees), the activity log (packages blocked, paid to recipients, released) and the stock
+ * movements (users buying from / selling to our stock, reclaims).
+ */
+export function rialMoves(s: Snapshot, f: { kind?: string; orgId?: string; userId?: string; limit?: number } = {}): RialMove[] {
+  const { d, t } = s;
+  const out: RialMove[] = [];
+  const fundLabel = (id?: string) => (id ? `صندوق ${fundName(d, id)}` : 'صندوق‌ها');
+  const pkgRef = (a: ActivityEvent) => a.refs?.find((r) => r.type === 'package')?.id;
+  for (const e of t.cash.entries) {
+    if (e.status !== 'done') continue;
+    const b = { id: 'rm-' + e.id, at: e.at, amount: Math.abs(e.amount), orgId: e.orgId, orgName: e.orgName, userId: e.userId, ref: e.ref, packageId: e.packageId, title: e.title };
+    const o = e.orderId ? t.orders.find((x) => x.id === e.orderId) : undefined;
+    if (e.kind === 'org_deposit') out.push({ ...b, kind: 'org_deposit', from: `حساب بانکی ${e.orgName ?? 'سازمان'}`, to: `${RIAL_LABEL} · ${acctLabel(e.orgName)}` });
+    else if (e.kind === 'user_deposit') out.push({ ...b, kind: 'user_deposit', from: 'حساب بانکی کاربر', to: walletLabel() });
+    else if (e.kind === 'user_withdrawal') out.push({ ...b, kind: 'user_withdrawal', from: walletLabel(), to: 'حساب بانکی کاربر' });
+    else if (e.kind === 'order_buy') out.push({ ...b, kind: 'order_buy', from: RIAL_LABEL, to: fundLabel(o?.fundId), fundId: o?.fundId });
+    else if (e.kind === 'order_redeem') out.push({ ...b, kind: 'order_redeem', from: fundLabel(o?.fundId), to: RIAL_LABEL, fundId: o?.fundId });
+    else if (e.kind === 'fee') out.push({ ...b, kind: 'fee', from: RIAL_LABEL, to: 'کارمزد بانکی' });
+    else out.push({ ...b, kind: 'adjustment', from: e.amount >= 0 ? 'اصلاح بانکی' : RIAL_LABEL, to: e.amount >= 0 ? RIAL_LABEL : 'اصلاح بانکی' });
+  }
+  for (const a of t.activity) {
+    if (!a.amount) continue;
+    const b = { id: 'rm-' + a.id, at: a.at, amount: Math.abs(a.amount), orgId: a.orgId, orgName: a.orgName, packageId: pkgRef(a), title: a.title };
+    if (a.kind === 'package_sent') out.push({ ...b, kind: 'reserve', from: `${RIAL_LABEL} · ${acctLabel(a.orgName)}`, to: RESERVE_LABEL });
+    else if (a.kind === 'package_accepted') out.push({ ...b, kind: 'payout', from: RESERVE_LABEL, to: walletLabel(a.actor.name), userId: a.actor.id, userName: a.actor.name });
+    else if (a.kind === 'package_cancelled') out.push({ ...b, kind: 'release', from: RESERVE_LABEL, to: `${RIAL_LABEL} · ${acctLabel(a.orgName)}` });
+    else if (a.kind === 'milestone_reclaimed') out.push({ ...b, kind: 'reclaim', from: 'دارایی همکاران', to: `${RIAL_LABEL} · ${acctLabel(a.orgName)}` });
+  }
+  for (const m of t.movements) {
+    const b = { id: 'rm-' + m.id, at: m.at, amount: Math.abs(m.value), orgId: m.orgId, orgName: orgName(d, m.orgId), userId: m.userId, userName: m.userName, fundId: m.fundId, packageId: m.packageId };
+    // a recipient's fund part is bought from our stock right after the payout: wallet → «ریال»
+    if (m.kind === 'user_buy' || m.kind === 'allocate') out.push({ ...b, kind: 'user_buy', from: walletLabel(m.userName), to: RIAL_LABEL, title: m.kind === 'allocate' ? `خرید ${fundName(d, m.fundId)} برای بسته · ${m.title}` : m.title });
+    else if (m.kind === 'user_sell') out.push({ ...b, kind: 'user_sell', from: RIAL_LABEL, to: walletLabel(m.userName), title: m.title });
+  }
+  const list = out
+    .filter((m) => (!f.kind || f.kind === 'all' || m.kind === f.kind) && (!f.orgId || m.orgId === f.orgId) && (!f.userId || m.userId === f.userId))
+    .sort((a, b) => b.at.localeCompare(a.at));
+  return list.slice(0, Math.max(1, Math.min(300, Number(f.limit) || 50)));
+}
+
+/** The package a receipt pays for (derived for the operator's review). */
+function packageOf(d: MockDB, e: CashEntry): CashEntry['forPackage'] {
+  const p = e.packageId && e.orgId ? (d.orgPackages[e.orgId] ?? []).find((x) => x.id === e.packageId) : undefined;
+  if (!p) return undefined;
+  const status = p.status === 'awaiting_payment' ? 'queued' : p.status === 'sent' || p.status === 'completed' ? 'sent' : p.status === 'cancelled' ? 'cancelled' : 'other';
+  return { id: p.id, title: p.title, recipients: p.recipients.length, total: p.total, fromFree: setAsideOf(p), status };
 }
 
 /** Ledger entries newest first, with the running balance on done entries. */
@@ -354,7 +837,7 @@ export function cashEntries(d: MockDB, f: { kind?: string; status?: string; orgI
   return t.cash.entries
     .filter((e) => (!f.kind || e.kind === f.kind) && (!f.orgId || e.orgId === f.orgId)
       && (!f.status || (f.status === 'overdue' ? isOverdue(e) : e.status === f.status)))
-    .map((e) => ({ ...e, balanceAfter: after.get(e.id), overdue: isOverdue(e) || undefined }))
+    .map((e) => ({ ...e, forPackage: packageOf(d, e), balanceAfter: after.get(e.id), overdue: isOverdue(e) || undefined }))
     .sort((a, b) => (b.status === 'expected' ? b.dueAt ?? b.at : b.at).localeCompare(a.status === 'expected' ? a.dueAt ?? a.at : a.at));
 }
 
@@ -364,6 +847,7 @@ const YEAR_START = () => jalaliToIso(1405, 1, 1);
 
 export function orgRows(s: Snapshot): OrgTreasuryRow[] {
   const { d, t, agg, com } = s;
+  const accounts = orgAccounts(d, t, com);
   return d.organizations.map((o) => {
     const b = t.base.orgs[o.id];
     const a = agg.org[o.id] ?? emptyOrgAgg();
@@ -375,6 +859,7 @@ export function orgRows(s: Snapshot): OrgTreasuryRow[] {
       commitments: r0(com.org[o.id]?.toman ?? 0), pendingRecipients: com.org[o.id]?.recipients ?? 0,
       depositsExpected: sum(exp.map((e) => e.amount)), depositsOverdue: sum(exp.filter(isOverdue).map((e) => e.amount)),
       depositsReceivedYear: r0((b?.depositsPrior ?? 0) + sum(deps.filter((e) => e.status === 'done' && e.at >= YEAR_START()).map((e) => e.amount))),
+      rial: (({ orgId: _i, orgName: _n, status: _s, ...rest }) => { void _i; void _n; void _s; return rest; })(accounts.find((x) => x.orgId === o.id)!),
     };
   });
 }
@@ -434,6 +919,16 @@ export function checkInvariants(s: Snapshot | null = treasuryOf() ? snapshot() :
   if (orgFund > totals.allocatedValue + 1) issues.push('Σ organization fund value > Σ allocated value');
   const fundAum = sum(s.d.funds.map((f) => f.aum));
   if (Math.abs(fundAum - totals.heldValue) > s.d.funds.length) issues.push('Σ fund AUM ≠ Σ held value');
+  const c = s.cash;
+  if (Math.abs(c.balance - (c.userWallets + c.tiedInOrders + c.orgFree + c.orgSetAside + c.reserve + c.available)) > 2) issues.push('bank ≠ users + tied + organizations + reserve + Namadno free');
+  // nothing goes negative: free stock and Namadno's free rial
+  for (const p of s.positions) if (p.state !== 'inactive' && p.availableValue < -1) issues.push(`${p.fundId}: free stock < 0`);
+  if (c.available < -2) issues.push('Namadno free rial < 0');
+  for (const a of orgAccounts(s.d, s.t, s.com)) {
+    if (Number.isNaN(a.balance)) issues.push(`${a.orgId}: rial balance is not a number`);
+    // nothing is sent before it is paid: sent packages are always covered by the organization's balance
+    if (a.blocked > a.balance + 1) issues.push(`${a.orgId}: blocked > balance`);
+  }
   for (const m of issues) if (!warned.has(m)) { warned.add(m); console.warn('[treasury] invariant broken:', m); }
   return issues;
 }
@@ -443,9 +938,16 @@ export function checkInvariants(s: Snapshot | null = treasuryOf() ? snapshot() :
 const FLOW_IN = new Set(['allocate', 'user_buy']);
 const FLOW_BACK = new Set(['user_sell', 'reclaim']);
 
-/** Managed assets per month (Toman) — the last month is the live Σ held value. Used by the overview as well. */
+/** Managed assets = Σ held fund value + the rial bank balance. */
+export function managedOf(s: Snapshot) {
+  const funds = totalsOf(s.positions, s.t).heldValue;
+  const rial = s.cash.balance;
+  return { value: funds + rial, funds, rial };
+}
+
+/** Managed assets per month (Toman, funds + rial) — the last month is live. Used by the overview as well. */
 export function aumMonthlyLive(s: Snapshot) {
-  const aum = totalsOf(s.positions, s.t).heldValue;
+  const aum = managedOf(s).value;
   const list = s.t.aumMonthly.map((m) => ({ ...m }));
   if (list.length) list[list.length - 1].aum = aum;
   return list;
@@ -467,7 +969,8 @@ export function summary(s: Snapshot, range: number): TreasurySummary {
     redeemed: live(F.redeemed, todayOf('redeem_settle')).slice(-n),
   };
   const rows = orgRows(s).sort((a, b) => b.value - a.value);
-  const held = totals.heldValue || 1;
+  const managed = managedOf(s);
+  const all = managed.value || 1;
   const monthly = aumMonthlyLive(s);
   const a0 = monthly[0]?.aum ?? 0;
   const tgt = t.targets.aum.value;
@@ -477,13 +980,18 @@ export function summary(s: Snapshot, range: number): TreasurySummary {
     coverageDays: coverageAll(positions),
     positions,
     cash: cashSummary(d, t, s.agg, s.com, n),
-    mix: positions.filter((p) => p.heldValue > 0).map((p) => ({ fundId: p.fundId, value: p.heldValue, pct: r1((p.heldValue / held) * 100), targetPct: t.targets.mix[p.fundId] })),
+    rial: rialTreasury(s, n),
+    managed,
+    mix: [
+      { fundId: 'rial', value: managed.rial, pct: r1((managed.rial / all) * 100), targetPct: t.targets.mix.rial },
+      ...positions.filter((p) => p.heldValue > 0).map((p) => ({ fundId: p.fundId, value: p.heldValue, pct: r1((p.heldValue / all) * 100), targetPct: t.targets.mix[p.fundId] })),
+    ],
     otherTargetPct: t.targets.mix.other,
     byOrg: rows,
     individualsValue: Math.max(0, totals.allocatedValue - sum(rows.map((r) => r.fundValue))),
     flow,
     aumMonthly: monthly.map((m, i) => ({ ...m, target: r0(a0 + ((tgt - a0) * i) / 11) })),
-    aumTarget: { value: tgt, by: t.targets.aum.by, pct: r1((totals.heldValue / (tgt || 1)) * 100) },
+    aumTarget: { value: tgt, by: t.targets.aum.by, pct: r1((managed.value / (tgt || 1)) * 100) },
     growth: {
       activeOrgs: d.organizations.filter((o) => o.status === 'active').length, orgs: d.organizations.length,
       activeUsers: t.base.activeUsers, users: t.base.users,
@@ -546,15 +1054,23 @@ export function evaluateOrder(s: Snapshot, b: { fundId?: string; side?: string; 
   const minTarget = minTargetOf(net, p.target);
   const blocking: TreasuryError[] = [];
   const warnings: string[] = [];
-  if (side === 'buy' && amount > s.cash.available) {
-    blocking.push(err(422, 'insufficient_cash', `نقدینگی آزاد کافی نیست؛ حداکثر ${bn(Math.max(0, s.cash.available))} تومان.`, { available: s.cash.available }));
+  // nothing goes negative: a buy only from free rial left after the sales waiting for it, a redemption only from free
+  // stock left after the queue
+  const cashRoom = rialRoom(s);
+  const unitRoom = Math.max(0, (p.availableValue - p.queuedValue) / nav);
+  if (side === 'buy' && amount > cashRoom) {
+    blocking.push(err(422, 'insufficient_cash', `ریال آزاد نمادنو کافی نیست؛ حداکثر ${bn(cashRoom)} تومان.`, { available: cashRoom }));
   }
-  if (side === 'redeem' && units > p.availableUnits + 1e-9) {
-    blocking.push(err(422, 'insufficient_stock', `موجودی آزاد این صندوق ${bn(Math.max(0, p.availableValue))} تومان است.`, { availableUnits: p.availableUnits, availableValue: p.availableValue }));
+  if (side === 'redeem' && units > unitRoom + 1e-9) {
+    blocking.push(err(422, 'insufficient_stock', p.queuedValue > 0 ? `موجودی آزاد پس از صف تأمین ${bn(unitRoom * nav)} تومان است.` : `موجودی آزاد این صندوق ${bn(Math.max(0, p.availableValue))} تومان است.`, { availableUnits: ru(unitRoom), availableValue: r0(unitRoom * nav) }));
   } else if (side === 'redeem' && p.target && availableValueAfter < minTarget) {
     blocking.push(err(422, 'below_target', `پس از ابطال، موجودی آزاد از حداقل هدف (${bn(minTarget)} تومان) کمتر می‌شود.`, { minFree: minTarget, availableValue: p.availableValue }));
   }
   for (const e of blocking) warnings.push(e.message);
+  const rialMin = s.t.targets.rial?.minFreeValue;
+  if (side === 'buy' && rialMin && cashAvailableAfter < rialMin && amount <= cashRoom) {
+    warnings.push(`پس از این سفارش، ریال آزاد نمادنو ${bn(Math.max(0, cashAvailableAfter))} تومان می‌شود؛ کمتر از حداقل هدف ${bn(rialMin)} تومان.`);
+  }
   if (side === 'buy' && p.target && coverageDaysAfter !== null && coverageDaysAfter < p.target.targetDays) {
     warnings.push(`پس از تسویه، پوشش موجودی ${faDigits(Math.floor(coverageDaysAfter))} روز است؛ هدف ${faDigits(p.target.targetDays)} روز است.`);
   }
@@ -562,6 +1078,7 @@ export function evaluateOrder(s: Snapshot, b: { fundId?: string; side?: string; 
     warnings.push(`پس از تسویه، موجودی آزاد از سقف هدف (${bn(p.target.maxFreeValue)} تومان) بیشتر می‌شود.`);
   }
   if (side === 'redeem' && p.state === 'below') warnings.push('موجودی این صندوق همین حالا زیر هدف است.');
+  if (side === 'buy' && p.needBuyValue > 0) warnings.push(`پس از تسویه، صف تأمین این صندوق (نیاز به خرید ${bn(p.needBuyValue)} تومان) خودکار تحویل می‌شود.`);
   return {
     blocking,
     quote: {
@@ -649,19 +1166,43 @@ export function cancelOrder(d: MockDB, id: string, reason: string | undefined, b
 
 // ───────────────────────── Deposits ─────────────────────────
 
+/** Approve an organization's deposit receipt: the money lands in its rial account (a package waiting for it can then be delivered). */
 export function confirmDeposit(d: MockDB, id: string, ref: string | undefined, by: string): CashEntry | TreasuryError {
   const t = T(d);
   const e = t.cash.entries.find((x) => x.id === id);
   if (!e || e.kind !== 'org_deposit') return err(404, 'not_found', 'واریز پیدا نشد.');
-  if (e.status !== 'expected') return err(409, 'already_received', 'این واریز قبلاً ثبت شده است.');
+  if (e.status !== 'expected') return err(409, 'not_pending', e.status === 'done' ? 'این فیش قبلاً تأیید شده است.' : 'این فیش در انتظار بررسی نیست.');
   e.status = 'done';
   e.at = nowIso();
   e.receivedAt = e.at;
   e.ref = ref?.trim() || e.ref;
   e.by = by;
+  if (e.orgId) orgAcct(t, e.orgId).balance += e.amount;
   logActivity({
     actor: { kind: 'operator', name: by }, orgId: e.orgId, orgName: e.orgName, category: 'cash', kind: 'deposit_confirmed',
-    title: `دریافت واریز ${e.orgName ?? ''}`.trim(), sub: e.title + (e.ref ? ` · مرجع ${e.ref}` : ''), amount: e.amount, tone: 'success',
+    title: `تأیید فیش واریز ${e.orgName ?? ''}`.trim(), sub: e.title + (e.note ? ` · ${e.note}` : ''), amount: e.amount, tone: 'success',
+    href: `${routes.op.cash}?id=${e.id}`, refs: [{ type: 'cash', id: e.id }, ...(e.packageId ? [{ type: 'package', id: e.packageId }] : [])],
+  });
+  return e;
+}
+/** Approve = confirm. */
+export const approveDeposit = confirmDeposit;
+
+/** Reject an organization's deposit receipt with a reason; it can upload a new one. */
+export function rejectDeposit(d: MockDB, id: string, reason: string | undefined, by: string): CashEntry | TreasuryError {
+  const t = T(d);
+  const e = t.cash.entries.find((x) => x.id === id);
+  if (!e || e.kind !== 'org_deposit') return err(404, 'not_found', 'واریز پیدا نشد.');
+  if (e.status !== 'expected') return err(409, 'not_pending', 'این فیش در انتظار بررسی نیست.');
+  const why = reason?.trim();
+  if (!why) return err(422, 'missing_reason', 'دلیل رد فیش را بنویسید؛ برای سازمان نمایش داده می‌شود.');
+  e.status = 'rejected';
+  e.rejectedAt = nowIso();
+  e.rejectReason = why;
+  e.by = by;
+  logActivity({
+    actor: { kind: 'operator', name: by }, orgId: e.orgId, orgName: e.orgName, category: 'cash', kind: 'deposit_rejected',
+    title: `رد فیش واریز ${e.orgName ?? ''}`.trim(), sub: `${e.title} · ${why}`, amount: e.amount, tone: 'warning',
     href: `${routes.op.cash}?id=${e.id}`, refs: [{ type: 'cash', id: e.id }, ...(e.packageId ? [{ type: 'package', id: e.packageId }] : [])],
   });
   return e;
@@ -674,12 +1215,46 @@ export function recordDeposit(d: MockDB, b: { orgId?: string; amount?: number; r
   const amount = r0(Number(b.amount));
   if (!(amount > 0)) return err(422, 'bad_amount', 'مبلغ معتبر نیست.');
   const e = pushCash(t, { kind: 'org_deposit', amount, status: 'done', title: b.note?.trim() || `واریز ${o.name}`, orgId: o.id, orgName: o.name, ref: b.ref?.trim() || undefined, note: b.note?.trim() || undefined, receivedAt: nowIso(), by });
+  orgAcct(t, o.id).balance += amount;
   logActivity({
     actor: { kind: 'operator', name: by }, orgId: o.id, orgName: o.name, category: 'cash', kind: 'deposit_recorded',
     title: `ثبت واریز ${o.name}`, sub: e.ref ? `مرجع ${e.ref}` : undefined, amount, tone: 'success', href: `${routes.op.cash}?id=${e.id}`, refs: [{ type: 'cash', id: e.id }],
   });
   return e;
 }
+
+/**
+ * Organization panel: a deposit receipt («فیش واریز» + optional description) waiting for Namadno's review.
+ * `packageId` = the receipt of a package waiting for payment (a new one replaces a pending one).
+ */
+export function submitReceipt(d: MockDB, orgId: string, b: { amount?: number; receipt?: ReceiptFile; note?: string; packageId?: string }, by: string): CashEntry | TreasuryError {
+  const t = T(d);
+  const o = d.organizations.find((x) => x.id === orgId);
+  if (!o) return err(404, 'not_found', 'سازمان پیدا نشد.');
+  const amount = r0(Number(b.amount));
+  if (!(amount >= 1_000_000)) return err(422, 'bad_amount', 'مبلغ واریز حداقل ۱ میلیون تومان است.');
+  if (!b.receipt) return err(422, 'missing_receipt', 'تصویر یا فایل فیش واریز را بارگذاری کنید.');
+  const pkg = b.packageId ? (d.orgPackages[orgId] ?? []).find((x) => x.id === b.packageId) : undefined;
+  if (b.packageId && (!pkg || pkg.status !== 'awaiting_payment')) return err(422, 'bad_package', 'این بسته در انتظار واریز نیست.');
+  // a queued package: the receipt covers what «آزاد» did not (the rest is set aside for it)
+  const need = pkg ? r0(pkg.total - setAsideOf(pkg)) : 0;
+  if (pkg && amount + 1 < need) return err(422, 'bad_amount', `مبلغ فیش باید دست‌کم ${money(need)} تومان باشد.`, { shortfall: need });
+  // one pending receipt per package: a new upload replaces the previous one
+  if (pkg) for (const x of t.cash.entries) if (x.packageId === pkg.id && x.status === 'expected') x.status = 'cancelled';
+  const note = b.note?.trim() || undefined;
+  const e = pushCash(t, {
+    kind: 'org_deposit', amount, status: 'expected', title: pkg ? `فیش «${pkg.title}»` : 'شارژ حساب سازمان',
+    orgId: o.id, orgName: o.name, packageId: pkg?.id, receipt: b.receipt, note, submittedBy: by,
+  });
+  logActivity({
+    actor: { kind: 'org', id: o.id, name: by }, orgId: o.id, orgName: o.name, category: 'cash', kind: 'deposit_submitted',
+    title: `فیش واریز ${o.name}`, sub: `${e.title} · در انتظار تأیید نمادنو`, amount, tone: 'info', href: `${routes.op.cash}?id=${e.id}`,
+    refs: [{ type: 'cash', id: e.id }, ...(pkg ? [{ type: 'package', id: pkg.id, label: pkg.title }] : [])],
+  });
+  return e;
+}
+/** @deprecated Use submitReceipt. */
+export const announceDeposit = submitReceipt;
 
 // ───────────────────────── Targets ─────────────────────────
 
@@ -689,6 +1264,10 @@ export function patchTargets(d: MockDB, b: TargetsPatch, by: string): TreasuryTa
   if (b.mix) {
     const vals = Object.values(b.mix);
     if (vals.some((v) => !(v >= 0)) || Math.round(sum(vals)) !== 100) return err(422, 'bad_mix', 'جمع ترکیب دارایی باید ۱۰۰٪ باشد.');
+  }
+  if (b.rial) {
+    if (!(b.rial.minFreeValue >= 0)) return err(422, 'bad_target', 'حداقل ریال آزاد معتبر نیست.');
+    if (b.rial.maxFreeValue !== undefined && b.rial.maxFreeValue !== null && !(b.rial.maxFreeValue > b.rial.minFreeValue)) return err(422, 'bad_target', 'سقف ریال آزاد باید از حداقل بیشتر باشد.');
   }
   if (b.stock) {
     for (const s of b.stock) {
@@ -712,6 +1291,7 @@ export function patchTargets(d: MockDB, b: TargetsPatch, by: string): TreasuryTa
     }
     t.targets.stock = next;
   }
+  if (b.rial) t.targets.rial = { minFreeValue: r0(b.rial.minFreeValue), maxFreeValue: b.rial.maxFreeValue ? r0(b.rial.maxFreeValue) : undefined };
   if (b.mix) t.targets.mix = { ...b.mix };
   if (b.aum) t.targets.aum = { value: r0(b.aum.value), by: b.aum.by };
   if (b.orgs) t.targets.orgs = { value: r0(b.orgs.value), by: b.orgs.by };
@@ -721,7 +1301,7 @@ export function patchTargets(d: MockDB, b: TargetsPatch, by: string): TreasuryTa
   logActivity({ actor: { kind: 'operator', name: by }, category: 'treasury', kind: 'targets_updated', title: 'به‌روزرسانی اهداف خزانه', sub: Object.keys(b).map((k) => TARGET_LABEL[k] ?? k).join('، '), tone: 'info', href: routes.op.planning });
   return t.targets;
 }
-const TARGET_LABEL: Record<string, string> = { stock: 'موجودی صندوق‌ها', mix: 'ترکیب دارایی', aum: 'دارایی تحت مدیریت', orgs: 'سازمان‌ها', users: 'کاربران' };
+const TARGET_LABEL: Record<string, string> = { stock: 'موجودی صندوق‌ها', rial: 'ریال آزاد', mix: 'ترکیب دارایی', aum: 'دارایی تحت مدیریت', orgs: 'سازمان‌ها', users: 'کاربران' };
 
 // ───────────────────────── Planning ─────────────────────────
 
@@ -745,6 +1325,10 @@ export function forecastEvents(s: Snapshot, h: number): ForecastEvent[] {
       const single = sp.gold === 100 ? 'gold' : sp.fixed === 100 ? 'fixed' : undefined;
       if (pkg.status === 'draft' && pkg.recipients.length) {
         out.push({ id: `ev-draft-${pkg.id}`, at: daysFromNow(3, '12:00'), kind: 'planned_package', title: `پیش‌نویس «${pkg.title}»`, value: pkg.total, count: pkg.recipients.length, orgId, orgName: oName, fundId: single, href: routes.op.organization(orgId) });
+      }
+      // in the queue: sent to the recipients once its receipt is approved
+      if (pkg.status === 'awaiting_payment') {
+        out.push({ id: `ev-queue-${pkg.id}`, at: daysFromNow(1, '12:00'), kind: 'planned_package', title: `در صف تأیید فیش «${pkg.title}»`, value: pkg.total, count: pkg.recipients.length, orgId, orgName: oName, fundId: single, href: `${routes.op.cash}?status=expected` });
       }
       if (pkg.status !== 'sent') continue;
       const pending = pkg.recipients.filter((r) => r.status === 'pending');
@@ -778,9 +1362,6 @@ export function forecastEvents(s: Snapshot, h: number): ForecastEvent[] {
   for (const o of t.orders.filter((x) => x.status === 'placed' && x.settleAt <= to)) {
     out.push({ id: `ev-ord-${o.id}`, at: o.settleAt, kind: 'order_settle', title: `تسویه‌ی ${o.side === 'buy' ? 'صدور' : 'ابطال'} ${fundName(d, o.fundId)} · ${o.code}`, value: o.amount, fundId: o.fundId, href: `${routes.op.orders}?id=${o.code}` });
   }
-  for (const e of t.cash.entries.filter((x) => x.status === 'expected' && (x.dueAt ?? x.at) <= to)) {
-    out.push({ id: `ev-dep-${e.id}`, at: e.dueAt ?? e.at, kind: 'deposit_due', title: `واریز ${e.orgName ?? ''} · ${e.title}`.trim(), value: e.amount, orgId: e.orgId, orgName: e.orgName, href: `${routes.op.cash}?id=${e.id}` });
-  }
   return out.sort((a, b) => a.at.localeCompare(b.at));
 }
 
@@ -793,7 +1374,7 @@ export function fundForecasts(s: Snapshot, h: number, events = forecastEvents(s,
     const committedSpare = (fid === 'gold' || fid === 'fixed') ? p.committedValue * (1 - A.acceptanceRate) : 0;
     const demand = r0((A.demandPerDay[fid] ?? 0) * h + (fid in sp && fid !== 'rial' ? (A.newPackagesPerMonth * sp[fid]) / 100 / 30 : 0) * h + ev('planned_package'));
     const returns = r0((A.returnsPerDay[fid] ?? 0) * h + ev('vesting_release') * A.vestingSellBackPct + ev('milestone_due') * A.reclaimRate + committedSpare);
-    const projectedEnd = p.availableValue + p.pendingBuyValue - demand + returns;
+    const projectedEnd = p.availableValue - p.queuedValue + p.pendingBuyValue - demand + returns;
     const minTarget = minTargetOf(p.demandPerDay, p.target);
     const state = stateOf(true, projectedEnd, minTarget, p.target?.maxFreeValue);
     return {
@@ -880,13 +1461,14 @@ export function plan(s: Snapshot, h: Horizon): TreasuryPlan {
   const recs: Recommendation[] = [];
   // The forecast's buy is the need over the whole horizon. The order suggested today is only what fits now:
   // up to the stock maximum and within the free cash still left (most urgent funds first).
-  let cashLeft = Math.max(0, s.cash.available);
-  const urgency: Record<StockState, number> = { shortfall: 0, below: 1, ok: 2, surplus: 3, inactive: 4 };
+  // buy suggestions keep Namadno's free rial above its minimum target («ریال» stays healthy)
+  let cashLeft = Math.max(0, rialRoom(s) - (s.t.targets.rial?.minFreeValue ?? 0));
+  const urgency: Record<StockState, number> = { need_buy: 0, shortfall: 0, below: 1, ok: 2, surplus: 3, inactive: 4 };
   for (const ff of [...perFund].sort((a, b) => urgency[a.state] - urgency[b.state])) {
     if (!ff.suggestion) continue;
     const p = s.positions.find((x) => x.fundId === ff.fundId)!;
     const buy = ff.suggestion.side === 'buy';
-    const severity: Severity = ff.state === 'shortfall' ? 'critical' : ff.state === 'below' ? 'warning' : 'info';
+    const severity: Severity = ff.state === 'need_buy' || ff.state === 'shortfall' ? 'critical' : ff.state === 'below' ? 'warning' : 'info';
     const id = `rec-${ff.suggestion.side}-${ff.fundId}-${h}`;
     if (!buy) {
       recs.push({
@@ -896,15 +1478,15 @@ export function plan(s: Snapshot, h: Horizon): TreasuryPlan {
       continue;
     }
     const need = ff.suggestion.amount;
-    const room = p.target?.maxFreeValue ? p.target.maxFreeValue - (p.availableValue + p.pendingBuyValue) : Infinity;
+    const room = p.target?.maxFreeValue ? p.target.maxFreeValue - (p.availableValue - p.queuedValue + p.pendingBuyValue) : Infinity;
     const nowAmt = roundDown(Math.max(0, Math.min(need, room, cashLeft)));
     const capped = nowAmt < need;
-    const limit = room < need && room <= cashLeft ? 'سقف هدف موجودی' : 'نقدینگی آزاد';
+    const limit = room < need && room <= cashLeft ? 'سقف هدف موجودی' : 'ریال آزاد بالای حداقل هدف';
     // when capped, one plain sentence replaces the forecast's reason (which explains the full amount)
     const why = !capped ? ff.suggestion.reason
       : nowAmt >= MIN_ORDER
         ? `تا ${faDigits(h)} روز آینده حدود ${bn(need)} تومان صدور لازم است تا موجودی آزاد بالای حداقل هدف بماند؛ اکنون ${bn(nowAmt)} تومان (به اندازه‌ی ${limit}) و باقی در نوبت‌های بعد.`
-        : `تا ${faDigits(h)} روز آینده حدود ${bn(need)} تومان صدور لازم است، ولی نقدینگی آزاد کافی نیست؛ اول واریزهای سازمان‌ها را پیگیری کنید.`;
+        : `تا ${faDigits(h)} روز آینده حدود ${bn(need)} تومان صدور لازم است، ولی ریال آزاد نمادنو بالای حداقل هدف کافی نیست؛ با پذیرش بسته‌ها و فروش کاربران ریال آزاد بالا می‌رود.`;
     if (nowAmt >= MIN_ORDER) {
       cashLeft -= nowAmt;
       recs.push({
@@ -914,13 +1496,9 @@ export function plan(s: Snapshot, h: Horizon): TreasuryPlan {
     } else {
       recs.push({
         id, kind: 'buy', severity, title: `صدور ${p.shortName}`, reason: why, fundId: ff.fundId, amount: need, horizonAmount: need,
-        action: { type: 'link', href: `${routes.op.cash}${s.cash.overdueCount > 0 ? '?status=overdue' : ''}` },
+        action: { type: 'link', href: routes.op.cash },
       });
     }
-  }
-  const buyTotal = sum(recs.filter((r) => r.kind === 'buy').map((r) => r.horizonAmount ?? r.amount ?? 0));
-  if (buyTotal > s.cash.available && s.cash.overdueCount > 0) {
-    recs.push({ id: `rec-collect-${h}`, kind: 'collect_deposit', severity: 'warning', title: `پیگیری ${faDigits(s.cash.overdueCount)} واریز معوق`, reason: `صدورهای پیشنهادی ${bn(buyTotal)} تومان است و نقدینگی آزاد ${bn(Math.max(0, s.cash.available))} تومان؛ ${bn(s.cash.overdueAmount)} تومان واریز سازمان‌ها معوق مانده است.`, amount: s.cash.overdueAmount, action: { type: 'link', href: `${routes.op.cash}?status=overdue` } });
   }
   for (const o of s.t.orders.filter((x) => x.status === 'placed' && x.settleAt <= nowIso())) {
     recs.push({ id: `rec-settle-${o.id}`, kind: 'settle', severity: 'warning', title: `ثبت تسویه‌ی ${o.code}`, reason: `سفارش ${o.side === 'buy' ? 'صدور' : 'ابطال'} ${fundName(s.d, o.fundId)} سررسید شده است.`, fundId: o.fundId, amount: o.amount, action: { type: 'link', href: `${routes.op.orders}?id=${o.code}` } });
@@ -944,27 +1522,39 @@ export function actions(s: Snapshot): ActionItem[] {
   const { d, t, positions } = s;
   const at = nowIso();
   const out: ActionItem[] = [];
+  // the rial treasuries first: everything users and organizations do is in rial
+  const rt = rialTreasury(s);
+  const cashHref = routes.op.cash;
+  // nothing goes negative: sales waiting for free rial → «نیاز به تأمین ریال» (e.g. a redemption)
+  if (rt.main.state === 'need_buy') out.push({ id: 'act-rial-need', kind: 'rial_need', severity: 'critical', title: 'نیاز به تأمین ریال', sub: `${faDigits(rt.main.queuedCount)} فروش کاربر در صف واریز · ${bn(rt.main.needValue)} تومان${s.queued.rial.needBy ? ` · تا ${faDigits(jDateTime(s.queued.rial.needBy))}` : ''}`, at: s.queued.rial.needBy, amount: rt.main.needValue, href: `${routes.op.funds}?state=need_buy`, cta: { label: 'صف تأمین' } });
+  else if (rt.main.state === 'below' && rt.main.target) out.push({ id: 'act-rial-below', kind: 'rial_below', severity: 'warning', title: 'ریال آزاد زیر هدف', sub: `ریال آزاد ${bn(rt.main.available)} تومان؛ حداقل هدف ${bn(rt.main.target.minFreeValue)} تومان`, amount: rt.main.target.minFreeValue - rt.main.available, href: cashHref, cta: { label: 'نقدینگی' } });
   for (const p of positions) {
     const href = routes.op.fund(p.fundId);
     const order = p.suggestion ? { type: 'order' as const, side: p.suggestion.side, fundId: p.fundId, amount: p.suggestion.amount } : undefined;
-    if (p.state === 'shortfall') out.push({ id: `act-short-${p.fundId}`, kind: 'stock_shortfall', severity: 'critical', title: `کسری موجودی ${p.shortName}`, sub: `کمبود ${bn(-p.availableValue)} تومان نسبت به تخصیص‌ها و تعهدات`, amount: p.suggestion?.amount, fundId: p.fundId, href, cta: { label: 'ثبت صدور', action: order } });
+    // «نیاز به خرید»: items wait in the queue for this fund — buy now (an open buy order may already cover it)
+    if (p.state === 'need_buy') {
+      const covered = p.pendingBuyValue >= p.needBuyValue;
+      out.push({
+        id: `act-need-${p.fundId}`, kind: 'stock_need_buy', severity: 'critical', title: `نیاز به خرید ${p.shortName}`,
+        sub: `${faDigits(p.queuedCount)} مورد در صف تأمین · ${bn(p.needBuyValue)} تومان${p.needBy ? ` · تحویل تا ${faDigits(jDateTime(p.needBy))}` : ''}${covered ? ' · سفارش صدور باز پوشش می‌دهد' : ''}`,
+        at: p.needBy, amount: p.suggestion?.amount ?? p.needBuyValue, fundId: p.fundId, href,
+        cta: covered || !order ? { label: 'سفارش‌ها' } : { label: 'ثبت صدور', action: order },
+      });
+    }
     if (p.state === 'below') out.push({ id: `act-below-${p.fundId}`, kind: 'stock_below', severity: 'warning', title: `موجودی ${p.shortName} زیر هدف`, sub: p.coverageDays !== null && p.target ? `پوشش ${faDigits(Math.floor(p.coverageDays))} روز از هدف ${faDigits(p.target.targetDays)} روز` : `موجودی آزاد ${bn(p.availableValue)} تومان`, amount: p.suggestion?.amount, fundId: p.fundId, href, cta: { label: 'ثبت صدور', action: order } });
     if (p.state === 'surplus') out.push({ id: `act-surplus-${p.fundId}`, kind: 'stock_surplus', severity: 'info', title: `مازاد موجودی ${p.shortName}`, sub: `موجودی آزاد ${bn(p.availableValue)} تومان، بیش از سقف هدف`, amount: p.suggestion?.amount, fundId: p.fundId, href, cta: { label: 'ثبت ابطال', action: order } });
   }
   for (const o of t.orders.filter((x) => x.status === 'placed' && x.settleAt <= at)) {
     out.push({ id: `act-settle-${o.id}`, kind: 'order_settle', severity: 'warning', title: `تسویه‌ی سفارش ${o.code}`, sub: `${o.side === 'buy' ? 'صدور' : 'ابطال'} ${fundName(d, o.fundId)} · ${bn(o.amount)} تومان`, at: o.settleAt, amount: o.amount, fundId: o.fundId, href: `${routes.op.orders}?id=${o.code}`, cta: { label: 'ثبت تسویه', action: { type: 'settle_order', id: o.id } } });
   }
-  const soon = daysFromNow(3, '23:59');
+  // deposit receipts waiting for the operator's review (nothing is ever overdue)
   for (const e of t.cash.entries.filter((x) => x.status === 'expected' && x.kind === 'org_deposit')) {
-    const due = e.dueAt ?? e.at;
-    const late = due < at;
-    if (!late && due > soon) continue;
-    const lateDays = Math.round((now().getTime() - Date.parse(due)) / DAY);
+    const queued = e.packageId && e.orgId ? (d.orgPackages[e.orgId] ?? []).find((p) => p.id === e.packageId && p.status === 'awaiting_payment') : undefined;
     out.push({
-      id: `act-dep-${e.id}`, kind: late ? 'deposit_overdue' : 'deposit_expected', severity: late ? (lateDays >= 3 ? 'critical' : 'warning') : 'info',
-      title: late ? `واریز معوق ${e.orgName ?? ''}`.trim() : `واریز در راه ${e.orgName ?? ''}`.trim(),
-      sub: `${e.title} · ${late ? `${faDigits(Math.max(1, lateDays))} روز از سررسید گذشته` : 'سررسید تا ۳ روز آینده'}`,
-      at: due, amount: e.amount, orgId: e.orgId, href: `${routes.op.cash}?id=${e.id}`, cta: { label: 'ثبت دریافت', action: { type: 'confirm_deposit', id: e.id } },
+      id: `act-dep-${e.id}`, kind: 'deposit_review', severity: 'warning',
+      title: `بررسی فیش واریز ${e.orgName ?? ''}`.trim(),
+      sub: `${e.title}${queued ? ` · ${faDigits(queued.recipients.length)} همکار در صف` : ''}${e.note ? ` · ${e.note}` : ''}`,
+      at: e.at, amount: e.amount, orgId: e.orgId, href: `${routes.op.cash}?id=${e.id}`, cta: { label: 'بررسی فیش', action: { type: 'review_deposit', id: e.id } },
     });
   }
   const meta = (d.extra.opRequestMeta ?? {}) as Record<string, { slaDueAt?: string }>;
@@ -1050,34 +1640,84 @@ function pushMovement(t: TreasuryStore, m: Omit<StockMovement, 'id' | 'at'> & { 
 
 // ───────────────────────── Flow hooks (called by core handlers) ─────────────────────────
 
-/** org.ts — a package was sent: the organization's deposit becomes expected (due in 3 days). */
-export function onPackageSent(orgId: string, pkg: OrgPackage, actorName?: string) {
+/**
+ * org.ts — a package was delivered to its recipients: its amount is blocked in «ریال رزرو» from the organization's free
+ * rial (sending is allowed only when «آزاد» covers it — otherwise the package waits for its receipt, see onPackageAwaiting).
+ */
+export function onPackageSent(orgId: string, pkg: OrgPackage, actorName?: string, afterReceipt?: boolean): { fromFree: number; toDeposit: number } {
+  const d = db();
+  const t = treasuryOf(d);
+  if (!t) return { fromFree: pkg.total, toDeposit: 0 };
+  const oName = orgName(d, orgId);
+  logActivity({
+    actor: { kind: 'org', id: orgId, name: actorName ?? oName ?? orgId }, orgId, orgName: oName, category: 'package', kind: 'package_sent',
+    title: `ارسال «${pkg.title}»`,
+    sub: `${faDigits(pkg.recipients.length)} گیرنده · بلاک در «ریال رزرو»${afterReceipt ? (pkg.stockQueuedAt ? ' پس از تأمین موجودی' : ' پس از تأیید فیش واریز') : ' از حساب آزاد سازمان'}`,
+    amount: pkg.total, tone: 'primary', href: routes.op.organization(orgId), refs: [{ type: 'package', id: pkg.id, label: pkg.title }],
+  });
+  return { fromFree: pkg.total, toDeposit: 0 };
+}
+
+/** org.ts — a package was submitted with a deposit receipt («آزاد» did not cover it): it waits for Namadno's approval. */
+export function onPackageAwaiting(orgId: string, pkg: OrgPackage, actorName: string | undefined, shortfall: number) {
+  const d = db();
+  if (!treasuryOf(d)) return;
+  const oName = orgName(d, orgId);
+  logActivity({
+    actor: { kind: 'org', id: orgId, name: actorName ?? oName ?? orgId }, orgId, orgName: oName, category: 'package', kind: 'package_awaiting',
+    title: `ثبت «${pkg.title}» با فیش واریز`, sub: `${faDigits(pkg.recipients.length)} گیرنده · ${bn(shortfall)} تومان با فیش · پس از تأیید نمادنو ارسال می‌شود`,
+    amount: pkg.total, tone: 'info', href: routes.op.organization(orgId), refs: [{ type: 'package', id: pkg.id, label: pkg.title }],
+  });
+}
+
+/** org.ts — a paid package waits for Namadno's stock («در انتظار تأمین موجودی»): the operator sees «نیاز به خرید». */
+export function onPackageStockWait(orgId: string, pkg: OrgPackage, actorName: string | undefined, missing: Record<string, number>) {
+  const d = db();
+  if (!treasuryOf(d)) return;
+  const oName = orgName(d, orgId);
+  const what = Object.entries(missing).map(([f, v]) => `${fundName(d, f)} ${bn(v)}`).join(' · ');
+  logActivity({
+    actor: actorName ? { kind: 'org', id: orgId, name: actorName } : { kind: 'system', name: SYSTEM_ACTOR }, orgId, orgName: oName, category: 'package', kind: 'package_stock_wait',
+    title: `«${pkg.title}» در صف تأمین موجودی`, sub: `${faDigits(pkg.recipients.length)} گیرنده · نیاز به خرید ${what} تومان · ارسال تا ${faDigits(jDateTime(pkg.stockEta ?? nowIso()))}`,
+    amount: pkg.total, tone: 'warning', href: `${routes.op.funds}?state=need_buy`, refs: [{ type: 'package', id: pkg.id, label: pkg.title }],
+  });
+}
+
+/** org.ts — a package was cancelled: its blocked or set-aside money returns to the organization's free balance; a pending receipt for it is cancelled. */
+export function onPackageCancelled(pkg: OrgPackage, wasQueued = false) {
   const d = db();
   const t = treasuryOf(d);
   if (!t) return;
+  for (const e of t.cash.entries) if (e.packageId === pkg.id && e.status === 'expected') e.status = 'cancelled';
+  const orgId = Object.entries(d.orgPackages).find(([, list]) => list.includes(pkg))?.[0];
   const oName = orgName(d, orgId);
-  pushCash(t, { kind: 'org_deposit', amount: pkg.total, status: 'expected', title: `واریز «${pkg.title}»`, orgId, orgName: oName, packageId: pkg.id, dueAt: daysFromNow(3, '12:00') });
+  if (orgId && wasQueued) {
+    // a package in the queue blocked nothing and reached no one: it just leaves the queue (what «آزاد» set aside is free again)
+    logActivity({
+      actor: { kind: 'org', id: orgId, name: oName ?? orgId }, orgId, orgName: oName, category: 'package', kind: 'package_cancelled',
+      title: `لغو «${pkg.title}» پیش از تأیید فیش`, sub: 'از صف تأیید واریز خارج شد؛ به همکاران ارسال نشده بود', amount: pkg.total, tone: 'neutral',
+      href: routes.op.organization(orgId), refs: [{ type: 'package', id: pkg.id, label: pkg.title }],
+    });
+    return;
+  }
+  const back = r0(sum(pkg.recipients.filter((r) => r.status === 'pending').map((r) => r.amount)) * (1 - reclaimedPct(pkg) / 100));
+  if (!orgId || back < 1) return;
   logActivity({
-    actor: { kind: 'org', id: orgId, name: actorName ?? oName ?? orgId }, orgId, orgName: oName, category: 'package', kind: 'package_sent',
-    title: `ارسال «${pkg.title}»`, sub: `${faDigits(pkg.recipients.length)} گیرنده · واریز مورد انتظار تا ۳ روز`, amount: pkg.total, tone: 'primary',
+    actor: { kind: 'org', id: orgId, name: oName ?? orgId }, orgId, orgName: oName, category: 'package', kind: 'package_cancelled',
+    title: `لغو «${pkg.title}»`, sub: 'مبلغ بلاک‌شده به حساب آزاد سازمان برگشت', amount: back, tone: 'neutral',
     href: routes.op.organization(orgId), refs: [{ type: 'package', id: pkg.id, label: pkg.title }],
   });
 }
 
-/** org.ts — a package was cancelled: an expected deposit for it is cancelled too (commitments drop on their own). */
-export function onPackageCancelled(pkg: OrgPackage) {
-  const t = treasuryOf();
-  if (!t) return;
-  for (const e of t.cash.entries) if (e.packageId === pkg.id && e.status === 'expected') e.status = 'cancelled';
-}
-
-/** app.ts — an employee accepted a package: its fund parts leave the free stock. */
-export function onPackageAccepted(ud: UserData, pkg: InboxPackage, split: AllocationSplit) {
+/** app.ts — an employee accepted a package: the money goes from «ریال رزرو» to the user; its fund parts are bought from our stock. */
+export function onPackageAccepted(ud: UserData, pkg: InboxPackage, split: AllocationSplit, waitingFunds: string[] = []) {
   const d = db();
   const t = treasuryOf(d);
   if (!t) return;
+  // «ریال رزرو» → the user's rial wallet: the organization's balance pays the recipient
+  if (pkg.orgId) orgAcct(t, pkg.orgId).balance -= pkg.amount;
   for (const [fid, pct] of [['gold', split.gold], ['fixed', split.fixed]] as const) {
-    if (!pct) continue;
+    if (!pct || waitingFunds.includes(fid)) continue; // a part waiting for stock leaves it when it is delivered
     const amt = r0((pkg.amount * pct) / 100);
     pushMovement(t, { fundId: fid, kind: 'allocate', units: -toUnits(amt, navOf(d, fid)), value: amt, title: `تخصیص «${pkg.title}» به ${ud.profile.fullName}`, orgId: pkg.orgId, userId: ud.profile.id, userName: ud.profile.fullName, packageId: pkg.packageId });
   }
@@ -1148,6 +1788,8 @@ export function onStepSettled(kind: 'released' | 'reclaimed', pkg: OrgPackage, s
       if (kind === 'reclaimed') t.base.allocatedUnits[fid] = Math.max(0, (t.base.allocatedUnits[fid] ?? 0) - u);
     }
   }
+  // a reclaimed share is bought back by Namadno and credited to the organization's rial account
+  if (kind === 'reclaimed' && orgId && total > 0) orgAcct(t, orgId).balance += r0(total);
   const idx = (pkg.milestoneProgress ?? []).indexOf(step) + 1;
   for (const [fid, v] of Object.entries(back)) {
     pushMovement(t, { fundId: fid, kind: 'reclaim', units: toUnits(v, navOf(d, fid)), value: v, title: `بازپس‌گیری مرحله‌ی ${faDigits(idx)} «${pkg.title}»`, orgId, packageId: pkg.id });

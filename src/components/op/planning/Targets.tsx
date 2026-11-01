@@ -1,9 +1,10 @@
 'use client';
 /**
  * /op/planning — «اهداف» tab: treasury targets as kit settings groups with a sticky save bar.
+ *   rial     Namadno's free rial («ریال آزاد نمادنو»): minimum and maximum (Toman)
  *   stock    per active fund: minimum free stock (Toman), target coverage days, maximum (above it a redemption is suggested)
- *   aum      total managed assets by a date · orgs / users growth by a date
- *   mix      asset mix in percent (gold, fixed, other …); must sum to 100 (the server answers 422 bad_mix otherwise)
+ *   aum      total managed assets (fund units + the rial bank balance) by a date · orgs / users growth by a date
+ *   mix      asset mix in percent (rial, gold, fixed, other …); must sum to 100 (the server answers 422 bad_mix otherwise)
  * Only changed sections are sent (TargetsPatch); edits reset when the saved targets come back.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -18,7 +19,7 @@ import {
 import { DateInput } from '@/components/ui/DateInput';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
-import { STOCK_STATE, TI, amt, daysText, fundUi } from '@/components/op/treasury/ui';
+import { RIAL_UI, STOCK_STATE, TI, amt, daysText, fundUi } from '@/components/op/treasury/ui';
 import { errMsg, pctT } from '@/components/op/system/fmt';
 import { enDigits, faDigits, jDate, jDayMonth, money } from '@/lib/format';
 import { now } from '@/lib/clock';
@@ -26,8 +27,9 @@ import { formatJalali, jalaliToIsoAny, parseJalaliText } from '@/lib/jalali';
 import { neededText, tm } from './shared';
 
 interface StockDraft { min: number; days: number; max: number }
+interface RialDraft { min: number; max: number }
 interface Goal { value: number; by: string }
-interface Edits { stock: Record<string, Partial<StockDraft>>; aum?: Partial<Goal>; orgs?: Partial<Goal>; users?: Partial<Goal>; mix?: Record<string, number> }
+interface Edits { stock: Record<string, Partial<StockDraft>>; rial?: Partial<RialDraft>; aum?: Partial<Goal>; orgs?: Partial<Goal>; users?: Partial<Goal>; mix?: Record<string, number> }
 type GoalKey = 'aum' | 'orgs' | 'users';
 
 /** Toman → billions for the inputs (two decimals); NaN stays NaN. */
@@ -43,6 +45,7 @@ const stockInit = (t: TreasuryTargets, fundId: string): StockDraft => {
   return s ? { min: s.minFreeValue, days: s.targetDays, max: s.maxFreeValue ?? NaN } : { min: NaN, days: NaN, max: NaN };
 };
 const goalInit = (t: TreasuryTargets, k: GoalKey): Goal => ({ value: t[k].value, by: jDate(t[k].by) });
+const rialInit = (t: TreasuryTargets): RialDraft => ({ min: t.rial?.minFreeValue ?? NaN, max: t.rial?.maxFreeValue ?? NaN });
 
 export function TargetsView({ positions, progress }: { positions: TreasuryPosition[]; progress?: TargetProgress[] }) {
   const toast = useToast();
@@ -61,10 +64,13 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
 
   // ── current values (saved + edits)
   const stockOf = (fid: string): StockDraft => ({ ...stockInit(t, fid), ...edits.stock[fid] });
+  const rialOf = (): RialDraft => ({ ...rialInit(t), ...edits.rial });
   const goalOf = (k: GoalKey): Goal => ({ ...goalInit(t, k), ...edits[k] });
-  const order = (k: string) => { const i = positions.findIndex((p) => p.fundId === k); return i < 0 ? 999 : i; };
+  // «ریال» first, then the funds in stock order, «سایر صندوق‌ها» last
+  const order = (k: string) => { if (k === 'rial') return -1; const i = positions.findIndex((p) => p.fundId === k); return i < 0 ? 999 : i; };
   const mixKeys = [...Object.keys(t.mix).filter((k) => k !== 'other').sort((a, b) => order(a) - order(b)), ...('other' in t.mix ? ['other'] : [])];
   const mixOf = (k: string) => edits.mix?.[k] ?? t.mix[k];
+  const setRial = (v: Partial<RialDraft>) => setEdits((e) => ({ ...e, rial: { ...e.rial, ...v } }));
   const setStock = (fid: string, v: Partial<StockDraft>) => setEdits((e) => ({ ...e, stock: { ...e.stock, [fid]: { ...e.stock[fid], ...v } } }));
   const setGoal = (k: GoalKey, v: Partial<Goal>) => setEdits((e) => ({ ...e, [k]: { ...e[k], ...v } }));
   const setMix = (k: string, n: number) => setEdits((e) => ({ ...e, mix: { ...e.mix, [k]: n } }));
@@ -73,8 +79,9 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
   const stockChanged = funds.filter((p) => { const a = stockOf(p.fundId), b = stockInit(t, p.fundId); return !same(a.min, b.min) || !same(a.days, b.days) || !same(a.max, b.max); });
   const goalChanged = (k: GoalKey) => { const a = goalOf(k), b = goalInit(t, k); return !same(a.value, b.value) || normDate(a.by) !== normDate(b.by); };
   const mixChanged = mixKeys.some((k) => !same(mixOf(k), t.mix[k]));
+  const rialChanged = (() => { const a = rialOf(), b = rialInit(t); return !same(a.min, b.min) || !same(a.max, b.max); })();
   const goalsChanged = (['aum', 'orgs', 'users'] as GoalKey[]).filter(goalChanged);
-  const changes = stockChanged.length + goalsChanged.length + (mixChanged ? 1 : 0);
+  const changes = stockChanged.length + goalsChanged.length + (mixChanged ? 1 : 0) + (rialChanged ? 1 : 0);
 
   // ── validation
   const stockErr = (fid: string): string | null => {
@@ -84,6 +91,13 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
     if (!(s.min >= 0)) return 'حداقل موجودی را وارد کنید.';
     if (!(Number.isInteger(s.days) && s.days >= 1 && s.days <= 365)) return 'روزهای پوشش باید عددی بین ۱ تا ۳۶۵ باشد.';
     if (!Number.isNaN(s.max) && !(s.max > s.min)) return 'سقف موجودی باید از حداقل بیشتر باشد.';
+    return null;
+  };
+  const rialErr = (): string | null => {
+    const r = rialOf();
+    if (!t.rial && [r.min, r.max].every(Number.isNaN)) return null;
+    if (!(r.min >= 0)) return 'حداقل ریال آزاد را وارد کنید.';
+    if (!Number.isNaN(r.max) && !(r.max > r.min)) return 'سقف ریال آزاد باید از حداقل بیشتر باشد.';
     return null;
   };
   const goalErr = (k: GoalKey): { value?: string; by?: string } => {
@@ -96,7 +110,7 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
   };
   const mixSum = Math.round(sum(mixKeys.map((k) => (Number.isFinite(mixOf(k)) ? mixOf(k) : 0))) * 10) / 10;
   const mixBad = mixKeys.some((k) => !(mixOf(k) >= 0 && mixOf(k) <= 100)) || Math.abs(mixSum - 100) > 0.05;
-  const invalid = funds.some((p) => stockErr(p.fundId)) || (['aum', 'orgs', 'users'] as GoalKey[]).some((k) => { const e = goalErr(k); return e.value || e.by; }) || mixBad;
+  const invalid = !!rialErr() || funds.some((p) => stockErr(p.fundId)) || (['aum', 'orgs', 'users'] as GoalKey[]).some((k) => { const e = goalErr(k); return e.value || e.by; }) || mixBad;
 
   const onSave = () => {
     if (!changes || invalid) return;
@@ -109,6 +123,7 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
     }
     for (const k of goalsChanged) { const g = goalOf(k); patch[k] = { value: g.value, by: isoOf(g.by)! }; }
     if (mixChanged) patch.mix = Object.fromEntries(mixKeys.map((k) => [k, mixOf(k)]));
+    if (rialChanged) { const r = rialOf(); patch.rial = { minFreeValue: r.min, maxFreeValue: Number.isNaN(r.max) ? undefined : r.max }; }
     save.mutate(patch, {
       onSuccess: () => toast(changes === 1 ? 'هدف خزانه ذخیره شد' : `${faDigits(changes)} هدف خزانه ذخیره شد`),
       onError: (e) => toast(errMsg(e), 'error'),
@@ -121,8 +136,9 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
     if (!m) return undefined;
     return k === 'other' ? sum(m.filter((x) => !(x.fundId in t.mix)).map((x) => x.pct)) : m.find((x) => x.fundId === k)?.pct ?? 0;
   };
-  const nameOf = (k: string) => (k === 'other' ? 'سایر صندوق‌ها' : positions.find((p) => p.fundId === k)?.name ?? k);
-  const mixCol = (k: string) => (k === 'other' ? 'var(--grey-400)' : fundUi(k).col);
+  const nameOf = (k: string) => (k === 'other' ? 'سایر صندوق‌ها' : k === 'rial' ? RIAL_UI.rial.name : positions.find((p) => p.fundId === k)?.name ?? k);
+  const mixCol = (k: string) => (k === 'other' ? 'var(--grey-400)' : k === 'rial' ? `var(${RIAL_UI.rial.col})` : fundUi(k).col);
+  const mixUi = (k: string): { d: string; tone: Tone } => (k === 'other' ? { d: TI.stock, tone: 'neutral' } : k === 'rial' ? { d: RIAL_UI.rial.d, tone: RIAL_UI.rial.tone } : fundUi(k));
   const errText = (s?: string | null) => (s ? <span style={{ color: 'var(--error-text)', fontWeight: 600 }}>{s}</span> : null);
   const label = (txt: string) => <span className="mute" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{txt}</span>;
   const titleWith = (d: string, tone: Tone, txt: string) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Tile d={d} tone={tone} size="sm" />{txt}</span>;
@@ -156,8 +172,30 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
     );
   };
 
+  const rial = rialOf();
+  const rErr = rialErr();
+  const rt = summary.data?.rial.main;
+  const rSt = rt ? STOCK_STATE[rt.state] : undefined;
+
   return (
     <>
+      <SettingsGroup
+        title={titleWith(RIAL_UI.rial.d, RIAL_UI.rial.tone, 'ریال')}
+        action={<span className="mute" style={{ fontSize: 12, fontWeight: 500 }}>ریال آزاد نمادنو: باقی حساب بانکی پس از پول کاربران و سازمان‌ها، سفارش‌های باز و ریال رزرو</span>}
+        footer="ریال آزاد نمادنو سقف سفارش‌های صدور تازه است؛ کمتر از حداقل در صف اقدام هشدار «زیر هدف» می‌آید و بالاتر از سقف «مازاد» نشان داده می‌شود."
+      >
+        <SettingRow
+          lead={<Tile d={RIAL_UI.rial.d} tone={RIAL_UI.rial.tone} />}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>حداقل ریال آزاد نمادنو{rSt && <Pill tone={rSt.tone} dot>{rSt.label}</Pill>}{!t.rial && <Pill>بدون هدف</Pill>}</span>}
+          desc={errText(rErr) ?? (rt ? <>اکنون <b className="num" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{amt(rt.available)}</b> · کیف پول کاربران {amt(rt.users)} · حساب آزاد سازمان‌ها {amt(rt.orgFree)}</> : 'در حال بارگذاری…')}
+        >
+          <NumberInput value={toB(rial.min)} onChange={(n) => setRial({ min: fromB(n) })} suffix="میلیارد تومان" width={64} decimals label="حداقل ریال آزاد نمادنو (میلیارد تومان)" invalid={!!rErr && !(rial.min >= 0)} />
+        </SettingRow>
+        <SettingRow lead={<Tile d={TI.target} tone="info" />} label="سقف ریال آزاد" desc="اختیاری · بالاتر از آن ریال آزاد «مازاد» است و می‌تواند صرف صدور شود">
+          <NumberInput value={toB(rial.max)} onChange={(n) => setRial({ max: fromB(n) })} suffix="میلیارد تومان" width={64} decimals label="سقف ریال آزاد نمادنو (میلیارد تومان، اختیاری)" invalid={!!rErr && !Number.isNaN(rial.max) && !(rial.max > rial.min)} />
+        </SettingRow>
+      </SettingsGroup>
+
       <SettingsGroup
         title={titleWith(TI.stock, 'success', 'موجودی صندوق‌ها')}
         action={<span className="mute" style={{ fontSize: 12, fontWeight: 500 }}>حداقل و سقف موجودی آزاد، و روزهای پوششی که باید همیشه آماده باشد</span>}
@@ -192,19 +230,19 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
         })}
       </SettingsGroup>
 
-      <SettingsGroup title={titleWith(TI.target, 'primary', 'اهداف رشد')} footer="دارایی تحت مدیریت = جمع ارزش واحدهای همه‌ی صندوق‌های خزانه. تاریخ هر هدف باید در آینده باشد.">
-        {goalRow('aum', { title: 'دارایی تحت مدیریت', d: TI.stock, tone: 'primary', unit: 'تومان', billions: true, current: summary.data?.totals.heldValue })}
+      <SettingsGroup title={titleWith(TI.target, 'primary', 'اهداف رشد')} footer="دارایی تحت مدیریت = جمع ارزش واحدهای صندوق‌ها + موجودی ریالی. تاریخ هر هدف باید در آینده باشد.">
+        {goalRow('aum', { title: 'دارایی تحت مدیریت', d: TI.stock, tone: 'primary', unit: 'تومان', billions: true, current: summary.data?.managed.value })}
         {goalRow('orgs', { title: 'سازمان‌های فعال', d: TI.org, tone: 'secondary', unit: 'سازمان', current: summary.data?.growth.activeOrgs })}
         {goalRow('users', { title: 'کاربران', d: TI.user, tone: 'info', unit: 'کاربر', current: summary.data?.growth.users })}
       </SettingsGroup>
 
       <div className="nm-grid c2">
         <div className="nm-stack">
-          <SettingsGroup title={titleWith(TI.plan, 'warning', 'ترکیب دارایی')} footer="سهم هر صندوق از دارایی تحت مدیریت؛ «سایر صندوق‌ها» همه‌ی صندوق‌های دیگر با هم است.">
+          <SettingsGroup title={titleWith(TI.plan, 'warning', 'ترکیب دارایی')} footer="سهم ریال و هر صندوق از دارایی تحت مدیریت؛ «ریال» موجودی حساب بانکی است و «سایر صندوق‌ها» همه‌ی صندوق‌های دیگر با هم.">
             {mixKeys.map((k) => {
               const c = curMix(k);
               const v = mixOf(k);
-              const u = k === 'other' ? { d: TI.stock, tone: 'neutral' as Tone } : fundUi(k);
+              const u = mixUi(k);
               const gap = c != null && Number.isFinite(v) ? c - v : 0;
               return (
                 <SettingRow key={k} lead={<Tile d={u.d} tone={u.tone} />} label={nameOf(k)}

@@ -25,6 +25,10 @@ export const EMP_TONE: Record<Employee['status'], Tone> = { active: 'success', i
 /** Status of one employee's share of a package: label, tone and a meta line (amount · date / milestone progress). */
 export function pkgStatusFor(p: OrgPackage, employeeId: string): { label: string; tone: Tone; meta: string } {
   const r = p.recipients.find((x) => x.employeeId === employeeId);
+  // registered with a deposit receipt: not delivered to the employee until Namadno approves it
+  if (p.status === 'awaiting_payment') return { label: 'در انتظار واریز', tone: 'warning', meta: `${money(r?.amount ?? p.amountPerPerson)} تومان · ثبت ${jDayMonth(p.submittedAt ?? p.createdAt)}` };
+  // paid, waiting for Namadno's fund stock: delivered automatically at the latest by stockEta
+  if (p.status === 'awaiting_stock') return { label: 'در انتظار تأمین موجودی', tone: 'warning', meta: `${money(r?.amount ?? p.amountPerPerson)} تومان · ${p.stockEta ? `ارسال تا ${jDayMonth(p.stockEta)}` : `ثبت ${jDayMonth(p.stockQueuedAt ?? p.createdAt)}`}` };
   if (p.lockPolicy.type === 'milestone' && r?.status === 'accepted') {
     const steps = p.milestoneProgress ?? [];
     return { label: LOCK_META.milestone.label, tone: 'primary', meta: `${money(r.amount)} تومان · ${faDigits(steps.filter((s) => s.status === 'released').length)} از ${faDigits(steps.length)} مرحله آزاد` };

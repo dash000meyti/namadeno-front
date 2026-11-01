@@ -3,15 +3,29 @@
  * Operator treasury («خزانه») — types + React Query hooks owned by the "op-treasury" area.
  *
  * Namadno buys units from investment funds and keeps them as ONE pooled stock. Parts of that stock are allocated to
- * organizations' packages and to users (partly reserved); the rest is free stock. Cash flows through one platform
- * rial account: organization deposits in, unit buy orders («صدور») out, redemptions («ابطال») in.
+ * organizations' packages and to users (partly reserved); the rest is free stock.
+ *
+ * Rial first: every interaction with users and organizations is in rial; funds are back-office policy. The bank
+ * account is split into two rial treasuries that work like the fund stock:
+ *   «ریال»      main rial: users' wallets, organizations' free balances, cash tied in buy orders and Namadno's free rial
+ *   «ریال رزرو» reserve rial: money of sent packages waiting for their recipients
+ * Flow: organization deposit → «ریال» (the organization's free balance) → a sent package blocks its amount in
+ * «ریال رزرو» → the recipient accepts → the user's rial wallet → the fund parts are bought from our stock (back to
+ * «ریال», Namadno's free rial). A user selling units is paid from «ریال»; a buy order («صدور») is paid from «ریال».
  *
  * Identities (per fund, units):
  *   allocated = baseline + Σ modelled holdings          reserved = baseline + Σ modelled reservations
  *   committed = baseline + pending recipients of sent packages × split
  *   available (free stock) = held − allocated − committed − pending redeem       (negative = shortfall)
  *   coverageDays = (available + pending buy) value / net daily demand            (null when net demand ≤ 0)
- * Cash: balance = opening + Σ done entries; available = balance − tied in buy orders − user wallets − committed rial.
+ * Cash: balance (bank) = opening + Σ done entries.
+ * Organization rial account: balance = approved deposits − paid to recipients + reclaimed shares;
+ *   blocked = pending recipients of its sent packages (always covered by the balance — a package is sent only when it is paid);
+ *   setAside = the part of «آزاد» kept for its packages waiting for receipt approval (the queue, `awaiting_payment`);
+ *   free = max(0, balance − blocked − setAside); pending = receipts waiting for review. Nothing is ever unfunded.
+ * «ریال رزرو» held = Σ blocked · «ریال» held = bank − «ریال رزرو» held
+ * Namadno free rial (`CashSummary.available`) = «ریال» held − user wallets − organizations' free and set-aside − tied in buy orders
+ *                                            = bank − user wallets − tied − Σ organizations' balances.
  *
  * Endpoints are implemented by src/mocks/handlers/op-treasury-extra.ts (engine: src/mocks/treasury.ts) and
  * documented in docs/API.md («بهره‌بردار — خزانه …»).
@@ -23,7 +37,11 @@ import { qk } from './keys';
 
 // ───────────────────────── Stock ─────────────────────────
 
-export type StockState = 'shortfall' | 'below' | 'ok' | 'surplus' | 'inactive';
+/**
+ * `need_buy` («نیاز به خرید»): items wait in the queue for this fund's stock (packages, users' purchases) — buy now.
+ * Nothing is ever negative: what the stock cannot cover waits, so `shortfall` («کسری») is no longer produced (deprecated).
+ */
+export type StockState = 'need_buy' | 'shortfall' | 'below' | 'ok' | 'surplus' | 'inactive';
 export type OrderSide = 'buy' | 'redeem';
 
 /** Per-fund stock targets. Free stock should stay above max(minFreeValue, net daily demand × targetDays). */
@@ -54,7 +72,7 @@ export interface TreasuryPosition {
   committedUnits: number;
   pendingBuyUnits: number;
   pendingRedeemUnits: number;
-  /** held − allocated − committed − pendingRedeem. Negative = shortfall. */
+  /** held − allocated − committed − pendingRedeem. Never negative: what the stock cannot cover waits in the queue. */
   availableUnits: number;
   heldValue: Toman;
   allocatedValue: Toman;
@@ -63,6 +81,13 @@ export interface TreasuryPosition {
   availableValue: Toman;
   pendingBuyValue: Toman;
   pendingRedeemValue: Toman;
+  /** Demand waiting in the queue for this fund (packages «در انتظار تأمین موجودی» + users' purchases), Toman. */
+  queuedValue: Toman;
+  queuedCount: number;
+  /** max(0, queued − available): what must be bought to release the queue («نیاز به خرید»). */
+  needBuyValue: Toman;
+  /** The earliest time promised to a waiting item (fund settlement + one working day, e.g. 72h for T+2). */
+  needBy?: ISODate;
   /** Average cost of one held unit (Toman). */
   avgCost: Toman;
   /** heldValue − cost of held units. */
@@ -75,6 +100,32 @@ export interface TreasuryPosition {
   minTargetValue?: Toman;
   state: StockState;
   suggestion?: StockSuggestion;
+}
+
+/**
+ * One item waiting in the queue («صف تأمین») — nothing is allowed to go negative, so what the stock or Namadno's free
+ * rial cannot cover waits here and is fulfilled automatically (oldest first) as soon as it is covered:
+ *   package  an organization's package «در انتظار تأمین موجودی» (one row per fund part; `value` = that part)
+ *   buy      a user's fund purchase (money already paid from the wallet; units arrive when the stock does)
+ *   accept   the fund part of an accepted package the stock could not cover yet
+ *   sell     a user's sale to Namadno waiting for Namadno's free rial (fundId 'rial'; `value` = rial to pay)
+ * `count` > 1 = aggregated orders of users the mock does not model one by one.
+ */
+export interface QueueItem {
+  id: ID;
+  kind: 'package' | 'buy' | 'accept' | 'sell';
+  fundId: ID | 'rial';
+  value: Toman;
+  title: string;
+  orgId?: ID;
+  orgName?: string;
+  userId?: ID;
+  userName?: string;
+  packageId?: ID;
+  count?: number;
+  at: ISODate;
+  /** Promised at the latest (settlement + one working day). */
+  eta: ISODate;
 }
 
 export interface StockMovement {
@@ -159,44 +210,85 @@ export interface PlaceOrderBody {
 
 export type CashEntryKind = 'org_deposit' | 'order_buy' | 'order_redeem' | 'user_deposit' | 'user_withdrawal' | 'fee' | 'adjustment';
 
+/** An uploaded payment receipt («فیش واریز»). `url` = a preview (image) or the file link; the real backend stores the file. */
+export interface ReceiptFile {
+  id: ID;
+  name: string;
+  /** MIME type: image/jpeg | image/png | image/webp | application/pdf. */
+  type: string;
+  /** Bytes. */
+  size: number;
+  url?: string;
+}
+
 export interface CashEntry {
   id: ID;
-  /** When it hit the account (done) or was created (expected). */
+  /** When it hit the account (done) or was submitted (expected). */
   at: ISODate;
   kind: CashEntryKind;
   /** Signed Toman: + into the platform account. */
   amount: Toman;
-  status: 'expected' | 'done' | 'cancelled';
+  /**
+   * Organization deposits: `expected` = a receipt waiting for the operator's review («در انتظار تأیید»),
+   * `done` = approved (the money is in the organization's account), `rejected` = not accepted (see rejectReason).
+   * There is no overdue state.
+   */
+  status: 'expected' | 'done' | 'cancelled' | 'rejected';
   title: string;
   orgId?: ID;
   orgName?: string;
   packageId?: ID;
   orderId?: ID;
   userId?: ID;
+  /** @deprecated Deposits have no due date any more (receipts are reviewed instead). */
   dueAt?: ISODate;
   receivedAt?: ISODate;
-  /** Bank reference of a received deposit. */
+  /** Bank reference of a received deposit (optional; organizations write it in `note`). */
   ref?: string;
+  /** The organization's optional description of the transfer (e.g. the tracking number), or an operator note. */
   note?: string;
+  /** The uploaded payment receipt («فیش واریز») of an organization deposit. */
+  receipt?: ReceiptFile;
+  /** Who submitted the receipt (organization panel member) — `by` is who approved / recorded it. */
+  submittedBy?: string;
+  rejectedAt?: ISODate;
+  rejectReason?: string;
+  /**
+   * The package this receipt pays for (read-only, derived): `queued` = still waiting in the queue for this approval
+   * (nothing delivered or blocked yet); `fromFree` = what the organization's «آزاد» covered (set aside for it).
+   */
+  forPackage?: { id: ID; title: string; recipients: number; total: Toman; fromFree: Toman; status: 'queued' | 'sent' | 'cancelled' | 'other' };
   /** Account balance right after this entry (done entries only). */
   balanceAfter?: Toman;
-  /** expected and dueAt < now. */
+  /** @deprecated Always false — there is no overdue state. */
   overdue?: boolean;
   by?: string;
 }
 
 export interface CashSummary {
+  /** Bank account balance (= «ریال» held + «ریال رزرو» held). */
   balance: Toman;
   /** Cash set aside for open buy orders. */
   tiedInOrders: Toman;
   /** Users' rial wallets (held in the same account, not the operator's money). */
   userWallets: Toman;
-  /** Rial part of open package commitments. */
+  /** @deprecated Rial part of open package commitments (before the rial treasuries); not part of `available` any more. */
   committedRial: Toman;
+  /** Organizations' free balances (paid, not yet defined in a package). */
+  orgFree: Toman;
+  /** Organizations' money kept for their packages waiting for receipt approval (part of «ریال»). */
+  orgSetAside: Toman;
+  /** «ریال رزرو» held: sent packages waiting for recipients. */
+  reserve: Toman;
+  /** @deprecated Always 0 — a package is sent only when it is paid, so blocked money is always covered. */
+  unfunded: Toman;
+  /** Namadno's free rial = balance − user wallets − tied in orders − organizations' free and set-aside − reserve. */
   available: Toman;
   expectedDeposits: Toman;
   expectedCount: number;
+  /** @deprecated Always 0 — receipts are reviewed, nothing becomes overdue. */
   overdueCount: number;
+  /** @deprecated Always 0. */
   overdueAmount: Toman;
   /** oldest first; the last point is live. */
   history: { t: ISODate; balance: Toman; available: Toman }[];
@@ -219,6 +311,101 @@ export interface OrgTreasuryRow {
   depositsExpected: Toman;
   depositsOverdue: Toman;
   depositsReceivedYear: Toman;
+  /** The organization's rial account with Namadno. */
+  rial: OrgRialBalance;
+}
+
+/**
+ * An organization's rial account with Namadno (Toman). balance = blocked + setAside + free.
+ * A package is sent only when it is paid: when «آزاد» is short it waits in a queue (`awaiting_payment`) until Namadno
+ * approves its receipt — nothing is delivered, blocked or unfunded meanwhile; only the part «آزاد» covered is set aside.
+ */
+export interface OrgRialBalance {
+  /** Approved deposits − paid to recipients + reclaimed shares. */
+  balance: Toman;
+  /** Pending recipients of its sent packages (whole amounts), kept in «ریال رزرو». Always ≤ balance. */
+  blocked: Toman;
+  /** Paid and not yet defined in a package. */
+  free: Toman;
+  /** Kept from «آزاد» for its packages waiting for receipt approval (the part of them «آزاد» covered). */
+  setAside: Toman;
+  /** Whole amount and number of its packages waiting for receipt approval (`awaiting_payment`, not delivered). */
+  queuedTotal: Toman;
+  queuedCount: number;
+  /** @deprecated Always 0 — nothing is sent before it is paid. */
+  unfunded: Toman;
+  /** Receipts waiting for Namadno's review. */
+  pending: Toman;
+  pendingCount: number;
+}
+export interface OrgRialAccount extends OrgRialBalance { orgId: ID; orgName: string; status: 'active' | 'onboarding' | 'suspended' }
+
+// ───────────────────────── Rial treasuries ─────────────────────────
+
+export type RialTreasuryId = 'rial' | 'rial_reserve';
+/** «ریال» and «ریال رزرو» — the bank account split by whose money it is. Toman. */
+export interface RialTreasury {
+  /** Bank account balance = main.held + reserve.held. */
+  bank: Toman;
+  main: {
+    held: Toman;
+    /** Users' rial wallets, and their reserved part (e.g. card collateral). */
+    users: Toman;
+    usersReserved: Toman;
+    /** Organizations' free balances. */
+    orgFree: Toman;
+    /** Organizations' money kept for their packages waiting for receipt approval. */
+    orgSetAside: Toman;
+    /** Set aside for open buy orders. */
+    tied: Toman;
+    /** Namadno's free rial (= CashSummary.available). Never negative. */
+    available: Toman;
+    /** Users' sales to Namadno waiting in the queue for free rial (rial to pay), and how many. */
+    queuedValue: Toman;
+    queuedCount: number;
+    /** max(0, queued − available): rial Namadno must raise (e.g. a redemption) to release the queue («نیاز به تأمین ریال»). */
+    needValue: Toman;
+    target?: RialTarget;
+    /** need_buy when sales wait for rial; otherwise below / surplus / ok against the target band. */
+    state: StockState;
+  };
+  reserve: {
+    /** = blocked: sent packages are always paid. */
+    held: Toman;
+    /** Pending recipients of sent packages (whole amounts). */
+    blocked: Toman;
+    /** @deprecated Always 0 — nothing is sent before it is paid. */
+    unfunded: Toman;
+    /** Organizations' receipts waiting for review (not part of the bank until approved). */
+    expected: Toman;
+    /** Always ok (kept for compatibility). */
+    state: StockState;
+  };
+  byOrg: OrgRialAccount[];
+  /** oldest first; the last point is live. */
+  history: { t: ISODate; bank: Toman; available: Toman; reserve: Toman }[];
+}
+
+export type RialMoveKind =
+  | 'org_deposit' | 'reserve' | 'payout' | 'release' | 'reclaim'
+  | 'user_buy' | 'user_sell' | 'user_deposit' | 'user_withdrawal' | 'order_buy' | 'order_redeem' | 'fee' | 'adjustment';
+/** One rial movement between the treasuries and wallets (derived from the ledger, packages and stock movements). */
+export interface RialMove {
+  id: ID;
+  at: ISODate;
+  kind: RialMoveKind;
+  /** Always positive; `from` → `to` gives the direction. */
+  amount: Toman;
+  from: string;
+  to: string;
+  title: string;
+  orgId?: ID;
+  orgName?: string;
+  userId?: ID;
+  userName?: string;
+  fundId?: ID;
+  packageId?: ID;
+  ref?: string;
 }
 
 export interface OrgTreasuryDetail {
@@ -229,11 +416,16 @@ export interface OrgTreasuryDetail {
 
 // ───────────────────────── Targets + planning ─────────────────────────
 
+/** Namadno's free rial should stay between these (Toman). */
+export interface RialTarget { minFreeValue: Toman; maxFreeValue?: Toman }
+
 export interface TreasuryTargets {
   stock: StockTarget[];
-  /** Total managed assets (Σ held value) by a date. */
+  /** Free rial of «ریال» (Namadno's own). */
+  rial?: RialTarget;
+  /** Total managed assets (Σ held fund value + the rial bank balance) by a date. */
   aum: { value: Toman; by: ISODate };
-  /** Percent per fund id; key 'other' = every other fund together. Sums to 100. */
+  /** Percent per fund id plus 'rial'; key 'other' = every other fund together. Sums to 100. */
   mix: Record<string, number>;
   /** Active organizations by a date. */
   orgs: { value: number; by: ISODate };
@@ -243,7 +435,7 @@ export interface TreasuryTargets {
   updatedBy: string;
 }
 
-export type TargetsPatch = Partial<Pick<TreasuryTargets, 'stock' | 'aum' | 'mix' | 'orgs' | 'users'>>;
+export type TargetsPatch = Partial<Pick<TreasuryTargets, 'stock' | 'rial' | 'aum' | 'mix' | 'orgs' | 'users'>>;
 
 export type Horizon = 30 | 60 | 90;
 
@@ -381,7 +573,11 @@ export interface TreasurySummary {
   coverageDays: number | null;
   positions: TreasuryPosition[];
   cash: CashSummary;
-  /** Held value per fund; targetPct for funds with their own mix target. */
+  /** The two rial treasuries. */
+  rial: RialTreasury;
+  /** Managed assets = Σ held fund value + the rial bank balance. */
+  managed: { value: Toman; funds: Toman; rial: Toman };
+  /** Held value per fund plus 'rial' (bank balance); targetPct for keys with their own mix target. */
   mix: { fundId: ID; value: Toman; pct: number; targetPct?: number }[];
   /** Target share of all funds without their own key (targets.mix.other). */
   otherTargetPct?: number;
@@ -390,7 +586,7 @@ export interface TreasurySummary {
   individualsValue: Toman;
   /** Daily Toman flows of the last `range` days, oldest first; the last point is today (live). */
   flow: { labels: ISODate[]; allocated: Toman[]; returned: Toman[]; bought: Toman[]; redeemed: Toman[] };
-  /** Managed assets per month this year (last = now) with the target path. */
+  /** Managed assets (funds + rial) per month this year (last = now) with the target path. */
   aumMonthly: { month: string; aum: Toman; target?: Toman }[];
   aumTarget: { value: Toman; by: ISODate; pct: number };
   growth: { activeOrgs: number; orgs: number; activeUsers: number; users: number };
@@ -400,7 +596,14 @@ export interface TreasurySummary {
 
 export type ActionKind =
   | 'stock_shortfall' | 'stock_below' | 'stock_surplus' | 'order_settle' | 'deposit_overdue' | 'deposit_expected'
-  | 'request_sla' | 'risk_alert' | 'milestone_due' | 'org_onboarding' | 'service_incident';
+  | 'request_sla' | 'risk_alert' | 'milestone_due' | 'org_onboarding' | 'service_incident' | 'rial_shortfall' | 'rial_below' | 'reserve_unfunded'
+  /** A receipt waiting for review (cta review_deposit). deposit_overdue / deposit_expected / reserve_unfunded are no longer produced. */
+  | 'deposit_review'
+  /**
+   * «نیاز به خرید»: items wait for a fund's stock (cta order buy) · «نیاز به تأمین ریال»: users' sales wait for free rial.
+   * stock_shortfall / rial_shortfall are no longer produced (nothing goes negative).
+   */
+  | 'stock_need_buy' | 'rial_need';
 
 export interface ActionItem {
   id: ID;
@@ -415,7 +618,7 @@ export interface ActionItem {
   href: string;
   cta: {
     label: string;
-    action?: OrderAction | { type: 'confirm_deposit'; id: ID } | { type: 'settle_order'; id: ID };
+    action?: OrderAction | { type: 'confirm_deposit'; id: ID } | { type: 'review_deposit'; id: ID } | { type: 'settle_order'; id: ID };
   };
 }
 
@@ -476,10 +679,13 @@ export const tq = {
   quote: (v: Record<string, unknown>) => ['op', 'treasury', 'quote', v] as const,
   cash: (range: number) => ['op', 'treasury', 'cash', range] as const,
   cashEntries: (f?: Record<string, unknown>) => ['op', 'treasury', 'cash-entries', f ?? {}] as const,
+  rial: (range: number) => ['op', 'treasury', 'rial', range] as const,
+  rialMoves: (f?: Record<string, unknown>) => ['op', 'treasury', 'rial-moves', f ?? {}] as const,
   org: (id: string) => ['op', 'treasury', 'org', id] as const,
   targets: ['op', 'treasury', 'targets'] as const,
   plan: (h: number) => ['op', 'treasury', 'plan', h] as const,
   actions: ['op', 'actions'] as const,
+  queue: (f?: Record<string, unknown>) => ['op', 'treasury', 'queue', f ?? {}] as const,
   activity: (f?: Record<string, unknown>) => ['op', 'activity', f ?? {}] as const,
 };
 
@@ -539,7 +745,23 @@ export type CashEntryFilter = { kind?: CashEntryKind | 'all'; status?: CashEntry
 export const useCashEntries = (f: CashEntryFilter = {}) =>
   useQuery({ queryKey: tq.cashEntries(clean(f)), queryFn: () => get<CashEntry[]>('/op/treasury/cash/entries', clean(f)) });
 
-export const useConfirmDeposit = () => useTreasuryMutation((v: { id: ID; ref?: string }) => post<CashEntry>(`/op/treasury/deposits/${v.id}/confirm`, { ref: v.ref }));
+/** «ریال» and «ریال رزرو» with every organization's rial account. */
+export const useRialTreasury = (range: 30 | 90 = 30) =>
+  useQuery({ queryKey: tq.rial(range), queryFn: () => get<RialTreasury>('/op/treasury/rial', { range }) });
+
+export type RialMoveFilter = { kind?: RialMoveKind | 'all'; orgId?: ID; userId?: ID; limit?: number };
+/** Rial movements between the treasuries and wallets, newest first. */
+export const useRialMoves = (f: RialMoveFilter = {}) =>
+  useQuery({ queryKey: tq.rialMoves(clean(f)), queryFn: () => get<RialMove[]>('/op/treasury/rial/moves', clean(f)) });
+
+/** Approve a receipt: the money goes into the organization's rial account; a package waiting for it is delivered. */
+export const useConfirmDeposit = () => useTreasuryMutation((v: { id: ID; ref?: string }) => post<CashEntry & {
+  deliveredPackage?: { id: ID; title: string; recipients: number };
+  /** Paid, but the stock is short: the package waits for Namadno's buy, sent at the latest by `eta`. */
+  stockQueued?: { id: ID; title: string; eta: ISODate };
+}>(`/op/treasury/deposits/${v.id}/confirm`, { ref: v.ref }));
+/** Reject a receipt with a reason (the organization is notified and can upload a new one). */
+export const useRejectDeposit = () => useTreasuryMutation((v: { id: ID; reason: string }) => post<CashEntry>(`/op/treasury/deposits/${v.id}/reject`, { reason: v.reason }));
 export const useRecordDeposit = () => useTreasuryMutation((v: { orgId: ID; amount: Toman; ref?: string; note?: string }) => post<CashEntry>('/op/treasury/deposits', v));
 
 export const useOrgTreasury = (orgId: string | undefined) =>
@@ -551,6 +773,10 @@ export const useUpdateTargets = () => useTreasuryMutation((v: TargetsPatch) => p
 
 export const useTreasuryPlan = (horizon: Horizon = 30) =>
   useQuery({ queryKey: tq.plan(horizon), queryFn: () => get<TreasuryPlan>('/op/treasury/plan', { horizon }) });
+
+/** «صف تأمین»: everything waiting for stock or free rial, oldest first (optionally one fund, or 'rial'). */
+export const useStockQueue = (fundId?: string) =>
+  useQuery({ queryKey: tq.queue(clean({ fundId })), queryFn: () => get<QueueItem[]>('/op/treasury/queue', clean({ fundId })) });
 
 /** «صف اقدام»: everything that needs the operator, most severe first. */
 export const useTreasuryActions = () =>

@@ -1,28 +1,31 @@
 'use client';
 /**
- * /op — command center («نمای کلی»), driven by the treasury summary.
- * Key numbers → what needs action now + stock health per fund → stock flow + cash → managed assets vs target + asset mix
- * → recent activity + top organizations. The former reports page is the «خروجی گزارش» menu (Excel / printable PDF).
+ * /op — command center («نمای کلی»), driven by the treasury summary. Rial first: everything users and organizations do
+ * with Namadno is in rial, so «ریال» / «ریال رزرو» lead the health list and the rial treasury has its own card.
+ * Key numbers → what needs action now + treasury health (rial, then funds) → stock flow + rial treasury → managed assets
+ * (funds + rial) vs target + asset mix → recent activity + top organizations. The former reports page is the
+ * «خروجی گزارش» menu (Excel / printable PDF).
  */
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useOpOrganizations } from '@/api/op';
-import { useOpActivity, useTreasurySummary, type CashSummary, type StockState, type TreasuryPosition, type TreasurySummary } from '@/api/op-treasury-extra';
+import { useOpActivity, useTreasurySummary, type RialTreasury, type StockState, type TreasuryPosition, type TreasurySummary } from '@/api/op-treasury-extra';
 import {
-  Allocation, Ava, BigNum, Card, Empty, ErrorBlock, KV, Legend, LineChart, List, ListRow, MenuButton, Meter, Note, PageHeading, Pill,
+  Allocation, Ava, BigNum, Card, Empty, ErrorBlock, Legend, LineChart, List, ListRow, MenuButton, Meter, Note, PageHeading, Pill,
   SkeletonCard, SkeletonRows, Spark, StatStrip, Tabs, Tile,
 } from '@/components/panel/kit';
 import { ActionQueue } from '@/components/op/overview/ActionQueue';
 import { useOverviewExports } from '@/components/op/overview/exports';
-import { ACTOR, STOCK_STATE, TI, amt, daysText, fundUi } from '@/components/op/treasury/ui';
+import { BankWaterfall, RialTile, mainStatus, queueOf, reserveStatus } from '@/components/op/funds/rial';
+import { ACTOR, RIAL_UI, STOCK_STATE, TI, amt, daysText, fundUi, isNeed } from '@/components/op/treasury/ui';
 import { dec, errMsg, pctT } from '@/components/op/system/fmt';
-import { faDigits, jDate, jDayMonth, money, relTime } from '@/lib/format';
+import { faDigits, jDate, jDateTime, jDayMonth, money, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { routes } from '@/lib/routes';
 
 type Range = 7 | 30 | 90;
 const RANGES: { key: Range; label: string }[] = [{ key: 7, label: '۷ روز' }, { key: 30, label: '۳۰ روز' }, { key: 90, label: '۹۰ روز' }];
-const STATE_RANK: Record<StockState, number> = { shortfall: 0, below: 1, surplus: 2, ok: 3, inactive: 4 };
+const STATE_RANK: Record<StockState, number> = { need_buy: 0, shortfall: 0, below: 1, surplus: 2, ok: 3, inactive: 4 };
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 /** Billions with one decimal for chart axes («۱٫۲»). */
 const b1 = (n: number) => dec(n, 1);
@@ -37,6 +40,14 @@ function split(n: number): [string, string] {
   return [money(n), 'تومان'];
 }
 const signedAmt = (n: number) => (n > 0 ? '+' : '') + amt(n);
+/** `n` in the same unit as split(ref) — for notes under a StatStrip value («صندوق‌ها ۴۸۶٫۲ · ریال ۸۲٫۵»). */
+function inUnitOf(n: number, ref: number): string {
+  const a = Math.abs(ref);
+  if (a >= 1e12) return dec(n / 1e12, 2);
+  if (a >= 1e9) return dec(n / 1e9, 1);
+  if (a >= 1e6) return dec(n / 1e6, 0);
+  return money(n);
+}
 
 export default function OpOverviewPage() {
   const [range, setRange] = useState<Range>(30);
@@ -65,7 +76,7 @@ export default function OpOverviewPage() {
         <>
           <div className="nm-grid side stretch">
             <FlowCard s={s} />
-            <CashCard c={s.cash} />
+            <RialCard s={s} />
           </div>
           <div className="nm-grid side stretch">
             <AumCard s={s} />
@@ -91,30 +102,35 @@ export default function OpOverviewPage() {
 function Stats({ s }: { s: TreasurySummary }) {
   const t = s.totals;
   const c = s.cash;
-  const weak = s.positions.filter((p) => p.state === 'shortfall' || p.state === 'below');
-  const shortfall = weak.some((p) => p.state === 'shortfall');
-  const [aumV, aumU] = split(t.heldValue);
+  const r = s.rial;
+  const mg = s.managed;
+  const weak = s.positions.filter((p) => isNeed(p.state) || p.state === 'below');
+  const need = weak.filter((p) => isNeed(p.state));
+  const [aumV, aumU] = split(mg.value);
+  const [rialV, rialU] = split(Math.max(0, c.available));
   const [freeV, freeU] = split(t.availableValue);
   const [resV, resU] = split(t.reservedValue);
-  const [cashV, cashU] = split(c.available);
-  const commit = t.committedValue + c.committedRial;
-  const [comV, comU] = split(commit);
+  const [comV, comU] = split(r.reserve.blocked);
   const resPct = t.allocatedValue ? (t.reservedValue / t.allocatedValue) * 100 : 0;
   return (
     <StatStrip items={[
-      { label: 'دارایی تحت مدیریت', value: aumV, unit: aumU, href: routes.op.planning, note: `${pctT(s.aumTarget.pct, 0)} از هدف ${amt(s.aumTarget.value)}`, trend: s.aumTarget.pct >= 100 ? 'up' : undefined },
       {
-        label: 'موجودی آزاد', value: freeV, unit: freeU, href: routes.op.funds,
-        note: `پوشش ${daysText(s.coverageDays)}`,
-        trend: shortfall ? 'down' : weak.length ? 'warn' : undefined,
+        label: 'دارایی تحت مدیریت', value: aumV, unit: aumU, href: routes.op.planning,
+        note: `صندوق‌ها ${inUnitOf(mg.funds, mg.value)} · ریال ${inUnitOf(mg.rial, mg.value)}`, trend: s.aumTarget.pct >= 100 ? 'up' : undefined,
+      },
+      {
+        label: 'ریال آزاد نمادنو', value: rialV, unit: rialU, href: routes.op.cash,
+        note: (r.main.needValue ?? 0) > 0 ? `نیاز به تأمین ریال ${amt(r.main.needValue)}`
+          : c.expectedCount ? `${faDigits(c.expectedCount)} فیش در انتظار تأیید · ${amt(c.expectedDeposits)}` : 'فیشی در انتظار تأیید نیست',
+        trend: isNeed(r.main.state) ? 'down' : r.main.state === 'below' ? 'warn' : undefined,
+      },
+      {
+        label: 'موجودی آزاد صندوق‌ها', value: freeV, unit: freeU, href: need.length ? `${routes.op.funds}?state=need_buy` : routes.op.funds,
+        note: need.length ? `${faDigits(need.length)} صندوق نیاز به خرید · ${amt(need.reduce((a, p) => a + p.needBuyValue, 0))}` : `پوشش ${daysText(s.coverageDays)}`,
+        trend: need.length ? 'down' : weak.length ? 'warn' : undefined,
       },
       { label: 'رزروشده', value: resV, unit: resU, href: routes.op.funds, note: `${pctT(resPct, 0)} از دارایی کاربران` },
-      {
-        label: 'نقد در دسترس', value: cashV, unit: cashU, href: routes.op.cash,
-        note: c.overdueCount ? `${faDigits(c.overdueCount)} واریز معوق · ${amt(c.overdueAmount)}` : c.expectedCount ? `${faDigits(c.expectedCount)} واریز در راه · ${amt(c.expectedDeposits)}` : 'واریز در انتظاری نیست',
-        trend: c.available < 0 ? 'down' : c.overdueCount ? 'warn' : undefined,
-      },
-      { label: 'تعهدات باز', value: comV, unit: comU, href: routes.op.organizations, note: 'بسته‌های در انتظار پذیرش' },
+      { label: 'تعهدات باز', value: comV, unit: comU, href: routes.op.cash, note: 'بسته‌های در انتظار دریافت' },
     ]} />
   );
 }
@@ -124,14 +140,67 @@ function Stats({ s }: { s: TreasurySummary }) {
 function StockHealth({ s }: { s: TreasurySummary }) {
   const list = s.positions.filter((p) => p.status === 'active')
     .sort((a, b) => STATE_RANK[a.state] - STATE_RANK[b.state] || b.heldValue - a.heldValue);
-  const weak = list.filter((p) => p.state === 'shortfall' || p.state === 'below').length;
+  const weak = list.filter((p) => isNeed(p.state) || p.state === 'below').length;
+  const rialWeak = isNeed(s.rial.main.state) || s.rial.main.state === 'below' ? 1 : 0;
+  const issues = weak + rialWeak;
+  // nothing goes negative: what the stock or free rial cannot cover waits in the queue («صف تأمین»)
+  const need = list.filter((p) => isNeed(p.state)).length + (isNeed(s.rial.main.state) ? 1 : 0);
+  const pill = need ? `${faDigits(need)} مورد در صف تأمین` : !issues ? 'همه در محدوده‌ی هدف' : issues === weak ? `${faDigits(weak)} صندوق نیازمند صدور` : `${faDigits(issues)} مورد نیازمند پیگیری`;
   return (
-    <Card title="سلامت خزانه" more={{ label: 'موجودی صندوق‌ها', href: routes.op.funds }}
-      actions={<Pill tone={weak ? 'warning' : 'success'} dot>{weak ? `${faDigits(weak)} صندوق نیازمند صدور` : 'همه در محدوده‌ی هدف'}</Pill>}>
-      {list.length ? (
-        <List>{list.map((p) => <StockRow key={p.fundId} p={p} />)}</List>
-      ) : <Empty icon={TI.stock} title="صندوق فعالی در خزانه نیست" />}
+    <Card title="سلامت خزانه" more={{ label: need ? 'نیاز به خرید' : 'موجودی ریال و صندوق‌ها', href: need ? `${routes.op.funds}?state=need_buy` : routes.op.funds }}
+      actions={<Pill tone={need ? 'error' : issues ? 'warning' : 'success'} dot>{pill}</Pill>}>
+      <List>
+        <RialRow r={s.rial} />
+        <ReserveRow r={s.rial} />
+        {list.map((p) => <StockRow key={p.fundId} p={p} />)}
+      </List>
+      {!list.length && <span className="mute" style={{ fontSize: 12.5 }}>صندوق فعالی در خزانه نیست</span>}
     </Card>
+  );
+}
+
+/** «ریال»: Namadno's free rial against the target minimum. */
+function RialRow({ r }: { r: RialTreasury }) {
+  const m = r.main;
+  const st = mainStatus(r);
+  const min = m.target?.minFreeValue;
+  const free = Math.max(0, m.available);
+  const need = m.needValue ?? 0;
+  return (
+    <ListRow href={need > 0 ? `${routes.op.funds}?state=need_buy` : routes.op.cash}
+      label={`${RIAL_UI.rial.name}: ${st.label}، ${need > 0 ? `نیاز به تأمین ریال ${amt(need)} تومان برای ${faDigits(m.queuedCount)} فروش در صف` : `ریال آزاد نمادنو ${amt(free)} تومان`}${min ? `، حداقل هدف ${amt(min)} تومان` : ''}`}
+      lead={<RialTile id="rial" />}
+      title={RIAL_UI.rial.name}
+      sub={need > 0 ? `نیاز به تأمین ریال ${amt(need)} تومان · ${faDigits(m.queuedCount)} فروش در صف` : `آزاد نمادنو ${amt(free)} تومان`}
+      trail={(
+        <>
+          {min ? <Meter value={free / min} tone={st.tone} width={56} label={`ریال آزاد ${amt(free)} از حداقل ${amt(min)} تومان`} /> : null}
+          <span className="num mute" style={{ fontSize: 12.5, minWidth: 64, textAlign: 'left' }}>{min ? `حداقل ${amt(min)}` : '—'}</span>
+          <Pill tone={st.tone} title={st.hint}>{st.label}</Pill>
+        </>
+      )}
+    />
+  );
+}
+
+/** «ریال رزرو»: money of sent packages (always paid); packages waiting for their receipt approval stay in the queue. */
+function ReserveRow({ r }: { r: RialTreasury }) {
+  const v = r.reserve;
+  const st = reserveStatus(r);
+  const q = queueOf(r);
+  return (
+    <ListRow href={routes.op.cash}
+      label={`${RIAL_UI.rial_reserve.name}: ${st.label}، بلاک‌شده ${amt(v.blocked)} تومان${q.count ? `، ${faDigits(q.count)} بسته در صف تأیید فیش` : ''}`}
+      lead={<RialTile id="rial_reserve" />}
+      title={RIAL_UI.rial_reserve.name}
+      sub={v.blocked > 0 ? `بلاک‌شده ${amt(v.blocked)} تومان` : 'بسته‌ای در انتظار دریافت نیست'}
+      trail={(
+        <>
+          <span className="num mute" style={{ fontSize: 12.5, minWidth: 64, textAlign: 'left' }}>{q.count ? `${faDigits(q.count)} بسته در صف` : '—'}</span>
+          <Pill tone={st.tone} title={st.hint}>{st.label}</Pill>
+        </>
+      )}
+    />
   );
 }
 
@@ -140,12 +209,16 @@ function StockRow({ p }: { p: TreasuryPosition }) {
   const st = STOCK_STATE[p.state];
   const target = p.target?.targetDays;
   const cov = p.coverageDays;
+  const need = p.needBuyValue ?? 0;
   const covText = cov == null ? 'بدون مصرف' : target ? `${faDigits(Math.min(999, Math.round(cov)))} از ${faDigits(target)} روز` : daysText(cov);
   return (
-    <ListRow href={routes.op.fund(p.fundId)} label={`${p.name}: ${st.label}، موجودی آزاد ${amt(p.availableValue)} تومان، پوشش ${covText}`}
+    <ListRow href={routes.op.fund(p.fundId)}
+      label={`${p.name}: ${st.label}، ${need > 0 ? `نیاز به خرید ${amt(need)} تومان${p.needBy ? ` تا ${jDateTime(p.needBy)}` : ''}` : `موجودی آزاد ${amt(p.availableValue)} تومان`}، پوشش ${covText}`}
       lead={<Tile d={u.d} tone={u.tone} />}
       title={p.shortName}
-      sub={p.availableValue < 0 ? `کسری ${amt(-p.availableValue)} تومان` : `آزاد ${amt(p.availableValue)} تومان`}
+      sub={need > 0
+        ? <><span style={{ color: 'var(--error-text)' }}>نیاز به خرید {amt(need)}</span>{p.needBy ? <> · تا <span className="num">{jDayMonth(p.needBy)}</span></> : null}</>
+        : `آزاد ${amt(p.availableValue)} تومان`}
       trail={(
         <>
           {target && cov != null && <Meter value={cov / target} tone={st.tone} width={56} label={`پوشش ${covText}`} />}
@@ -195,30 +268,35 @@ function FlowCard({ s }: { s: TreasurySummary }) {
   );
 }
 
-function CashCard({ c }: { c: CashSummary }) {
-  const [v, u] = split(c.available);
-  const minus = (n: number) => <span className="num">{n ? `−${amt(n)}` : '—'}</span>;
+/** «خزانه‌ی ریالی»: Namadno's free rial = bank − users' wallets − organizations' free − open buy orders − «ریال رزرو». */
+function RialCard({ s }: { s: TreasurySummary }) {
+  const r = s.rial;
+  const c = s.cash;
+  const m = r.main;
+  const st = mainStatus(r);
+  const [v, u] = split(Math.max(0, m.available));
+  const pendingHref = `${routes.op.cash}?status=expected`;
   return (
-    <Card title="نقدینگی" more={{ label: 'جزئیات', href: routes.op.cash }}>
+    <Card title="خزانه‌ی ریالی" more={{ label: 'نقدینگی', href: routes.op.cash }}
+      actions={<Pill tone={st.tone} dot title={st.hint}>{st.label}</Pill>}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
         <span className="nm-col" style={{ gap: 2 }}>
-          <span className="mute" style={{ fontSize: 12.5 }}>نقد در دسترس برای صدور</span>
-          <BigNum value={v} unit={u} style={c.available < 0 ? { color: 'var(--error-text)' } : undefined} />
+          <span className="mute" style={{ fontSize: 12.5 }}>ریال آزاد نمادنو</span>
+          <BigNum value={v} unit={u} />
         </span>
-        <Spark values={c.history.map((h) => h.available)} width={96} height={30} label={`روند نقد در دسترس در ${faDigits(c.history.length)} روز گذشته`} />
+        <Spark values={r.history.map((h) => h.available)} width={96} height={30} label={`روند ریال آزاد نمادنو در ${faDigits(r.history.length)} روز گذشته`} />
       </div>
-      <KV rows={[
-        ['موجودی حساب', <span key="b" className="num">{amt(c.balance)}</span>],
-        ['سفارش‌های صدور باز', minus(c.tiedInOrders)],
-        ['کیف پول کاربران', minus(c.userWallets)],
-        ['تعهد ریالی بسته‌ها', minus(c.committedRial)],
-      ]} />
-      {c.overdueCount > 0 ? (
-        <Note tone="warn" action={<Link href={`${routes.op.cash}?status=overdue`} className="nm-btn sm text">پیگیری</Link>}>
-          {faDigits(c.overdueCount)} واریز معوق · {amt(c.overdueAmount)} تومان
+      <BankWaterfall r={r} />
+      {(m.needValue ?? 0) > 0 && (
+        <Note tone="err" icon={TI.wallet} action={<Link href={`${routes.op.funds}?state=need_buy`} className="nm-btn sm text">صف تأمین</Link>}>
+          نیاز به تأمین ریال {amt(m.needValue)} تومان · {faDigits(m.queuedCount)} فروش کاربر در صف واریز
         </Note>
-      ) : c.expectedCount > 0 ? (
-        <Note tone="mute" icon={TI.deposit}>{faDigits(c.expectedCount)} واریز سازمان در راه · {amt(c.expectedDeposits)} تومان</Note>
+      )}
+      {c.expectedCount > 0 ? (
+        <Note tone="info" icon={TI.deposit} action={<Link href={pendingHref} className="nm-btn sm text">بررسی فیش‌ها</Link>}>
+          {faDigits(c.expectedCount)} فیش واریز در انتظار تأیید · {amt(c.expectedDeposits)} تومان
+          {queueOf(r).count > 0 ? ` · ${faDigits(queueOf(r).count)} بسته پس از تأیید ارسال می‌شود` : ''}
+        </Note>
       ) : null}
     </Card>
   );
@@ -228,9 +306,9 @@ function CashCard({ c }: { c: CashSummary }) {
 
 function AumCard({ s }: { s: TreasurySummary }) {
   const m = s.aumMonthly;
-  const held = s.totals.heldValue;
-  const [v, u] = split(held);
-  const left = Math.max(0, s.aumTarget.value - held);
+  const mg = s.managed;
+  const [v, u] = split(mg.value);
+  const left = Math.max(0, s.aumTarget.value - mg.value);
   const vals = m.flatMap((x) => [x.aum, x.target ?? x.aum]).map((n) => n / 1e9);
   const lo = vals.length ? Math.max(0, Math.floor((Math.min(...vals) * 0.9) / 50) * 50) : 0;
   return (
@@ -249,18 +327,22 @@ function AumCard({ s }: { s: TreasurySummary }) {
           ]} />
       ) : <Empty title="داده‌ای برای امسال ثبت نشده است" />}
       <Legend items={[{ label: 'دارایی تحت مدیریت', color: 'var(--chart-1)' }, { label: 'مسیر هدف', color: 'var(--chart-4)' }]} />
+      <span className="mute" style={{ fontSize: 12 }}>
+        دارایی تحت مدیریت = صندوق‌ها {amt(mg.funds)} + ریال (حساب بانکی) {amt(mg.rial)} تومان
+      </span>
     </Card>
   );
 }
 
 function MixCard({ s }: { s: TreasurySummary }) {
-  const name = (id: string) => s.positions.find((p) => p.fundId === id)?.shortName ?? id;
+  const name = (id: string) => (id === 'rial' ? RIAL_UI.rial.name : s.positions.find((p) => p.fundId === id)?.shortName ?? id);
+  const color = (id: string) => (id === 'rial' ? `var(${RIAL_UI.rial.col})` : fundUi(id).col);
   const keyed = s.mix.filter((x) => x.targetPct != null);
   const rest = s.mix.filter((x) => x.targetPct == null);
   const restValue = sum(rest.map((x) => x.value));
   const restPct = sum(rest.map((x) => x.pct));
   const items = [
-    ...keyed.map((x) => ({ label: `${name(x.fundId)} · هدف ${pctT(x.targetPct ?? 0, 0)}`, value: x.value, color: fundUi(x.fundId).col })),
+    ...keyed.map((x) => ({ label: `${name(x.fundId)} · هدف ${pctT(x.targetPct ?? 0, 0)}`, value: x.value, color: color(x.fundId) })),
     ...(restValue > 0 ? [{ label: s.otherTargetPct != null ? `سایر صندوق‌ها · هدف ${pctT(s.otherTargetPct, 0)}` : 'سایر صندوق‌ها', value: restValue, color: 'var(--chart-4)' }] : []),
   ];
   const gaps = [...keyed.map((x) => Math.abs(x.pct - (x.targetPct ?? 0))), ...(s.otherTargetPct != null ? [Math.abs(restPct - s.otherTargetPct)] : [])];
@@ -322,7 +404,7 @@ function OrgsCard({ s }: { s: TreasurySummary }) {
           <ListRow key={r.orgId} href={routes.op.organization(r.orgId)} label={`${r.orgName}: دارایی اعضا ${amt(r.value)} تومان`}
             lead={<Ava letter={letter(r.orgId, r.orgName)} id={r.orgId} sq />}
             title={r.orgName}
-            sub={r.depositsOverdue > 0 ? `واریز معوق ${amt(r.depositsOverdue)}` : r.pendingRecipients ? `${faDigits(r.pendingRecipients)} گیرنده در انتظار پذیرش` : `رزرو ${amt(r.reservedValue)}`}
+            sub={r.depositsExpected > 0 ? `فیش در انتظار تأیید ${amt(r.depositsExpected)}` : r.pendingRecipients ? `${faDigits(r.pendingRecipients)} گیرنده در انتظار پذیرش` : `رزرو ${amt(r.reservedValue)}`}
             trail={<span className="num">{amt(r.value)}</span>}
           />
         ))}

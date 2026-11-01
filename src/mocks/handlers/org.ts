@@ -7,13 +7,57 @@ import { now } from '@/lib/clock';
 import { faDigits, money } from '@/lib/format';
 import { DEFAULT_UNIT, isOrgRequest } from '@/lib/org';
 import { ledger } from './app';
-import { onPackageCancelled, onPackageSent, onStepSettled } from '../treasury';
+import { onPackageAwaiting, onPackageCancelled, onPackageSent, onPackageStockWait, onStepSettled, orgFreeFor, registerPackageDelivery, stockCheck, submitReceipt } from '../treasury';
+import { isMultipart, readReceiptForm } from '../receipts';
 
 const nowIso = () => now().toISOString();
 const orgOf = (req: Request) => who(req, 'org_admin').orgId!;
 const org = (id: string) => db().organizations.find((o) => o.id === id)!;
 const employees = (orgId: string) => (db().employees[orgId] ??= []);
 const packages = (orgId: string) => (db().orgPackages[orgId] ??= []);
+
+/** Sends a paid package whose stock is there: status sent, inbox items, yearly budget, activity. */
+function sendNow(orgId: string, pkg: OrgPackage, actorName?: string, afterQueue?: boolean) {
+  pkg.status = 'sent';
+  pkg.sentAt = nowIso();
+  pkg.stockEta = undefined;
+  org(orgId).budgetUsed += pkg.total; // the yearly budget counts a package only when it is sent
+  deliver(pkg, orgId);
+  return onPackageSent(orgId, pkg, actorName, afterQueue);
+}
+
+/** Puts a paid package in the stock queue («در انتظار تأمین موجودی»): nothing delivered or blocked; its amount is set aside. */
+function queueForStock(orgId: string, pkg: OrgPackage, eta: string, missing: Record<string, number>, actorName?: string) {
+  pkg.status = 'awaiting_stock';
+  pkg.stockQueuedAt = nowIso();
+  pkg.stockEta = eta;
+  pkg.funding = { fromFree: pkg.total, toDeposit: 0 };
+  onPackageStockWait(orgId, pkg, actorName, missing);
+}
+
+/**
+ * A package waiting in a queue goes on when it can — called by the operator handler after approving its receipt
+ * («در انتظار تأیید واریز»): «آزاد» must cover it, then the fund stock (after the stock queue); if the stock is short it
+ * moves to «در انتظار تأمین موجودی». Returns whether it went out to the recipients now.
+ */
+export function deliverPackage(orgId: string, pkgId: string): { delivered: boolean; title?: string; recipients?: number; stockEta?: string } {
+  const pkg = packages(orgId).find((x) => x.id === pkgId);
+  if (!pkg || pkg.status !== 'awaiting_payment') return { delivered: false };
+  // what «آزاد» set aside for it + the approved receipt must cover it (the queue never spends unapproved money)
+  if (orgFreeFor(db(), orgId, pkg.id) + 1 < pkg.total) return { delivered: false, title: pkg.title };
+  const st = stockCheck(db(), pkg);
+  if (!st.ok) { queueForStock(orgId, pkg, st.eta, st.missing); return { delivered: false, title: pkg.title, stockEta: st.eta }; }
+  sendNow(orgId, pkg, undefined, true);
+  return { delivered: true, title: pkg.title, recipients: pkg.recipients.length };
+}
+
+// the treasury's queue sends a package «در انتظار تأمین موجودی» once its stock has arrived (strict order, see fillQueues)
+registerPackageDelivery((orgId, pkgId) => {
+  const pkg = packages(orgId).find((x) => x.id === pkgId);
+  if (!pkg || pkg.status !== 'awaiting_stock') return false;
+  sendNow(orgId, pkg, undefined, true);
+  return true;
+});
 
 /** Pushes a sent package into each recipient's app inbox (only registered app users exist in the mock). */
 function deliver(pkg: OrgPackage, orgId: string) {
@@ -341,20 +385,49 @@ export const orgHandlers = [
     if (pkg.status !== 'draft') return fail(409, 'already_sent', 'این بسته قبلاً ارسال شده است.');
     if (!pkg.recipients.length) return fail(422, 'no_recipients', 'حداقل یک گیرنده انتخاب کنید.');
     const o = org(id);
-    if (o.budgetUsed + pkg.total > o.budgetYear) return fail(422, 'over_budget', 'مبلغ بسته از بودجه باقی‌مانده سازمان بیشتر است.');
-    pkg.status = 'sent';
-    pkg.sentAt = nowIso();
-    o.budgetUsed += pkg.total;
-    deliver(pkg, id);
-    onPackageSent(id, pkg, o.admins.find((a) => a.id === who(request, 'org_admin').userId)?.name); // treasury: expected deposit
-    return ok(pkg);
+    // packages in the queue (waiting for receipt approval) will use the yearly budget when they are delivered
+    const queued = packages(id).filter((x) => x.status === 'awaiting_payment' || x.status === 'awaiting_stock').reduce((s, x) => s + x.total, 0);
+    if (o.budgetUsed + queued + pkg.total > o.budgetYear) return fail(422, 'over_budget', 'مبلغ بسته از سقف بودجه‌ی سالانه‌ی سازمان بیشتر است.');
+    const actor = o.admins.find((a) => a.id === who(request, 'org_admin').userId)?.name;
+    // treasury: «آزاد» of the organization's rial account must cover the package; otherwise a receipt for the rest goes with it
+    const free = Math.round(orgFreeFor(db(), id, pkg.id));
+    const shortfall = Math.max(0, pkg.total - free);
+    if (shortfall < 1) {
+      // paid: the fund stock (after the stock queue) must cover its fund parts too — otherwise it waits for Namadno's buy
+      const st = stockCheck(db(), pkg);
+      if (!st.ok) {
+        queueForStock(id, pkg, st.eta, st.missing, actor);
+        return ok({ ...pkg, funding: pkg.funding, stock: { eta: st.eta, missing: st.missing } });
+      }
+      const funding = sendNow(id, pkg, actor); // blocked in «ریال رزرو» from «آزاد»
+      return ok({ ...pkg, funding });
+    }
+    const need = `«آزاد» حساب ریالی سازمان ${money(free)} تومان است؛ برای ${money(shortfall)} تومان باقی‌مانده فیش واریز را بارگذاری کنید.`;
+    if (!isMultipart(request)) return fail(422, 'receipt_required', need, { shortfall, free });
+    const f = await readReceiptForm(request);
+    if (!f.receipt) return fail(422, 'receipt_required', need, { shortfall, free });
+    if ('error' in f.receipt) return fail(422, f.receipt.error.code, f.receipt.error.message);
+    if (!(f.amount >= shortfall)) return fail(422, 'bad_amount', `مبلغ فیش باید دست‌کم ${money(shortfall)} تومان باشد.`, { shortfall });
+    // the package waits in the queue until Namadno approves the receipt, then it is delivered (deliverPackage):
+    // nothing reaches employees meanwhile; only what «آزاد» covers is set aside for it
+    pkg.status = 'awaiting_payment';
+    pkg.submittedAt = nowIso();
+    pkg.funding = { fromFree: free, toDeposit: shortfall };
+    const dep = submitReceipt(db(), id, { amount: f.amount, receipt: f.receipt.file, note: f.note, packageId: pkg.id }, actor ?? o.name);
+    if ('code' in dep) { pkg.status = 'draft'; pkg.submittedAt = undefined; pkg.funding = undefined; return fail(dep.status, dep.code, dep.message); }
+    onPackageAwaiting(id, pkg, actor, shortfall);
+    return ok({
+      ...pkg,
+      deposit: { id: dep.id, at: dep.at, title: dep.title, amount: dep.amount, status: dep.status, note: dep.note, receipt: dep.receipt, packageId: pkg.id, packageTitle: pkg.title },
+    });
   }),
   http.post(p('/org/packages/:id/cancel'), async ({ request, params }) => {
     await latency();
     const pkg = packages(orgOf(request)).find((x) => x.id === params.id);
     if (!pkg) return fail(404, 'not_found', 'بسته پیدا نشد.');
+    const wasQueued = pkg.status === 'awaiting_payment' || pkg.status === 'awaiting_stock';
     pkg.status = 'cancelled';
-    onPackageCancelled(pkg); // treasury: its expected deposit is no longer expected
+    onPackageCancelled(pkg, wasQueued); // treasury: blocked or set-aside money back to «آزاد», a pending receipt is cancelled
     return ok(pkg);
   }),
   http.post(p('/org/packages/:id/milestones/:stepId/release'), async ({ request, params }) => {

@@ -57,6 +57,7 @@ const COL = {
   reserved: 'var(--chart-4)',
   committed: 'var(--warning-main)',
   redeem: 'var(--info-main)',
+  queue: 'var(--error-main)',
   free: 'var(--chart-2)',
 };
 
@@ -87,16 +88,24 @@ export function OpLabel({ op, children, sub, strong }: { op?: '−' | '+' | '=';
 /**
  * Where the held units are: one bar of shares + the waterfall held − allocated − committed − pending redeem = free.
  * `reserved` is part of `allocated` (users own it; it is set aside for savings, collateral, milestones …).
+ * Nothing goes negative: what the free stock cannot cover waits in the queue («در صف تأمین»), so the waterfall ends with
+ * «آزاد پس از صف» — or «نیاز به خرید» when the queue is larger than the free stock.
  */
 export function PositionBreakdown({ p }: { p: TreasuryPosition }) {
+  const free = Math.max(0, p.availableValue);
+  const queued = p.queuedValue ?? 0;
+  const inQueue = Math.min(queued, free);
+  const need = p.needBuyValue ?? 0;
+  const u = (v: number) => (p.nav ? v / p.nav : 0);
   const items = [
     { label: 'در اختیار کاربران', value: p.allocatedValue - p.reservedValue, color: COL.holding },
     { label: 'رزرو', value: p.reservedValue, color: COL.reserved },
     { label: 'تعهد بسته‌ها', value: p.committedValue, color: COL.committed },
     ...(p.pendingRedeemValue > 0 ? [{ label: 'در انتظار ابطال', value: p.pendingRedeemValue, color: COL.redeem }] : []),
-    { label: 'آزاد', value: Math.max(0, p.availableValue), color: COL.free },
+    ...(inQueue > 0 ? [{ label: 'در صف تأمین', value: inQueue, color: COL.queue }] : []),
+    ...(queued > 0 && free - inQueue <= 0 ? [] : [{ label: queued > 0 ? 'آزاد پس از صف' : 'آزاد', value: free - inQueue, color: COL.free }]),
   ];
-  const short = p.availableValue < 0;
+  const row = (k: string, label: ReactNode, v: ReactNode): [ReactNode, ReactNode] => [<span key={k}>{label}</span>, v];
   return (
     <div className="nm-stack" style={{ gap: 14 }}>
       <Allocation compact items={items} />
@@ -105,7 +114,13 @@ export function PositionBreakdown({ p }: { p: TreasuryPosition }) {
         [<OpLabel key="a" op="−" sub={`شامل رزرو ${samt(p.reservedValue)}`}>تخصیص به کاربران</OpLabel>, <Amt key="a" v={p.allocatedValue} u={p.allocatedUnits} />],
         [<OpLabel key="c" op="−">تعهد بسته‌های ارسالی</OpLabel>, <Amt key="c" v={p.committedValue} u={p.committedUnits} />],
         ...(p.pendingRedeemUnits > 0 ? [[<OpLabel key="r" op="−">در انتظار ابطال</OpLabel>, <Amt key="r" v={p.pendingRedeemValue} u={p.pendingRedeemUnits} />] as [ReactNode, ReactNode]] : []),
-        [<OpLabel key="f" op="=" strong>{short ? 'کسری موجودی' : 'موجودی آزاد'}</OpLabel>, <Amt key="f" v={Math.abs(p.availableValue)} u={Math.abs(p.availableUnits)} strong tone={short ? 'var(--error-text)' : undefined} />],
+        [<OpLabel key="f" op="=" strong>موجودی آزاد</OpLabel>, <Amt key="f" v={free} u={Math.max(0, p.availableUnits)} strong />],
+        ...(queued > 0 ? [
+          row('q', <OpLabel op="−" sub={`${faDigits(p.queuedCount)} مورد منتظر موجودی`}>در صف تأمین</OpLabel>, <Amt key="q" v={queued} u={u(queued)} />),
+          need > 0
+            ? row('n', <OpLabel op="=" strong sub="با تسویه‌ی صدور، صف خودکار تحویل می‌شود"><span style={{ color: 'var(--error-text)' }}>نیاز به خرید</span></OpLabel>, <Amt key="n" v={need} u={u(need)} strong tone="var(--error-text)" />)
+            : row('n', <OpLabel op="=" strong>آزاد پس از صف</OpLabel>, <Amt key="n" v={free - queued} u={u(free - queued)} strong />),
+        ] : []),
         ...(p.pendingBuyUnits > 0 ? [[<OpLabel key="b" op="+">صدور در راه</OpLabel>, <Amt key="b" v={p.pendingBuyValue} u={p.pendingBuyUnits} />] as [ReactNode, ReactNode]] : []),
       ]} />
     </div>

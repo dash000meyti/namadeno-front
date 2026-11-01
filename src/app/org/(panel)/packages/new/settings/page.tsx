@@ -7,12 +7,16 @@
  * Milestone steps: every step has a required due date («سررسید») and «نیاز به تأیید» (on = released after the
  * organization approves it in «درخواست‌ها»; off = released automatically at the due date). All dates use DateInput.
  * Kit wizard page: heading + steps → settings groups beside the live summary → sticky action bar.
+ * Money: the summary shows the organization's rial account («حساب ریالی سازمان»: آزاد) — sending blocks the amount from «آزاد»;
+ * for whatever «آزاد» does not cover, the last step (review) asks for a deposit receipt («فیش واریز») and the package waits for
+ * Namadno's approval. The annual budget cap («سقف بودجه‌ی سالانه») is a separate yearly limit.
  */
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useOrgContract, useOrgPackage, useUpdatePackage, type NewPackage } from '@/api/org';
+import { useOrgAccount } from '@/api/org-money-extra';
 import {
   ActionBar, Ava, BigNum, Card, Chips, Empty, ErrorBlock, KV, Meter, Note, NumInput, NumberInput, Pill, Section, SettingRow,
   SettingsGroup, SkeletonCard, Switch, Table, type Column, type Tone,
@@ -25,7 +29,7 @@ import { I, jalaliAddMonths, lockChip, parseJalali, perPersonText, splitCompact 
 import { errMsg } from '@/components/org/packages/ui';
 import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
-import { enDigits, faDigits, jDate, money, time } from '@/lib/format';
+import { compactMoney, enDigits, faDigits, jDate, money, time } from '@/lib/format';
 import { now } from '@/lib/clock';
 import type { LockPolicy, PackageReason } from '@/types/domain';
 
@@ -74,6 +78,7 @@ function SettingsStep() {
   const draftId = sp.get('draft') ?? '';
   const { data: pkg, isLoading, isError, error, refetch } = useOrgPackage(draftId);
   const { data: contract } = useOrgContract();
+  const { data: acct } = useOrgAccount();
   const update = useUpdatePackage();
   const toast = useToast();
 
@@ -129,7 +134,7 @@ function SettingsStep() {
     return (
       <>
         <WizardHeader step={2} />
-        <Note tone="warn" action={<Link href={routes.org.package(pkg.id)} className="nm-btn sm ghost">مشاهده بسته</Link>}>این بسته قبلاً ارسال شده و قابل ویرایش نیست.</Note>
+        <Note tone="warn" action={<Link href={routes.org.package(pkg.id)} className="nm-btn sm ghost">مشاهده بسته</Link>}>{pkg.status === 'awaiting_payment' ? 'این بسته ثبت شده و در انتظار تأیید واریز است؛ قابل ویرایش نیست.' : pkg.status === 'awaiting_stock' ? 'این بسته ثبت شده و در صف تأمین موجودی نمادنو است؛ قابل ویرایش نیست.' : 'این بسته قبلاً ارسال شده و قابل ویرایش نیست.'}</Note>
       </>
     );
   }
@@ -144,11 +149,18 @@ function SettingsStep() {
   const fileRange = fromFile ? perPersonText(pkg, money) : '';
   // package type follows the receive policy (no separate question)
   const reason: PackageReason = isMs ? 'project_contract' : pkg.reason === 'project_contract' ? 'bonus' : pkg.reason;
-  const remaining = contract ? contract.budgetYear - contract.budgetUsed : 0;
-  const usePct = remaining > 0 ? (total * 100) / remaining : 0;
+  // annual budget cap (a yearly limit, not the account balance)
+  // packages in the queue (waiting for receipt approval) will use the yearly budget when delivered
+  const remaining = contract ? contract.budgetYear - contract.budgetUsed - (acct?.queuedTotal ?? 0) : 0;
   const over = !!contract && total > remaining;
   const remainAfter = splitCompact(Math.max(0, remaining - total));
   const remainNow = splitCompact(remaining);
+  // rial account: the amount is blocked from «آزاد»; the rest needs a deposit receipt in the last step
+  const free = acct ? Math.max(0, acct.free) : 0;
+  const fromFree = Math.min(total, free);
+  const toDeposit = acct ? Math.max(0, total - free) : 0;
+  const usePct = free > 0 ? (total * 100) / free : total > 0 ? 100 : 0;
+  const freeNow = splitCompact(free);
   const msTotal = msRows.reduce((s, r) => s + num(r.pct), 0);
   /** Steps released automatically at their due date. */
   const msAuto = msRows.filter((r) => !r.approval).length;
@@ -222,7 +234,7 @@ function SettingsStep() {
 
   const polValue = pol === 'none' ? '' : pol === 'vesting' ? 'تا ' + vest : faDigits(msRows.length) + ' مرحله';
   const lockNote = pol === 'none'
-    ? 'کل بسته پس از تأیید کارمند آزاد است؛ تا تأیید، مبلغ از حساب سازمان رزرو می‌شود.'
+    ? 'کل بسته پس از تأیید کارمند آزاد است؛ تا آن زمان، مبلغ در حساب ریالی سازمان بلاک می‌ماند.'
     : pol === 'vesting'
       ? `پس از تأیید کارمند، بخش صندوقی بسته به‌عنوان «${LOCK_META.vesting.label}» تا ${vest} در دارایی او رزرو می‌شود و بازده می‌گیرد.`
       : `${Number.isFinite(one) ? `${money(one)} تومان` : 'مبلغ هر نفر'} به‌عنوان «${LOCK_META.milestone.label}» در صندوق طلای کارمند رزرو می‌شود و طی ${faDigits(msRows.length)} مرحله آزاد می‌شود${msAuto ? `؛ ${msAuto === msRows.length ? 'همه‌ی مراحل' : faDigits(msAuto) + ' مرحله'} خودکار در سررسید` : ''}.`;
@@ -370,7 +382,7 @@ function SettingsStep() {
             </SettingRow>
           </SettingsGroup>
 
-          {over && <Note tone="err">جمع بسته ({money(total)} تومان) از موجودی باقی‌ماندهٔ سازمان بیشتر است؛ مبلغ یا تعداد گیرندگان را کاهش دهید.</Note>}
+          {over && <Note tone="err">جمع بسته ({money(total)} تومان) از باقی‌مانده‌ی سقف بودجه‌ی سالانه‌ی سازمان ({remainNow.value} {remainNow.unit} تومان) بیشتر است؛ مبلغ یا تعداد گیرندگان را کاهش دهید.</Note>}
         </div>
 
         <Card title="خلاصه">
@@ -385,11 +397,20 @@ function SettingsStep() {
             ['شیوه‌ی دریافت', <span key="p" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LockTag type={pol} />{polValue && <span className="num">{polValue}</span>}</span>],
           ]} />
           <Section title="جمع کل بسته‌ها"><BigNum value={money(total)} unit="تومان" /></Section>
-          <Section title="منبع: حساب سازمان" action={<span className="num">موجودی {remainNow.value} {remainNow.unit}</span>}>
-            <Meter value={Math.min(100, Math.max(total ? 1 : 0, usePct)) / 100} tone={over ? 'error' : 'primary'} label={`${faDigits(Math.round(usePct))}٪ موجودی`} />
-            <span style={{ fontSize: 12, lineHeight: 1.6, color: over ? 'var(--error-text)' : 'var(--text-secondary)' }}>
-              {over ? 'مبلغ بسته از موجودی سازمان بیشتر است' : usePct < 1 ? 'کمتر از ۱٪ موجودی' : `${faDigits(Math.round(usePct))}٪ موجودی مصرف می‌شود`} · باقی‌مانده: <span className="num" style={{ color: 'var(--text-primary)' }}>{remainAfter.value} {remainAfter.unit} تومان</span>
+          <Section title="حساب ریالی سازمان" action={<span className="num">{acct ? `آزاد ${freeNow.value} ${freeNow.unit}`.trim() : '…'}</span>}>
+            <Meter value={Math.min(100, Math.max(total ? 1 : 0, usePct)) / 100} tone={toDeposit > 0 ? 'warning' : 'primary'} label={`${faDigits(Math.min(100, Math.round(usePct)))}٪ از «آزاد»`} />
+            <span style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+              {!acct ? 'در حال دریافت حساب ریالی سازمان…'
+                : toDeposit > 0
+                  ? <>«آزاد» <span className="num" style={{ color: 'var(--text-primary)' }}>{money(fromFree)}</span> تومان را پوشش می‌دهد · برای <span className="num" style={{ color: 'var(--warning-text)' }}>{money(toDeposit)}</span> تومان باقی‌مانده در مرحله‌ی آخر فیش واریز بارگذاری می‌کنید؛ بسته تا تأیید فیش در صف می‌ماند</>
+                  : <>از «آزاد» <span className="num" style={{ color: 'var(--text-primary)' }}>{money(fromFree)}</span> تومان بلاک می‌شود</>}
             </span>
+            {contract && (
+              <span style={{ fontSize: 12, lineHeight: 1.6, color: over ? 'var(--error-text)' : 'var(--text-secondary)' }}>
+                سقف بودجه‌ی سالانه: باقی‌مانده <span className="num">{`${remainNow.value} ${remainNow.unit}`.trim()} تومان</span>
+                {over ? '؛ مبلغ بسته بیشتر است' : <> · پس از این بسته <span className="num" style={{ color: 'var(--text-primary)' }}>{`${remainAfter.value} ${remainAfter.unit}`.trim()} تومان</span></>}
+              </span>
+            )}
           </Section>
           <Note tone="info" icon={chip.d}>{lockNote}</Note>
         </Card>
@@ -405,7 +426,8 @@ function SettingsStep() {
         </>
       )}>
         <span><b className="num" style={{ color: 'var(--text-primary)' }}>{faDigits(n)}</b> نفر · جمع <b className="num" style={{ color: 'var(--text-primary)' }}>{money(total)}</b> تومان</span>
-        {over && <Pill tone="error" dot>بیش از موجودی سازمان</Pill>}
+        {over && <Pill tone="error" dot>بیش از سقف بودجه‌ی سالانه</Pill>}
+        {!over && toDeposit > 0 && <Pill tone="warning" dot>فیش واریز برای {compactMoney(toDeposit)} تومان</Pill>}
       </ActionBar>
     </>
   );

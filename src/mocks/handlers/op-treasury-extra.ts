@@ -14,8 +14,11 @@
  *   POST  /op/treasury/orders/:id/cancel {reason?}                  → TreasuryOrder       404, 409 not_open
  *   GET   /op/treasury/cash?range=30|90                → CashSummary
  *   GET   /op/treasury/cash/entries?kind&status&orgId  → CashEntry[]     (status: expected|done|cancelled|overdue)
- *   POST  /op/treasury/deposits/:id/confirm {ref?}     → CashEntry       404, 409 already_received
+ *   POST  /op/treasury/deposits/:id/confirm {ref?}     → CashEntry (+ deliveredPackage) approve a receipt  404, 409 not_pending
+ *   POST  /op/treasury/deposits/:id/reject {reason}    → CashEntry       reject a receipt     404, 409 not_pending, 422 missing_reason
  *   POST  /op/treasury/deposits {orgId,amount,ref?,note?} → 201 CashEntry 422 bad_amount|missing_org
+ *   GET   /op/treasury/rial?range=30|90                → RialTreasury   («ریال» + «ریال رزرو» + every organization's rial account)
+ *   GET   /op/treasury/rial/moves?kind&orgId&userId&limit → RialMove[]    (derived, newest first)
  *   GET   /op/treasury/orgs/:id                        → OrgTreasuryDetail                   404
  *   GET   /op/treasury/targets  · PATCH (TargetsPatch) → TreasuryTargets  422 bad_mix|bad_target|bad_date
  *   GET   /op/treasury/plan?horizon=30|60|90           → TreasuryPlan
@@ -27,10 +30,11 @@ import type { ActivityFilter, Horizon, TargetsPatch } from '@/api/op-treasury-ex
 import { db } from '../db';
 import { body, fail, latency, ok, p, qs, who } from '../http';
 import { seed_opTreasury } from '../seed/extra-op-treasury';
+import { deliverPackage } from './org';
 import {
-  activityPage, actions, cancelOrder, cashEntries, cashSummary, checkInvariants, confirmDeposit, evaluateOrder, listMovements,
-  listOrders, operatorName, orgDetail, placeOrder, plan, positionDetail, recordDeposit, settleOrder, snapshot, summary,
-  syncAggregates, treasuryOf, patchTargets, type TreasuryError,
+  activityPage, actions, cancelOrder, cashEntries, cashSummary, checkInvariants, confirmDeposit, evaluateOrder, fillQueues, listMovements, queueItems,
+  listOrders, operatorName, orgDetail, placeOrder, plan, positionDetail, recordDeposit, rejectDeposit, rialMoves, rialTreasury, settleOrder, snapshot,
+  summary, syncAggregates, treasuryOf, patchTargets, type TreasuryError,
 } from '../treasury';
 
 /** Seeds the store when an older saved database has none (normally the seed creates it). */
@@ -52,12 +56,19 @@ const opt = (v: string | null) => (v && v !== 'all' ? v : undefined);
 export const treasuryTickHandlers: HttpHandler[] = [
   http.all(p('/*'), () => {
     ensure();
+    fillQueues(); // nothing goes negative: what waited for stock / free rial goes on as soon as it is covered
     checkInvariants(syncAggregates());
     return undefined;
   }),
 ];
 
 export const opTreasuryHandlers: HttpHandler[] = [
+  // ═════════ queue («صف تأمین»): items waiting for stock or free rial ═════════
+  http.get(p('/op/treasury/queue'), async ({ request }) => {
+    await latency();
+    ensure();
+    return ok(queueItems(db(), qs(request).get('fundId') || undefined));
+  }),
   // ═════════ stock ═════════
   http.get(p('/op/treasury/summary'), async ({ request }) => {
     await latency();
@@ -121,12 +132,36 @@ export const opTreasuryHandlers: HttpHandler[] = [
     await latency();
     const b = await body<{ ref?: string }>(request);
     const r = confirmDeposit(ensure(), String(params.id), b.ref, by(request));
+    if (isErr(r)) return fail(r.status, r.code, r.message, r.details);
+    // a package that waited for this receipt goes out to its recipients now
+    const dp = r.packageId && r.orgId ? deliverPackage(r.orgId, r.packageId) : undefined;
+    return ok({
+      ...r, deliveredPackage: dp?.delivered ? { id: r.packageId, title: dp.title, recipients: dp.recipients } : undefined,
+      // paid now, but the fund stock is short: the package waits for Namadno's buy («در انتظار تأمین موجودی»)
+      stockQueued: dp?.stockEta ? { id: r.packageId, title: dp.title, eta: dp.stockEta } : undefined,
+    });
+  }),
+  http.post(p('/op/treasury/deposits/:id/reject'), async ({ request, params }) => {
+    await latency();
+    const b = await body<{ reason?: string }>(request);
+    const r = rejectDeposit(ensure(), String(params.id), b.reason, by(request));
     return isErr(r) ? fail(r.status, r.code, r.message, r.details) : ok(r);
   }),
   http.post(p('/op/treasury/deposits'), async ({ request }) => {
     await latency();
     const r = recordDeposit(ensure(), await body(request), by(request));
     return isErr(r) ? fail(r.status, r.code, r.message, r.details) : ok(r, { status: 201 });
+  }),
+
+  // ═════════ rial treasuries ═════════
+  http.get(p('/op/treasury/rial'), async ({ request }) => {
+    await latency();
+    return ok(rialTreasury(snapshot(ensure()), pick(qs(request).get('range'), [30, 90], 30)));
+  }),
+  http.get(p('/op/treasury/rial/moves'), async ({ request }) => {
+    await latency();
+    const q = qs(request);
+    return ok(rialMoves(snapshot(ensure()), { kind: opt(q.get('kind')), orgId: opt(q.get('orgId')), userId: opt(q.get('userId')), limit: Number(q.get('limit')) || undefined }));
   }),
 
   // ═════════ organizations ═════════

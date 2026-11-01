@@ -11,7 +11,8 @@ export const DEFAULT_UNIT = 'سایر';
 
 /**
  * Request types the organization itself approves (org panel «درخواست‌ها», dashboard, employee page, badges).
- * Everything else (cash withdrawal, credit increase, installments, profile changes) is handled in the operator console.
+ * Credit increase and installments are handled in the operator console. Withdrawals need no approval (fixed daily /
+ * monthly caps) and identity is verified automatically in the app, so neither is a request.
  * Loans join when «تسهیلات و اعتبار» goes live (FEATURES.orgCredit).
  */
 export const ORG_REQUEST_KINDS: RequestKind[] = ['milestone_release', ...(FEATURES.orgCredit ? (['loan'] as const) : [])];

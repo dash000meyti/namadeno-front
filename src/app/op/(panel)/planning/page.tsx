@@ -1,8 +1,8 @@
 'use client';
 /**
  * /op/planning — «برنامه‌ریزی و اهداف». Kit page: heading with the forecast horizon (30/60/90 days) → key numbers of the
- * plan → «پیش‌بینی» (weekly flow, free stock per fund, suggestions, events, target progress, assumptions) and «اهداف»
- * (stock, managed assets, mix and growth targets as settings with a save bar).
+ * plan → «پیش‌بینی» (weekly flow, Namadno's free rial, free stock per fund, suggestions, events, target progress,
+ * assumptions) and «اهداف» (free rial, stock, managed assets, mix and growth targets as settings with a save bar).
  * Data: useTreasuryPlan(horizon), useTreasuryPositions, useTreasuryTargets / useUpdateTargets (src/api/op-treasury-extra.ts).
  */
 import { useEffect, useState } from 'react';

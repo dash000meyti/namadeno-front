@@ -244,6 +244,20 @@ export function txVisual(tx: Transaction): TxVisual {
   };
 }
 
+/**
+ * A fund trade waiting in Namadno's queue (nothing goes negative): a purchase the fund stock does not cover yet (the money is
+ * taken now, the units arrive by «تأمین تا») or a sale Namadno's free rial does not cover yet (paid by «واریز تا»).
+ * `until` is the promised time from the transaction details; null for every other transaction.
+ */
+export function tradeWait(tx: Transaction): { kind: 'buy' | 'sell'; until: string; title: string; text: string } | null {
+  if (tx.category !== 'trade' || tx.status !== 'pending') return null;
+  const buy = tx.details?.find((d) => d.label === 'تأمین تا')?.value;
+  if (buy) return { kind: 'buy', until: buy, title: 'خرید ثبت شد', text: `موجودی صندوق در حال تأمین است و واحدها حداکثر تا ${buy} به دارایی شما اضافه می‌شود. مبلغ از کیف پول کسر شد.` };
+  const sell = tx.details?.find((d) => d.label === 'واریز تا')?.value;
+  if (sell) return { kind: 'sell', until: sell, title: 'فروش ثبت شد', text: `مبلغ حداکثر تا ${sell} به کیف پول ریالی شما واریز می‌شود.` };
+  return null;
+}
+
 /** Plain-text receipt used by «دانلود» / «اشتراک رسید». */
 export function receiptText(tx: Transaction): string {
   const lines = [

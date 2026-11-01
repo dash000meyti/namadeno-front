@@ -5,8 +5,8 @@
  */
 import type { Tone } from '@/components/panel/kit';
 import type {
-  ActionKind, ActivityCategory, ActorKind, CashEntry, CashEntryKind, ForecastEvent, OrderSide, Severity, StockMovement,
-  StockState, TreasuryOrder,
+  ActionKind, ActivityCategory, ActorKind, CashEntry, CashEntryKind, ForecastEvent, OrderSide, QueueItem, RialMoveKind, RialTreasuryId,
+  Severity, StockMovement, StockState, TreasuryOrder,
 } from '@/api/op-treasury-extra';
 import { FUND_UI } from '@/components/op/system/funds';
 import { compactMoney, faDigits } from '@/lib/format';
@@ -33,6 +33,44 @@ export const TI = {
   chevL: 'M14 6l-6 6 6 6',
   plus: 'M12 5v14M5 12h14',
   download: 'M12 4v11M7 10l5 5 5-5M4 20h16',
+  wallet: 'M4 7a2 2 0 0 1 2-2h12v4M4 7v10a2 2 0 0 0 2 2h14V9H6a2 2 0 0 1-2-2zM16 14h.01',
+  reserve: 'M6 3h12M6 21h12M7 3c0 4 5 5 5 9s-5 5-5 9M17 3c0 4-5 5-5 9s5 5 5 9',
+  bank: 'M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 21h18',
+};
+
+/**
+ * The two rial treasuries («ریال» and «ریال رزرو») — shown like funds in the stock list, first.
+ * Everything users and organizations do with Namadno is in rial; funds are back-office policy.
+ */
+export const RIAL_UI: Record<RialTreasuryId, { name: string; short: string; sub: string; d: string; tone: Tone; col: string }> = {
+  rial: { name: 'ریال', short: 'ریال', sub: 'کیف پول کاربران، حساب آزاد سازمان‌ها و ریال آزاد نمادنو', d: TI.wallet, tone: 'neutral', col: '--grey-600' },
+  rial_reserve: { name: 'ریال رزرو', short: 'ریال رزرو', sub: 'مبلغ بسته‌های ارسالی تا دریافت گیرندگان', d: TI.reserve, tone: 'secondary', col: '--secondary-main' },
+};
+
+/** Organization rial account states. */
+export const ORG_RIAL = {
+  free: { label: 'آزاد', tone: 'success' as Tone, sub: 'واریز‌شده، هنوز در بسته‌ای تعریف نشده' },
+  blocked: { label: 'بلاک‌شده', tone: 'secondary' as Tone, sub: 'در «ریال رزرو» برای بسته‌های ارسالی' },
+  setAside: { label: 'کنار گذاشته', tone: 'info' as Tone, sub: 'از «آزاد» برای بسته‌های در صف، تا تأیید فیش' },
+  queued: { label: 'بسته در صف', tone: 'warning' as Tone, sub: 'تا تأیید فیش واریز ارسال نمی‌شود؛ چیزی بلاک نشده است' },
+  pending: { label: 'در انتظار تأیید فیش', tone: 'warning' as Tone, sub: 'فیش واریز بارگذاری‌شده، هنوز تأیید نشده' },
+};
+
+/** Rial movements between the treasuries and wallets. */
+export const RIAL_MOVE: Record<RialMoveKind, { label: string; tone: Tone; d: string }> = {
+  org_deposit: { label: 'واریز سازمان', tone: 'success', d: TI.deposit },
+  reserve: { label: 'بلاک برای بسته', tone: 'secondary', d: TI.reserve },
+  payout: { label: 'دریافت بسته', tone: 'primary', d: TI.user },
+  release: { label: 'برگشت به حساب سازمان', tone: 'neutral', d: TI.reserve },
+  reclaim: { label: 'بازپس‌گیری', tone: 'warning', d: TI.org },
+  user_buy: { label: 'خرید کاربر از موجودی', tone: 'info', d: TI.buy },
+  user_sell: { label: 'فروش کاربر به نمادنو', tone: 'neutral', d: TI.redeem },
+  user_deposit: { label: 'واریز کاربر', tone: 'success', d: TI.deposit },
+  user_withdrawal: { label: 'برداشت کاربر', tone: 'neutral', d: TI.redeem },
+  order_buy: { label: 'صدور', tone: 'primary', d: TI.buy },
+  order_redeem: { label: 'ابطال', tone: 'info', d: TI.redeem },
+  fee: { label: 'کارمزد', tone: 'neutral', d: TI.cash },
+  adjustment: { label: 'اصلاح', tone: 'neutral', d: TI.cash },
 };
 
 const toKit = (t: string): Tone => (t === 'default' ? 'neutral' : (t as Tone));
@@ -42,12 +80,28 @@ export function fundUi(fundId: string): { d: string; tone: Tone; col: string } {
   return { d: u.d, tone: toKit(u.tone), col: `var(${u.col})` };
 }
 
+/**
+ * Nothing goes negative: what the stock cannot cover waits in the queue («صف تأمین») → «نیاز به خرید».
+ * `shortfall` is no longer produced; it is kept as an alias of `need_buy` for old data.
+ */
+const NEED_BUY = { label: 'نیاز به خرید', tone: 'error' as Tone, hint: 'مواردی در صف تأمین منتظر موجودی این صندوق‌اند؛ صدور فوری لازم است' };
+/** Items wait in the queue for this stock (the deprecated `shortfall` counts too). */
+export const isNeed = (s: StockState) => s === 'need_buy' || s === 'shortfall';
 export const STOCK_STATE: Record<StockState, { label: string; tone: Tone; hint: string }> = {
-  shortfall: { label: 'کسری', tone: 'error', hint: 'موجودی آزاد منفی است؛ خرید فوری لازم است' },
+  need_buy: NEED_BUY,
+  shortfall: NEED_BUY,
   below: { label: 'زیر هدف', tone: 'warning', hint: 'موجودی آزاد کمتر از هدف پوشش است' },
   ok: { label: 'متعادل', tone: 'success', hint: 'موجودی آزاد در محدوده‌ی هدف است' },
   surplus: { label: 'مازاد', tone: 'info', hint: 'موجودی آزاد بیشتر از سقف هدف است' },
   inactive: { label: 'غیرفعال', tone: 'neutral', hint: 'صندوق فعال نیست' },
+};
+
+/** Kinds of items waiting in the queue («صف تأمین») for a fund's stock or Namadno's free rial. */
+export const QUEUE_KIND: Record<QueueItem['kind'], { label: string; tone: Tone; d: string }> = {
+  package: { label: 'بسته‌ی سازمان', tone: 'secondary', d: TI.org },
+  buy: { label: 'خرید کاربر', tone: 'info', d: TI.buy },
+  accept: { label: 'سهم بسته‌ی پذیرفته‌شده', tone: 'primary', d: TI.user },
+  sell: { label: 'فروش کاربر · در انتظار ریال', tone: 'warning', d: TI.wallet },
 };
 
 export const SIDE: Record<OrderSide, { label: string; long: string; tone: Tone; d: string }> = {
@@ -72,9 +126,11 @@ export const CASH_KIND: Record<CashEntryKind, { label: string; tone: Tone }> = {
 };
 
 export function cashStatus(e: CashEntry): { label: string; tone: Tone } {
-  if (e.status === 'done') return { label: 'انجام‌شده', tone: 'success' };
+  // organization receipts are reviewed by the operator; nothing becomes overdue
+  if (e.status === 'done') return e.kind === 'org_deposit' && e.receipt ? { label: 'تأییدشده', tone: 'success' } : { label: 'انجام‌شده', tone: 'success' };
   if (e.status === 'cancelled') return { label: 'لغوشده', tone: 'neutral' };
-  return e.overdue ? { label: 'دیرکرد', tone: 'error' } : { label: 'در انتظار', tone: 'warning' };
+  if (e.status === 'rejected') return { label: 'ردشده', tone: 'error' };
+  return { label: 'در انتظار تأیید', tone: 'warning' };
 }
 
 export const MOVE_KIND: Record<StockMovement['kind'], { label: string; tone: Tone }> = {
@@ -106,17 +162,26 @@ export const SEVERITY: Record<Severity, { label: string; tone: Tone }> = {
 };
 
 export const ACTION_KIND: Record<ActionKind, { d: string; tone: Tone }> = {
+  stock_need_buy: { d: TI.alert, tone: 'error' },
+  rial_need: { d: TI.wallet, tone: 'error' },
+  /** no longer produced (nothing goes negative; see stock_need_buy / rial_need) */
   stock_shortfall: { d: TI.alert, tone: 'error' },
   stock_below: { d: TI.stock, tone: 'warning' },
   stock_surplus: { d: TI.stock, tone: 'info' },
   order_settle: { d: TI.order, tone: 'primary' },
   deposit_overdue: { d: TI.cash, tone: 'error' },
   deposit_expected: { d: TI.cash, tone: 'warning' },
+  deposit_review: { d: TI.deposit, tone: 'warning' },
   request_sla: { d: TI.clock, tone: 'warning' },
   risk_alert: { d: TI.alert, tone: 'error' },
   milestone_due: { d: TI.target, tone: 'info' },
   org_onboarding: { d: TI.org, tone: 'secondary' },
   service_incident: { d: TI.system, tone: 'warning' },
+  /** no longer produced */
+  rial_shortfall: { d: TI.wallet, tone: 'error' },
+  rial_below: { d: TI.wallet, tone: 'warning' },
+  /** no longer produced (nothing is sent before it is paid) */
+  reserve_unfunded: { d: TI.reserve, tone: 'warning' },
 };
 
 export const EVENT_KIND: Record<ForecastEvent['kind'], { label: string; tone: Tone }> = {
@@ -125,7 +190,8 @@ export const EVENT_KIND: Record<ForecastEvent['kind'], { label: string; tone: To
   package_expiry: { label: 'پایان مهلت بسته', tone: 'neutral' },
   planned_package: { label: 'بسته‌ی برنامه‌ریزی‌شده', tone: 'warning' },
   order_settle: { label: 'تسویه‌ی سفارش', tone: 'primary' },
-  deposit_due: { label: 'سررسید واریز', tone: 'warning' },
+  // kept for the type; receipts are reviewed instead, so this event is no longer produced
+  deposit_due: { label: 'فیش واریز', tone: 'warning' },
 };
 
 /** A buy suggested for a whole horizon, capped to what fits under the fund's stock maximum now (0.1B / 10M steps). */

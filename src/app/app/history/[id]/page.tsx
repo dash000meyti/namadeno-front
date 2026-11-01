@@ -1,5 +1,8 @@
 'use client';
-/** /app/history/[id] — design: app-transaction (transaction detail). */
+/**
+ * /app/history/[id] — design: app-transaction (transaction detail).
+ * A fund trade waiting in Namadno's queue (`tradeWait`) shows a calm note with the promised time under the head.
+ */
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useHolding, useTransaction } from '@/api/app';
@@ -11,7 +14,7 @@ import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { faDigits, jDateTime, jDayMonth, money, pct, signedMoney, time, units as fmtUnits } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { Lock } from '@/types/domain';
-import { CATEGORY_LABEL, D, STATUS_LABEL, TONE, assetMeta, downloadText, milestoneProgress, receiptText, stepView, txVisual } from '@/components/app/money/lib';
+import { CATEGORY_LABEL, D, STATUS_LABEL, TONE, assetMeta, downloadText, milestoneProgress, receiptText, stepView, tradeWait, txVisual } from '@/components/app/money/lib';
 import '@/components/app/money/money.css';
 
 export default function TransactionPage() {
@@ -37,6 +40,8 @@ export default function TransactionPage() {
   }
 
   const v = txVisual(tx);
+  /** Waiting for Namadno's stock (buy) or rial (sell). */
+  const wait = tradeWait(tx);
   const isLockEvent = !!tx.lockEvent && tx.category !== 'inbox';
   const released = tx.lockEvent === 'released';
   const headAmount = isLockEvent ? (released ? '+' : '') + money(Math.abs(tx.amount)) : signedMoney(tx.amount);
@@ -87,6 +92,13 @@ export default function TransactionPage() {
             <span className="lbl" style={{ background: statusTone[0], color: statusTone[1] }}>{statusLabel}</span>
           </span>
         </div>
+
+        {wait && (
+          <div role="status" style={{ boxSizing: 'border-box', padding: '10px 12px', borderRadius: 12, background: 'var(--soft-info)', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
+            <Icon name="clock" size={20} style={{ color: 'var(--info-text)', flex: 'none' }} />
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.8, color: 'var(--text-primary)' }}>{wait.title}؛ {wait.text}</span>
+          </div>
+        )}
 
         {/* milestone progress */}
         {msLock && <MilestoneCard lock={msLock} />}

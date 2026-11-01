@@ -1,6 +1,6 @@
 /** Operator console endpoints (/op/*). */
 import { http } from 'msw';
-import type { AssetKind, Organization, PlatformUser } from '@/types/domain';
+import type { AssetKind, Holding, Organization, PlatformUser } from '@/types/domain';
 import { db, newId, recalcHoldings } from '../db';
 import { body, fail, latency, ok, p, qs } from '../http';
 import { panelAccessOf } from '../identity';
@@ -19,15 +19,23 @@ const OP_SETTINGS = {
   ],
 };
 
-/** Operator view of every user: the full demo user + lightweight platform users, each with their organization-panel access. */
+/** Rial wallet (value and reserved part) of a set of holdings. */
+const rialOf = (holdings?: Holding[]) => {
+  const h = holdings?.find((x) => x.kind === 'rial');
+  return h ? { rialValue: h.value, rialLocked: Math.min(h.value, h.locks.reduce((s, l) => s + l.amount, 0)) } : undefined;
+};
+
+/** Operator view of every user: the full demo user + lightweight platform users, each with their rial wallet and organization-panel access. */
 function allUsers(): PlatformUser[] {
   const out: PlatformUser[] = [];
   for (const ud of Object.values(db().users)) {
     const pf = portfolioOf(ud);
     const legal = ud.holdings.flatMap((h) => h.locks).some((l) => l.type === 'legal');
-    out.push({ ...ud.profile, portfolioValue: pf.total, freeValue: pf.free, lockedValue: pf.locked, riskScore: 12, lastActiveAt: nowIso(), flags: legal ? ['legal_hold'] : [] });
+    out.push({ ...ud.profile, ...rialOf(ud.holdings), portfolioValue: pf.total, freeValue: pf.free, lockedValue: pf.locked, riskScore: 12, lastActiveAt: nowIso(), flags: legal ? ['legal_hold'] : [] });
   }
-  return out.concat(db().platformUsers.filter((x) => !db().users[x.id])).map((u) => ({ ...u, panelAccess: panelAccessOf(u.id) }));
+  const core = (db().extra.opCore as { users?: Record<string, { holdings?: Holding[] }> } | undefined)?.users ?? {};
+  return out.concat(db().platformUsers.filter((x) => !db().users[x.id]).map((u) => ({ ...u, ...rialOf(core[u.id]?.holdings) })))
+    .map((u) => ({ ...u, panelAccess: panelAccessOf(u.id) }));
 }
 
 export const opHandlers = [
@@ -37,7 +45,8 @@ export const opHandlers = [
     // managed assets, reserved value and the lock mix come from the treasury, so the overview matches every other screen
     const tr = treasuryOf() ? snapshot() : null;
     const tot = tr ? totalsOf(tr.positions, tr.t) : null;
-    const aum = tot?.heldValue ?? 412_600_000_000;
+    // managed assets = funds + the rial bank balance (rial is an asset like the funds)
+    const aum = tot && tr ? tot.heldValue + tr.cash.balance : 412_600_000_000;
     const lockedValue = tot?.reservedValue ?? 124_300_000_000;
     const monthlyAum = tr ? aumMonthlyLive(tr).map((m) => m.aum) : [301, 308, 316, 339, 347, 366, 395, 412.6].map((v) => v * 1e9);
     const byType = Object.fromEntries(LOCK_TYPES.map((k) => [k, tr ? tr.positions.reduce((s, p) => s + p.reservedByType[k] * p.nav, 0) : 0]));

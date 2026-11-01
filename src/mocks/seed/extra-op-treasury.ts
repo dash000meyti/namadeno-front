@@ -15,24 +15,36 @@ import type {
 import type { OrgContractExt } from '@/api/op-core-extra';
 import type { FundMeta } from '@/api/op-system-extra';
 import { daysFromNow, jalaliToIso } from '@/lib/clock';
-import { faDigits, money, units } from '@/lib/format';
+import { faDigits, jDate, money, units } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import {
   HISTORY_DAYS, LOCK_TYPES, commitments, historyIndex, modelledAgg, netDemand, snapshot,
-  type BaseOrg, type StoredOrder, type TreasuryStore,
+  type BaseOrg, type StockWait, type StoredOrder, type TreasuryStore,
 } from '../treasury';
 
 const B = 1e9;
 const M = 1e6;
 
-/** Allocated value per fund (Toman billions) — free stock = held − allocated − committed.
- *  Silver is allocated beyond its 12B held (shortfall «کسری»): its buy TR-1036 was cancelled and not placed again. */
-const ALLOC_B: Record<string, number> = { gold: 239.5, fixed: 166, equity: 47, mixed: 35, silver: 12.6, saffron: 6.8, leverage: 8.4, project: 14.2 };
+/** Allocated value per fund (Toman billions) — free stock = held − allocated − committed (never negative).
+ *  Silver: only 0.4B of its 12B is free and users' purchases of 1B wait in the queue («نیاز به خرید» 0.6B) — its buy
+ *  TR-1036 was cancelled and not placed again (SILVER_QUEUE below). */
+const ALLOC_B: Record<string, number> = { gold: 239.5, fixed: 166, equity: 47, mixed: 35, silver: 11.6, saffron: 6.8, leverage: 8.4, project: 14.2 };
 /** Unrealised gain of the held stock over its cost. */
 const GAIN: Record<string, number> = { gold: 0.18, fixed: 0.09, equity: 0.06, mixed: 0.05, silver: 0.1, saffron: 0.04, leverage: -0.03, project: 0.07 };
 const COMMIT_B = { gold: 6.1, fixed: 4.0, rial: 0.4 };
+/** Users' silver purchases waiting for Namadno's stock (aggregated, unmodelled users): paid, units delivered when the stock arrives. */
+const SILVER_QUEUE: StockWait[] = [
+  { id: 'qw-s-silver', kind: 'buy', fundId: 'silver', value: 1.0 * B, fee: 1 * M, userName: 'خرید کاربران (تجمیع)', count: 27, title: 'خرید صندوق نقره',
+    at: daysFromNow(-1, '15:40'), eta: daysFromNow(1, '15:40'), status: 'waiting' },
+];
 const USER_RIAL_B = 46;
-const CASH_BALANCE_B = 71.6;
+/** Reserved part of the unmodelled users' rial wallets (card collateral …). */
+const USER_RIAL_RESERVED_B = 2.4;
+/** Namadno's own free rial today; the bank balance is sized from it (bank = users + tied + organizations + this). */
+const NAMADNO_FREE_B = 17.2;
+/** Organizations' rial accounts: share of the unmodelled blocked package money, and the free balance (B). */
+const ORG_BLOCK_W: Record<string, number> = { 'org-pars': 2.6, 'org-sepehr': 1.5, 'org-kaveh': 2.2, 'org-novin': 1.2, 'org-rad': 0.9, 'org-ava': 0.6, 'org-alborz': 0.4, 'org-aseman': 0.5, 'org-ideh': 0.2 };
+const ORG_FREE_B: Record<string, number> = { 'org-arman': 1.2, 'org-rad': 1.6, 'org-ava': 0.9, 'org-aseman': 0.8, 'org-alborz': 0.6, 'org-mehr': 0.5, 'org-ideh': 0.3 };
 
 export const TREASURY_ASSUMPTIONS: TreasuryAssumptions = {
   acceptanceRate: 0.85,
@@ -51,8 +63,9 @@ const TARGETS = (): TreasuryTargets => ({
     { fundId: 'equity', minFreeValue: 3 * B, targetDays: 30, maxFreeValue: 8 * B },
     { fundId: 'silver', minFreeValue: 1 * B, targetDays: 30, maxFreeValue: 3 * B },
   ],
-  aum: { value: 750 * B, by: jalaliToIso(1405, 12, 29) },
-  mix: { gold: 45, fixed: 35, other: 20 },
+  rial: { minFreeValue: 10 * B, maxFreeValue: 40 * B },
+  aum: { value: 860 * B, by: jalaliToIso(1405, 12, 29) },
+  mix: { rial: 13, gold: 40, fixed: 29, other: 18 },
   orgs: { value: 14, by: jalaliToIso(1406, 3, 31) },
   users: { value: 15_000, by: jalaliToIso(1406, 3, 31) },
   updatedAt: daysFromNow(-30, '09:00'),
@@ -105,13 +118,44 @@ const ORG_DEPOSITS: [string, string, number | string, number][] = [
   ['org-rad', 'پاداش مرداد', 4.8, -80],
   ['org-pars', 'بسته‌ی رفاهی مرداد', 5.2, -86],
 ];
-// expected deposits (packages sent, money not received yet): [org, title, amount B, sent day, due day]
-const EXPECTED: [string, string, number, number, number, number][] = [
-  ['org-pars', 'بسته‌ی رفاهی آبان', 4.2, -6, -3, 560],
-  ['org-sepehr', 'پاداش آبان', 2.6, -4, -1, 270],
-  ['org-kaveh', 'بسته‌ی پاداش عملکرد', 3.8, -1, 2, 470],
-  ['org-novin', 'هدیه‌ی تولد همکاران', 1.9, 0, 4, 180],
+// packages waiting in the queue for their receipt approval (`awaiting_payment`): nothing is delivered or blocked; the part
+// «آزاد» covered (total − receipt) is set aside for them. [org, id, title, total B, people, submitted day]
+const QUEUED_PACKAGES: [string, string, string, number, number, number][] = [
+  ['org-pars', 'pkg-q-pars', 'بسته‌ی رفاهی آبان', 3.5, 140, -2],
+  ['org-sepehr', 'pkg-q-sepehr', 'پاداش آبان', 1.3, 52, -3],
+  ['org-kaveh', 'pkg-q-kaveh', 'بسته‌ی پاداش عملکرد', 2.4, 80, 0],
 ];
+// deposit receipts («فیش واریز») waiting for the operator's review: a queued package's receipt (what «آزاد» did not
+// cover) or a plain top-up («شارژ حساب»). [org, package id | null, amount B, submitted day, time, description, bank]
+const PENDING_RECEIPTS: [string, string | null, number, number, string, string, string][] = [
+  ['org-pars', 'pkg-q-pars', 2.1, -2, '11:40', 'شماره پیگیری پایا ۱۴۰۵۰۸۱۳۰۰۴۲۱۷', 'بانک تجارت'],
+  ['org-sepehr', 'pkg-q-sepehr', 1.3, -1, '09:20', 'واریز دوباره پس از اصلاح مبلغ · ساتنا ۸۸۳۱۲۰۴', 'بانک ملت'],
+  ['org-kaveh', 'pkg-q-kaveh', 1.8, 0, '08:55', '', 'بانک پاسارگاد'],
+  ['org-novin', null, 0.9, 0, '10:10', 'حساب‌به‌حساب از حساب جاری شرکت', 'بانک سامان'],
+];
+const FIRST = ['علی', 'مریم', 'رضا', 'زهرا', 'حسین', 'فاطمه', 'مهدی', 'سارا', 'امیر', 'نرگس', 'محمد', 'الهام', 'پویا', 'نیلوفر', 'کاوه', 'شیما'];
+const LAST = ['احمدی', 'کریمی', 'رضایی', 'موسوی', 'حسینی', 'جعفری', 'صادقی', 'نوری', 'رحیمی', 'قاسمی', 'باقری', 'طاهری', 'یزدانی'];
+// a receipt the operator rejected (the organization sent a new one, above)
+const REJECTED_RECEIPT = { orgId: 'org-sepehr', packageId: 'pkg-q-sepehr', title: 'پاداش آبان', amountB: 1.2, day: -3, time: '15:05', rejectedDay: -2, reason: 'مبلغ فیش (۱٫۲ میلیارد) با مبلغ اعلام‌شده‌ی بسته (۱٫۳ میلیارد) یکی نیست.', bank: 'بانک ملت' };
+
+/** A simple receipt image for the demo (SVG data URL): bank, amount, tracking number and date. */
+function receiptSvg(bank: string, amountToman: number, track: string, dateLabel: string, from: string) {
+  const fa = (x: string | number) => faDigits(x);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="560" viewBox="0 0 420 560">
+<rect width="420" height="560" rx="18" fill="#ffffff"/><rect x="0" y="0" width="420" height="92" rx="18" fill="#1d1d1f"/><rect x="0" y="60" width="420" height="32" fill="#1d1d1f"/>
+<text x="390" y="56" font-family="Tahoma, sans-serif" font-size="24" fill="#ffffff" text-anchor="end">${bank}</text>
+<text x="30" y="56" font-family="Tahoma, sans-serif" font-size="14" fill="#c7c7cc">رسید انتقال وجه</text>
+<text x="390" y="150" font-family="Tahoma, sans-serif" font-size="15" fill="#6e6e73" text-anchor="end">مبلغ (تومان)</text>
+<text x="390" y="192" font-family="Tahoma, sans-serif" font-size="30" font-weight="bold" fill="#1d1d1f" text-anchor="end">${fa(money(amountToman))}</text>
+<line x1="30" y1="222" x2="390" y2="222" stroke="#e5e5ea" stroke-dasharray="6 6"/>
+<text x="390" y="262" font-family="Tahoma, sans-serif" font-size="15" fill="#6e6e73" text-anchor="end">از</text><text x="30" y="262" font-family="Tahoma, sans-serif" font-size="15" fill="#1d1d1f">${from}</text>
+<text x="390" y="302" font-family="Tahoma, sans-serif" font-size="15" fill="#6e6e73" text-anchor="end">به</text><text x="30" y="302" font-family="Tahoma, sans-serif" font-size="15" fill="#1d1d1f">شرکت نمادنو</text>
+<text x="390" y="342" font-family="Tahoma, sans-serif" font-size="15" fill="#6e6e73" text-anchor="end">شماره پیگیری</text><text x="30" y="342" font-family="Tahoma, sans-serif" font-size="15" fill="#1d1d1f">${fa(track)}</text>
+<text x="390" y="382" font-family="Tahoma, sans-serif" font-size="15" fill="#6e6e73" text-anchor="end">تاریخ</text><text x="30" y="382" font-family="Tahoma, sans-serif" font-size="15" fill="#1d1d1f">${dateLabel}</text>
+<rect x="30" y="430" width="360" height="56" rx="12" fill="#e8f5ec"/><text x="210" y="465" font-family="Tahoma, sans-serif" font-size="17" fill="#1f7a3d" text-anchor="middle">تراکنش موفق</text>
+</svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
 
 const SCHEDULE = (orgName: (id: string) => string | undefined): ForecastEvent[] => [
   { id: 'sch-1', at: jalaliToIso(1405, 8, 28), kind: 'milestone_due', title: 'سررسید مرحله‌ی ۳ «قرارداد پشتیبانی سامانه»', value: 1.2 * B, count: 14, orgId: 'org-novin', fundId: 'fixed' },
@@ -217,11 +261,41 @@ export function seed_opTreasury(d: MockDB) {
     const at = daysFromNow(day, '11:' + String(10 + ((ce * 7) % 45)).padStart(2, '0'));
     entries.push({
       id: cid(), at, kind: 'org_deposit', amount: pkg ? pkg.total : Math.round((amt as number) * B), status: 'done', title: `واریز «${title}»`,
-      orgId, orgName: orgName(orgId), packageId: pkg?.id, dueAt: daysFromNow(day + 1, '12:00'), receivedAt: at, ref: `FT${(482_310 + ce * 1_379).toString()}`, by: ce % 3 ? 'علی نادری' : 'مهسا بهرامی',
+      orgId, orgName: orgName(orgId), packageId: pkg?.id, receivedAt: at, ref: `FT${(482_310 + ce * 1_379).toString()}`, by: ce % 3 ? 'علی نادری' : 'مهسا بهرامی',
+      ...(day >= -35 ? { receipt: { id: `rcp-s${ce}`, name: `fish-${482_310 + ce * 1_379}.jpg`, type: 'image/svg+xml', size: 48_000 + ce * 731, url: receiptSvg(['بانک ملت', 'بانک تجارت', 'بانک سامان'][ce % 3], pkg ? pkg.total : Math.round((amt as number) * B), `${482_310 + ce * 1_379}`, jDate(at), orgName(orgId) ?? '') }, submittedBy: 'منابع انسانی ' + (orgName(orgId) ?? '') } : {}),
     });
   }
-  for (const [orgId, title, amtB, sent, due] of EXPECTED) {
-    entries.push({ id: cid(), at: daysFromNow(sent, sent === 0 ? '09:15' : '10:45'), kind: 'org_deposit', amount: Math.round(amtB * B), status: 'expected', title: `واریز «${title}»`, orgId, orgName: orgName(orgId), dueAt: daysFromNow(due, '12:00') });
+  // the queue: packages submitted with a receipt, waiting for its approval (nothing delivered yet)
+  for (const [orgId, id, title, totalB, people, day] of QUEUED_PACKAGES) {
+    const total = Math.round(totalB * B);
+    const per = Math.round(total / people);
+    const toDeposit = Math.round((PENDING_RECEIPTS.find((r) => r[1] === id)?.[2] ?? totalB) * B);
+    (d.orgPackages[orgId] ??= []).unshift({
+      id, title, reason: 'bonus', createdAt: daysFromNow(day - 1, '16:00'), submittedAt: daysFromNow(day, '11:30'), status: 'awaiting_payment',
+      recipients: Array.from({ length: people }, (_, i) => ({ employeeId: `${id}-r${i + 1}`, name: `${FIRST[i % FIRST.length]} ${LAST[(i * 7) % LAST.length]}`, amount: per, status: 'pending' as const })),
+      amountSource: 'uniform', amountPerPerson: per, total: per * people, allocationMode: 'free', cashAllowed: true, lockPolicy: { type: 'none' },
+      funding: { fromFree: Math.max(0, per * people - toDeposit), toDeposit },
+    });
+  }
+  const queuedOf = (id: string | null) => (id ? Object.values(d.orgPackages).flat().find((p) => p.id === id) : undefined);
+  for (const [orgId, pkgId, amtB, day, time, note, bank] of PENDING_RECEIPTS) {
+    const at = daysFromNow(day, time);
+    const track = String(7_100_000 + ce * 4_391);
+    const pkg = queuedOf(pkgId);
+    entries.push({
+      id: cid(), at, kind: 'org_deposit', amount: Math.round(amtB * B), status: 'expected', title: pkg ? `فیش «${pkg.title}»` : 'شارژ حساب سازمان', orgId, orgName: orgName(orgId),
+      packageId: pkg?.id, note: note || undefined, submittedBy: 'منابع انسانی ' + (orgName(orgId) ?? ''),
+      receipt: { id: `rcp-p${ce}`, name: `receipt-${track}.jpg`, type: 'image/svg+xml', size: 51_000 + ce * 517, url: receiptSvg(bank, Math.round(amtB * B), track, jDate(at), orgName(orgId) ?? '') },
+    });
+  }
+  {
+    const r = REJECTED_RECEIPT;
+    const at = daysFromNow(r.day, r.time);
+    entries.push({
+      id: cid(), at, kind: 'org_deposit', amount: Math.round(r.amountB * B), status: 'rejected', title: `فیش «${r.title}»`, orgId: r.orgId, orgName: orgName(r.orgId), packageId: r.packageId,
+      submittedBy: 'منابع انسانی ' + (orgName(r.orgId) ?? ''), rejectedAt: daysFromNow(r.rejectedDay, '10:30'), rejectReason: r.reason, by: 'مهسا بهرامی',
+      receipt: { id: 'rcp-rej', name: 'receipt-sepehr.jpg', type: 'image/svg+xml', size: 47_200, url: receiptSvg(r.bank, Math.round(r.amountB * B), '8830917', jDate(at), orgName(r.orgId) ?? '') },
+    });
   }
   for (let day = -88; day <= 0; day += 4) {
     entries.push({ id: cid(), at: daysFromNow(day, day === 0 ? '09:00' : '20:00'), kind: 'user_deposit', amount: Math.round((0.9 + rnd() * 1.5) * B * (day === 0 ? 0.35 : 1)), status: 'done', title: 'واریز کاربران · تجمیع روزانه' });
@@ -250,12 +324,30 @@ export function seed_opTreasury(d: MockDB) {
     b.depositsPrior = Math.max(0, o.budgetUsed - inLedger);
   }
 
+  // ── organizations' rial accounts: blocked = sent packages waiting for recipients (modelled + a share of the baseline),
+  //    balance = blocked + set aside for queued packages + free — always covered: nothing is sent before it is paid
+  const baseBlocked = commitToman.gold + commitToman.fixed + commitToman.rial;
+  const wSum = Object.values(ORG_BLOCK_W).reduce((a, b) => a + b, 0);
+  const orgRial: NonNullable<TreasuryStore['orgRial']> = {};
+  for (const o of d.organizations) {
+    const blockedBase = Math.round((baseBlocked * (ORG_BLOCK_W[o.id] ?? 0)) / wSum);
+    const blocked = blockedBase + (com.org[o.id]?.toman ?? 0);
+    const setAside = (d.orgPackages[o.id] ?? []).filter((p) => p.status === 'awaiting_payment').reduce((acc, p) => acc + (p.funding?.fromFree ?? 0), 0);
+    orgRial[o.id] = { blockedBase, balance: Math.round(blocked + setAside + (ORG_FREE_B[o.id] ?? 0) * B) };
+  }
+  const orgPositive = Object.values(orgRial).reduce((acc, a) => acc + Math.max(0, a.balance), 0);
+  const tiedNow = orders.filter((o) => o.side === 'buy' && o.status === 'placed').reduce((acc, o) => acc + o.amount, 0);
+  // purchases waiting in the queue: users' money in transit (part of the bank, not Namadno's)
+  const transit = SILVER_QUEUE.reduce((acc, w) => acc + w.value + (w.fee ?? 0), 0);
+  const bank = USER_RIAL_B * B + tiedNow + orgPositive + transit + NAMADNO_FREE_B * B;
+
   const t: TreasuryStore = {
     base: {
       allocatedUnits, reservedUnits, commitToman, userRial: Math.max(0, USER_RIAL_B * B - agg.rial), orgs,
+      userRialReserved: Math.max(0, USER_RIAL_RESERVED_B * B - agg.rialLocked),
       activeUsers: 9_310, users: 12_840, pace: { orgsPerMonth: 0.8, usersPerMonth: 310 }, schedule: SCHEDULE(orgName),
     },
-    held, orders, cash: { opening: Math.round(CASH_BALANCE_B * B - doneSum), entries }, movements: [], activity: [],
+    held, orders, cash: { opening: Math.round(bank - doneSum), entries }, orgRial, movements: [], activity: [], waits: SILVER_QUEUE.map((w) => ({ ...w })),
     targets: TARGETS(), assumptions: A,
     history: { available: {}, held: {}, balance: [], cashAvailable: [], flow: { allocated: [], returned: [], bought: [], redeemed: [] } },
     aumMonthly: [],
@@ -315,9 +407,14 @@ export function seed_opTreasury(d: MockDB) {
   const tiedOn = (i: number) => orders.filter((o) => o.side === 'buy' && o.status !== 'cancelled' && historyIndex(o.placedAt) <= i && historyIndex(o.placedAt) >= 0
     && (o.status === 'placed' || historyIndex(o.settledAt!) > i)).reduce((acc, o) => acc + o.amount, 0);
   t.history.balance = bal.map(Math.round);
-  t.history.cashAvailable = bal.map((b, i) => Math.round(b - tiedOn(i) - s.cash.userWallets * (0.86 + (0.14 * i) / (N - 1)) * (0.99 + rnd() * 0.02) - s.cash.committedRial));
+  // Namadno free rial = bank − tied − user wallets − organizations' balances (free + reserve), built backwards
+  const orgsNow = s.cash.orgFree + s.cash.reserve;
+  t.history.cashAvailable = bal.map((b, i) => Math.round(b - tiedOn(i) - s.cash.userWallets * (0.86 + (0.14 * i) / (N - 1)) * (0.99 + rnd() * 0.02) - orgsNow * (0.9 + (0.1 * i) / (N - 1))));
+  t.history.reserve = bal.map((_, i) => Math.round(s.cash.reserve * (0.72 + (0.28 * i) / (N - 1)) * (0.94 + rnd() * 0.12)));
+  t.history.reserve[N - 1] = s.cash.reserve;
 
-  const scale = s.positions.reduce((acc, p) => acc + p.heldValue, 0) / (MONTHLY_AUM[MONTHLY_AUM.length - 1] * B);
+  // managed assets = funds + the rial bank balance
+  const scale = (s.positions.reduce((acc, p) => acc + p.heldValue, 0) + s.cash.balance) / (MONTHLY_AUM[MONTHLY_AUM.length - 1] * B);
   t.aumMonthly = MONTHS.map((month, i) => ({ month, aum: Math.round(MONTHLY_AUM[i] * B * scale) }));
 
   // ── stock movements
@@ -377,8 +474,11 @@ export function seed_opTreasury(d: MockDB) {
   for (const e of entries.filter((x) => x.kind === 'org_deposit' && x.orgId)) {
     const sentAt = e.status === 'expected' ? e.at : new Date(Date.parse(e.at) - 1.6 * 86_400_000).toISOString();
     if (sentAt < daysFromNow(-45)) continue;
-    act.push({ id: `ev-p${e.id}`, at: sentAt, actor: org(e.orgId!), orgId: e.orgId, orgName: e.orgName, category: 'package', kind: 'package_sent', title: `ارسال «${e.title.replace(/^واریز «|»$/g, '')}»`, sub: e.status === 'expected' ? 'واریز سازمان در راه است' : 'واریز سازمان دریافت شد', amount: e.amount, tone: 'primary', href: routes.op.organization(e.orgId!), refs: e.packageId ? [{ type: 'package', id: e.packageId }] : undefined });
-    if (e.status === 'done') act.push({ id: `ev-d${e.id}`, at: e.at, actor: opr(e.by ?? 'علی نادری'), orgId: e.orgId, orgName: e.orgName, category: 'cash', kind: 'deposit_confirmed', title: `دریافت واریز ${e.orgName}`, sub: `${e.title} · مرجع ${e.ref}`, amount: e.amount, tone: 'success', href: `${routes.op.cash}?id=${e.id}`, refs: [{ type: 'cash', id: e.id }] });
+    if (e.status === 'rejected') continue;
+    act.push(e.status === 'expected'
+      ? { id: `ev-p${e.id}`, at: sentAt, actor: org(e.orgId!), orgId: e.orgId, orgName: e.orgName, category: 'cash', kind: 'deposit_submitted', title: `فیش واریز ${e.orgName}`, sub: `${e.title} · در انتظار تأیید نمادنو`, amount: e.amount, tone: 'info', href: `${routes.op.cash}?id=${e.id}`, refs: [{ type: 'cash', id: e.id }] }
+      : { id: `ev-p${e.id}`, at: sentAt, actor: org(e.orgId!), orgId: e.orgId, orgName: e.orgName, category: 'package', kind: 'package_sent', title: `ارسال «${e.title.replace(/^(واریز|فیش) «|»$/g, '')}»`, sub: 'واریز سازمان تأیید شد', amount: e.amount, tone: 'primary', href: routes.op.organization(e.orgId!), refs: e.packageId ? [{ type: 'package', id: e.packageId }] : undefined });
+    if (e.status === 'done') act.push({ id: `ev-d${e.id}`, at: e.at, actor: opr(e.by ?? 'علی نادری'), orgId: e.orgId, orgName: e.orgName, category: 'cash', kind: 'deposit_confirmed', title: `تأیید فیش واریز ${e.orgName}`, sub: `${e.title} · مرجع ${e.ref}`, amount: e.amount, tone: 'success', href: `${routes.op.cash}?id=${e.id}`, refs: [{ type: 'cash', id: e.id }] });
   }
   for (let day = -1; day >= -6; day--) add(day, '14:00', { actor: sys, category: 'treasury', kind: 'nav_updated', title: 'به‌روزرسانی NAV صندوق‌ها', sub: `${faDigits(8)} صندوق فعال · از هسته‌ی معاملات`, tone: 'neutral', href: routes.op.funds });
 
@@ -386,9 +486,8 @@ export function seed_opTreasury(d: MockDB) {
   const N_ = (id: string) => ({ orgId: id, orgName: orgName(id) });
   add(0, '10:05', { actor: user('u-1001', 'سارا محمدی'), ...ORG_ARMAN, category: 'trade', kind: 'user_buy', title: 'خرید صندوق طلا', sub: 'از موجودی آزاد خزانه', amount: 5 * M, fundId: 'gold', tone: 'info', href: routes.op.user('u-1001'), refs: [{ type: 'user', id: 'u-1001' }] });
   add(0, '08:41', { actor: sys, ...N_('org-novin'), category: 'account', kind: 'risk_alert', title: 'هشدار ریسک · برداشت غیرعادی', sub: `الهام رستمی · امتیاز ${faDigits(82)}`, tone: 'error', href: `${routes.op.risk}?id=AL-3318`, refs: [{ type: 'alert', id: 'AL-3318' }, { type: 'user', id: 'u-2138' }] });
-  add(0, '08:40', { actor: user('u-2138', 'الهام رستمی'), ...N_('org-novin'), category: 'cash', kind: 'user_withdrawal', title: 'برداشت به حساب بانکی', sub: 'در انتظار بررسی ریسک', amount: 85 * M, tone: 'warning', href: routes.op.user('u-2138'), refs: [{ type: 'user', id: 'u-2138' }, { type: 'alert', id: 'AL-3318' }] });
-  add(0, '07:30', { actor: sys, ...N_('org-pars'), category: 'cash', kind: 'deposit_overdue', title: 'یادآوری واریز معوق', sub: `صنایع پارس · ${faDigits(3)} روز از سررسید گذشته`, amount: 4.2 * B, tone: 'warning', href: `${routes.op.cash}?status=overdue` });
-  add(-1, '17:20', { actor: user('u-1009', 'محمد صادقی'), ...ORG_ARMAN, category: 'request', kind: 'request_created', title: 'درخواست تغییر شماره موبایل', sub: 'RQ-2036', tone: 'info', href: `${routes.op.requests}?id=RQ-2036`, refs: [{ type: 'request', id: 'RQ-2036' }, { type: 'user', id: 'u-1009' }] });
+  add(0, '08:40', { actor: user('u-2138', 'الهام رستمی'), ...N_('org-novin'), category: 'cash', kind: 'user_withdrawal', title: 'برداشت به حساب بانکی', sub: 'پایا · در سقف برداشت روزانه', amount: 45 * M, tone: 'neutral', href: routes.op.user('u-2138'), refs: [{ type: 'user', id: 'u-2138' }, { type: 'alert', id: 'AL-3318' }] });
+  add(-2, '10:30', { actor: opr('مهسا بهرامی'), ...N_('org-sepehr'), category: 'cash', kind: 'deposit_rejected', title: 'رد فیش واریز گروه سپهر', sub: 'فیش «پاداش آبان» · مبلغ فیش با مبلغ بسته یکی نیست', amount: 1.2 * B, tone: 'warning', href: routes.op.cash });
   add(-1, '16:20', { actor: user('u-4006', 'بهراد کیانی'), ...N_('org-sepehr'), category: 'trade', kind: 'user_buy', title: 'خرید صندوق طلا', sub: 'از موجودی آزاد خزانه', amount: 118 * M, fundId: 'gold', tone: 'info', href: routes.op.user('u-4006'), refs: [{ type: 'user', id: 'u-4006' }, { type: 'alert', id: 'AL-3317' }] });
   add(-1, '16:05', { actor: user('u-4006', 'بهراد کیانی'), ...N_('org-sepehr'), category: 'trade', kind: 'user_sell', title: 'فروش صندوق طلا', sub: 'به موجودی آزاد خزانه برگشت', amount: 120 * M, fundId: 'gold', tone: 'neutral', href: routes.op.user('u-4006'), refs: [{ type: 'user', id: 'u-4006' }] });
   add(-1, '09:30', { actor: user('u-1002', 'علی کریمی'), ...ORG_ARMAN, category: 'trade', kind: 'user_buy', title: 'خرید صندوق درآمد ثابت', sub: 'از موجودی آزاد خزانه', amount: 12 * M, fundId: 'fixed', tone: 'info', href: routes.op.user('u-1002'), refs: [{ type: 'user', id: 'u-1002' }] });

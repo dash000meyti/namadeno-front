@@ -2,19 +2,20 @@
 /**
  * Operator console — fund. Kit detail page: heading (fund tile, status / stock-state pills, «ثبت سفارش», more actions:
  * NAV refresh, edit, pause/resume; launch for drafts) → stock stats → tabs:
- *   موجودی     stock breakdown, free-stock trend vs the target band, 30-day forecast, the suggestion, recent movements
+ *   موجودی     «صف تأمین» (when items wait for this fund's stock: the need, the promise, «ثبت صدور», the waiting items),
+ *              stock breakdown, free-stock trend vs the target band, 30-day forecast, the suggestion, recent movements
  *   سفارش‌ها   this fund's orders to the fund («صدور» / «ابطال») + inspector with «ثبت تسویه» and «لغو سفارش»
  *   عملکرد    NAV chart with range, recent NAVs + CSV export, users' orders today, fund info
  *   رزروها     free / reserved AUM by reservation type
  *   تنظیمات   trading and collateral groups + sticky save bar
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useParams } from 'next/navigation';
 import { useOpFund } from '@/api/op';
 import { useRefreshNav, useUpdateFundX, type OpFund } from '@/api/op-system-extra';
 import {
   useTreasuryOrders, useTreasuryPosition,
-  type OrderSide, type TreasuryOrder, type TreasuryPositionDetail,
+  type OrderSide, type QueueItem, type TreasuryOrder, type TreasuryPositionDetail,
 } from '@/api/op-treasury-extra';
 import type { Fund, LockType } from '@/types/domain';
 import {
@@ -30,11 +31,12 @@ import { IC, type ToneKey } from '@/components/op/system/ui';
 import { CATEGORY_LABEL, FUND_STATUS, FUND_UI, LOCK_ORDER, fundTitle, lockedOf } from '@/components/op/system/funds';
 import { FundEditDialog, NavChart } from '@/components/op/system/FundUi';
 import { OrderDialog } from '@/components/op/treasury/OrderDialog';
-import { STOCK_STATE, TI, amt, buyNowCap, daysText, unitsText } from '@/components/op/treasury/ui';
+import { STOCK_STATE, TI, amt, buyNowCap, daysText, isNeed, unitsText } from '@/components/op/treasury/ui';
 import {
   CoverageBlock, MovementInspector, OpLabel, PositionBreakdown, StatePill, SuggestionNote, minTargetOf, movementColumns, samt, sbn, useOrgNames,
 } from '@/components/op/funds/stock';
 import { OrderInspector, orderColumns } from '@/components/op/funds/orders';
+import { QueueCard, QueueItemInspector } from '@/components/op/funds/queue';
 import { faDigits, jDate, jDayMonth, money } from '@/lib/format';
 import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
@@ -52,7 +54,7 @@ const trend = (n: number) => (n > 0 ? 'up' as const : n < 0 ? 'down' as const : 
 
 interface LockRow { t: LockType; v: number; units: number; pct: number; holders: number }
 interface OrderPrefill { key: number; side?: OrderSide; amount?: number; source?: 'manual' | 'suggestion'; reason?: string }
-type Sel = { kind: 'move' | 'order'; id: string } | null;
+type Sel = { kind: 'move' | 'order'; id: string } | { kind: 'queue'; id: string; item: QueueItem } | null;
 
 export default function OpFundPage() {
   const { id } = useParams<{ id: string }>();
@@ -88,7 +90,8 @@ export default function OpFundPage() {
   const openOrders = (d?.orders ?? []).filter((o) => o.status === 'placed');
   const dueOrders = openOrders.filter((o) => o.dueNow).length;
   const openAmount = openOrders.reduce((s, o) => s + o.amount, 0);
-  const attention = d?.state === 'shortfall' || d?.state === 'below';
+  const need = !!d && isNeed(d.state);
+  const attention = need || d?.state === 'below';
 
   const setTab = (t: Tab) => { setTabRaw(t); setSel(null); };
   const openOrder = (o: Omit<OrderPrefill, 'key'> = {}) => setOrder({ key: Date.now(), ...o });
@@ -115,8 +118,10 @@ export default function OpFundPage() {
     { label: 'موجودی خزانه', value: sbn(d.heldValue), unit: 'میلیارد تومان', note: `${unitsText(d.heldUnits)} واحد` },
     { label: 'تخصیص به کاربران', value: sbn(d.allocatedValue), unit: 'میلیارد تومان', note: `رزرو ${amt(d.reservedValue)} · ${money(f.investors)} دارنده` },
     {
-      label: 'موجودی آزاد', value: sbn(d.availableValue), unit: 'میلیارد تومان', trend: attention ? 'warn' : undefined,
-      note: `پوشش ${daysText(d.coverageDays)}${d.target ? ` از هدف ${faDigits(d.target.targetDays)} روز` : ''}`,
+      label: 'موجودی آزاد', value: sbn(Math.max(0, d.availableValue)), unit: 'میلیارد تومان', trend: need ? 'down' : attention ? 'warn' : undefined,
+      note: d.needBuyValue > 0
+        ? `نیاز به خرید ${amt(d.needBuyValue)}`
+        : `پوشش ${daysText(d.coverageDays)}${d.target ? ` از هدف ${faDigits(d.target.targetDays)} روز` : ''}`,
     },
     {
       label: 'سفارش‌های باز', value: faDigits(openOrders.length), unit: 'سفارش', onClick: () => setTab('orders'), active: tab === 'orders',
@@ -224,6 +229,8 @@ function StockTab({ d, active, sel, onSelect, onOrder }: {
   const s = d.suggestion;
   const fs = fc?.suggestion;
   const selMove = sel?.kind === 'move' ? d.movements.find((m) => m.id === sel.id) : undefined;
+  const queued = d.queuedCount > 0 || d.needBuyValue > 0;
+  const order = active ? onOrder : undefined;
 
   if (d.state === 'inactive') {
     return <Card><Empty icon={TI.stock} title="این صندوق هنوز موجودی ندارد" sub="پس از راه‌اندازی و ثبت نخستین صدور، موجودی خزانه، تخصیص‌ها و موجودی آزاد اینجا نمایش داده می‌شود." /></Card>;
@@ -231,7 +238,9 @@ function StockTab({ d, active, sel, onSelect, onOrder }: {
   const projected = fc?.projectedEnd ?? 0;
   return (
     <>
-      {s && <SuggestionNote suggestion={s} onOrder={active ? () => onOrder({ side: s.side, amount: s.amount, source: 'suggestion', reason: s.reason }) : undefined} />}
+      {queued
+        ? <QueueCard p={d} onOrder={order} selectedId={sel?.kind === 'queue' ? sel.id : null} onSelect={(i) => onSelect(i ? { kind: 'queue', id: i.id, item: i } : null)} />
+        : s && <SuggestionNote suggestion={s} onOrder={active ? () => onOrder({ side: s.side, amount: s.amount, source: 'suggestion', reason: s.reason }) : undefined} />}
       <div className="nm-grid side">
         <div className="nm-stack">
           <FreeTrend d={d} minTarget={minTarget} />
@@ -242,12 +251,14 @@ function StockTab({ d, active, sel, onSelect, onOrder }: {
               more={{ label: 'برنامه‌ریزی', href: routes.op.planning }}>
               <KV rows={[
                 [<OpLabel key="a">موجودی آزاد اکنون</OpLabel>, <span key="a" className="num">{samt(fc.availableNow)} تومان</span>],
+                ...(d.queuedValue > 0 ? [[<OpLabel key="q" op="−" sub={`${faDigits(d.queuedCount)} مورد منتظر موجودی`}>در صف تأمین</OpLabel>, <span key="q" className="num">{samt(d.queuedValue)} تومان</span>] as [ReactNode, ReactNode]] : []),
                 [<OpLabel key="b" op="+">صدور در راه</OpLabel>, <span key="b" className="num">{samt(fc.pendingBuy)} تومان</span>],
                 [<OpLabel key="d" op="−" sub="خرید کاربران و بسته‌های تازه">تقاضای پیش‌بینی‌شده</OpLabel>, <span key="d" className="num">{samt(fc.demand)} تومان</span>],
                 [<OpLabel key="r" op="+" sub="فروش کاربران، پس‌انداز آزادشده و بازپس‌گیری">بازگشت به موجودی</OpLabel>, <span key="r" className="num">{samt(fc.returns)} تومان</span>],
-                [<OpLabel key="e" op="=" strong>موجودی آزاد پایان دوره</OpLabel>, (
+                // nothing goes negative: a projected gap is what must be bought in advance
+                [<OpLabel key="e" op="=" strong>{projected < 0 ? 'نیاز به خرید تا پایان دوره' : 'موجودی آزاد پایان دوره'}</OpLabel>, (
                   <span key="e" className="num" style={{ fontWeight: 600, color: projected < 0 ? 'var(--error-text)' : projected < minTarget ? 'var(--warning-text)' : undefined }}>
-                    {samt(projected)} تومان
+                    {amt(Math.abs(projected))} تومان
                   </span>
                 )],
                 [<OpLabel key="m">حداقل هدف</OpLabel>, <span key="m" className="num mute">{samt(minTarget)} تومان</span>],
@@ -281,6 +292,7 @@ function StockTab({ d, active, sel, onSelect, onOrder }: {
       </Card>
 
       {selMove && <MovementInspector key={selMove.id} m={selMove} fundName={d.name} orgName={orgName} onClose={() => onSelect(null)} />}
+      {sel?.kind === 'queue' && <QueueItemInspector key={sel.id} i={sel.item} fundName={d.name} onClose={() => onSelect(null)} />}
     </>
   );
 }

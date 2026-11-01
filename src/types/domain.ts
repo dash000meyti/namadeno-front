@@ -455,7 +455,19 @@ export interface OrgPackage {
   reason: PackageReason;
   createdAt: ISODate;
   sentAt?: ISODate;
-  status: 'draft' | 'sent' | 'completed' | 'cancelled';
+  /**
+   * `awaiting_payment` = in the queue: submitted with a deposit receipt because «آزاد» was short; nothing is delivered or
+   * blocked until Namadno approves the receipt (then `sent`). A rejected receipt keeps it in the queue for a new one.
+   */
+  status: 'draft' | 'awaiting_payment' | 'awaiting_stock' | 'sent' | 'completed' | 'cancelled';
+  /**
+   * `awaiting_stock` = paid, but Namadno's fund stock does not cover its fund parts yet: it waits in the queue («در انتظار
+   * تأمین موجودی») — nothing is delivered or blocked — and is sent automatically once Namadno buys the stock, at the latest
+   * by `stockEta` (fund settlement + one working day, e.g. 72h for T+2). Its whole amount is set aside from «آزاد».
+   */
+  stockEta?: ISODate;
+  /** When the package entered the stock queue. */
+  stockQueuedAt?: ISODate;
   recipients: { employeeId: ID; name: string; amount: Toman; status: 'pending' | 'accepted' | 'expired'; acceptedAt?: ISODate }[];
   /** Same amount for everyone. 0 when the amounts come from a file (`amountSource: 'file'`) — then read `recipients[].amount`. */
   amountPerPerson: Toman;
@@ -467,6 +479,13 @@ export interface OrgPackage {
   cashAllowed: boolean;
   lockPolicy: LockPolicy;
   milestoneProgress?: MilestoneStep[];
+  /**
+   * How the amount is funded from the organization's rial account (Toman): in the response of POST /org/packages/:id/send,
+   * and kept on a queued package — `fromFree` is set aside from «آزاد» for it, `toDeposit` comes with its receipt.
+   */
+  funding?: { fromFree: Toman; toDeposit: Toman };
+  /** When the package was submitted with a receipt (status awaiting_payment). */
+  submittedAt?: ISODate;
   message?: string;
   expiresAt?: ISODate;
 }
@@ -499,6 +518,9 @@ export interface ApprovalRequest {
 
 // ───────────────────────── Operator panel ─────────────────────────
 export interface PlatformUser extends UserProfile {
+  /** Rial wallet and its reserved part (part of `portfolioValue`). */
+  rialValue?: Toman;
+  rialLocked?: Toman;
   portfolioValue: Toman;
   freeValue: Toman;
   lockedValue: Toman;

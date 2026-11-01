@@ -1,61 +1,24 @@
 'use client';
 /**
- * Deposits into Namadno's rial account:
- *   ConfirmDepositDialog — «ثبت دریافت» of an expected organization deposit (with the bank reference)
- *   RecordDepositDialog  — «ثبت واریز» of a deposit that was not expected (organization, amount, reference, note)
+ * «ثبت واریز» — the operator records an organization deposit seen on the bank statement without a receipt from the
+ * organization (organization, amount, reference, note). Receipts the organizations upload («فیش واریز») are reviewed
+ * in ReviewDepositDialog instead.
+ * A recorded deposit goes to the organization's rial account (its «آزاد»)
+ * (into «ریال رزرو»), the rest stays in the organization's free balance.
  */
 import { useState } from 'react';
-import type { Organization } from '@/types/domain';
-import { useConfirmDeposit, useRecordDeposit, type CashEntry } from '@/api/op-treasury-extra';
-import { Dialog, Field, KV, Note, NumInput, NumberInput, Select, Tile } from '@/components/panel/kit';
+import { useRecordDeposit, type CashEntry } from '@/api/op-treasury-extra';
+import { Dialog, Field, Note, NumInput, NumberInput, Select, Tile } from '@/components/panel/kit';
 import { useToast } from '@/components/ui/Toast';
 import { errMsg } from '@/components/op/system/fmt';
 import { TI, amt } from '@/components/op/treasury/ui';
-import { faDigits, jDate, money } from '@/lib/format';
+import { faDigits, money } from '@/lib/format';
 
 const REF_RE = /^[A-Za-z0-9۰-۹\-/ ]{4,32}$/;
 
-export function ConfirmDepositDialog({ entry, onClose, onDone }: { entry: CashEntry | null; onClose: () => void; onDone?: (e: CashEntry) => void }) {
-  const toast = useToast();
-  const confirm = useConfirmDeposit();
-  const [ref, setRef] = useState(entry?.ref ?? '');
-  const [err, setErr] = useState('');
-  if (!entry) return null;
-  const submit = () => {
-    const r = ref.trim();
-    if (!REF_RE.test(r)) { setErr('شماره‌ی مرجع بانکی را وارد کنید (۴ تا ۳۲ نویسه).'); return; }
-    confirm.mutate({ id: entry.id, ref: r }, {
-      onSuccess: (e) => { toast(`دریافت ${money(e.amount)} تومان از ${e.orgName ?? 'سازمان'} ثبت شد`); onDone?.(e); onClose(); },
-      onError: (e) => setErr(errMsg(e)),
-    });
-  };
-  return (
-    <Dialog
-      open onClose={onClose} width={480} title="ثبت دریافت واریز" sub={entry.orgName}
-      icon={<Tile d={TI.deposit} tone="success" size="lg" />}
-      footer={(
-        <>
-          <button type="button" className="nm-btn ghost" onClick={onClose}>انصراف</button>
-          <button type="button" className="nm-btn" onClick={submit} disabled={confirm.isPending}>{confirm.isPending ? 'در حال ثبت…' : 'ثبت دریافت'}</button>
-        </>
-      )}
-    >
-      <KV rows={[
-        ['بابت', entry.title],
-        ['مبلغ', <span key="a" className="num">{money(entry.amount)} تومان</span>],
-        ['سررسید', <span key="d" className="num">{entry.dueAt ? jDate(entry.dueAt) : '—'}</span>],
-      ]} />
-      <Field label="شماره‌ی مرجع بانکی" htmlFor={`dep-ref-${entry.id}`} help="برای تطبیق با صورت‌حساب بانک" error={err || undefined}>
-        <NumInput id={`dep-ref-${entry.id}`} label="شماره‌ی مرجع بانکی" value={ref} onChange={(v) => { setRef(v); setErr(''); }} text ltr full placeholder="مثلاً 140508151234" invalid={!!err} />
-      </Field>
-      <span className="mute" style={{ fontSize: 12.5 }}>مبلغ با تاریخ امروز به حساب ریالی نمادنو ثبت می‌شود.</span>
-    </Dialog>
-  );
-}
-
 export function RecordDepositDialog({ orgs, expected, orgId, onClose, onDone }: {
-  orgs: Organization[];
-  /** Expected organization deposits, to point at «ثبت دریافت» when the money matches one of them. */
+  orgs: { id: string; name: string }[];
+  /** Receipts waiting for review, to point at «بررسی فیش» when the money matches one of them. */
   expected: CashEntry[];
   orgId?: string;
   onClose: () => void;
@@ -82,7 +45,7 @@ export function RecordDepositDialog({ orgs, expected, orgId, onClose, onDone }: 
 
   return (
     <Dialog
-      open onClose={onClose} width={520} title="ثبت واریز" sub="واریز سازمان به حساب ریالی نمادنو"
+      open onClose={onClose} width={520} title="ثبت واریز" sub="واریز سازمان به حساب ریالی آن نزد نمادنو"
       icon={<Tile d={TI.deposit} tone="success" size="lg" />}
       footer={(
         <>
@@ -97,8 +60,8 @@ export function RecordDepositDialog({ orgs, expected, orgId, onClose, onDone }: 
       </Field>
       {pending.length > 0 && (
         <Note tone="info">
-          این سازمان {faDigits(pending.length)} واریز در انتظار به مبلغ {amt(pending.reduce((a, e) => a + e.amount, 0))} تومان دارد.
-          اگر این مبلغ بابت یکی از آن‌هاست، از «ثبت دریافت» همان ردیف استفاده کنید تا تطبیق شود.
+          این سازمان {faDigits(pending.length)} فیش در انتظار تأیید به مبلغ {amt(pending.reduce((a, e) => a + e.amount, 0))} تومان دارد.
+          اگر این واریز بابت یکی از آن‌هاست، همان فیش را بررسی و تأیید کنید تا دو بار ثبت نشود.
         </Note>
       )}
       <div className="nm-grid c2" style={{ gap: 12 }}>
@@ -112,6 +75,9 @@ export function RecordDepositDialog({ orgs, expected, orgId, onClose, onDone }: 
       <Field label="شرح" htmlFor="dep-note" help="اختیاری · در گردش حساب نمایش داده می‌شود">
         <NumInput id="dep-note" label="شرح واریز" value={note} onChange={setNote} text full placeholder="مثلاً: پیش‌پرداخت بسته‌های یلدا" />
       </Field>
+      <span className="mute" style={{ fontSize: 12.5, lineHeight: 1.7 }}>
+        مبلغ به حساب آزاد سازمان اضافه می‌شود. بسته‌های در صف فقط با تأیید فیش خودشان ارسال می‌شوند.
+      </span>
       {err?.key === null && <Note tone="err">{err.msg}</Note>}
     </Dialog>
   );

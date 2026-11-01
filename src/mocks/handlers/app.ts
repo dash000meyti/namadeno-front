@@ -7,10 +7,13 @@ import { db, fund, newId, recalcHoldings, trackingCode, userData, type UserData 
 import { body, fail, latency, ok, p, qs, who } from '../http';
 import { panelAccessOf } from '../identity';
 import { now, jalaliToIso } from '@/lib/clock';
-import { faDigits, money } from '@/lib/format';
-import { onPackageAccepted, onUserCash, onUserTrade } from '../treasury';
+import { faDigits, jDateTime, money } from '@/lib/format';
+import { type StockWait, acceptRoom, etaFor, onPackageAccepted, onUserCash, onUserTrade, queueAccept, queueBuy, queueSell, rialRoom, snapshot, stockRoom, treasuryOf } from '../treasury';
+import { overLimit, withdrawLimits } from '../withdraw-limits';
 
 const nowIso = () => now().toISOString();
+/** «۱۴۰۵/۰۸/۱۸ · ۱۰:۳۰» — the promise of an item waiting for Namadno's stock / rial. */
+const jDateTimeFa = (iso: string) => faDigits(jDateTime(iso));
 
 function u(req: Request): UserData {
   return userData(who(req, 'employee').userId);
@@ -140,9 +143,17 @@ export const appHandlers = [
     if (Math.round(sum) !== 100) return fail(422, 'bad_split', 'جمع تخصیص باید ۱۰۰٪ باشد.');
     if ((split.rial ?? 0) > 0 && !pkg.cashAllowed) return fail(422, 'cash_not_allowed', 'این بسته فقط به صندوق‌ها تخصیص داده می‌شود و سهم ریالی ندارد.');
     const parts: [AssetKind, number][] = [['gold', split.gold], ['fixed', split.fixed], ['rial', split.rial ?? 0]];
+    // nothing goes negative: a fund part the stock cannot cover (after the queue + this recipient's own commitment) waits
+    // for Namadno's buy and is delivered — with its reservation — when the stock arrives
+    const waiting: { kind: AssetKind; amount: number; eta: string; wait: StockWait }[] = [];
     for (const [kind, pct] of parts) {
       if (!pct) continue;
       const amt = Math.round((pkg.amount * pct) / 100);
+      if (kind !== 'rial' && treasuryOf() && amt > acceptRoom(ud, pkg, kind) + 1) {
+        const w = queueAccept(ud, pkg, kind, amt);
+        waiting.push({ kind, amount: amt, eta: w.eta, wait: w });
+        continue;
+      }
       credit(ud, kind, amt);
       const lp = pkg.lockPolicy;
       if (kind !== 'rial' && lp.type === 'vesting') {
@@ -158,8 +169,13 @@ export const appHandlers = [
     pkg.status = 'accepted';
     pkg.acceptedAt = nowIso();
     pkg.acceptedSplit = split;
-    onPackageAccepted(ud, pkg, split); // treasury: the fund parts leave the free stock
-    const tx = addTx(ud, { category: 'inbox', title: `دریافت ${pkg.title} — ${pkg.orgName}`, subtitle: 'تأیید دریافت', amount: pkg.amount, lockType: pkg.lockPolicy.type === 'none' ? undefined : pkg.lockPolicy.type, lockEvent: pkg.lockPolicy.type === 'none' ? undefined : 'locked' });
+    onPackageAccepted(ud, pkg, split, waiting.map((w) => w.kind)); // treasury: the fund parts leave the free stock
+    const tx = addTx(ud, {
+      category: 'inbox', title: `دریافت ${pkg.title} — ${pkg.orgName}`, subtitle: 'تأیید دریافت', amount: pkg.amount,
+      lockType: pkg.lockPolicy.type === 'none' ? undefined : pkg.lockPolicy.type, lockEvent: pkg.lockPolicy.type === 'none' ? undefined : 'locked',
+      details: waiting.length ? waiting.map((w) => ({ label: `در انتظار تأمین ${fund(w.kind).shortName}`, value: `${money(w.amount)} تومان · تا ${jDateTimeFa(w.eta)}` })) : undefined,
+    });
+    for (const w of waiting) w.wait.txId = tx.id; // delivery later updates this transaction
     // reflect on the organization side
     for (const list of Object.values(db().orgPackages)) {
       const op = list.find((x) => x.id === pkg.packageId);
@@ -215,12 +231,35 @@ export const appHandlers = [
     const fee = Math.round(b.amount * (f.feePct / 100));
     if (b.direction === 'buy') {
       if (!debit(ud, 'rial', b.amount)) return fail(422, 'insufficient_free', 'موجودی آزاد کیف پول ریالی کافی نیست.');
+      // nothing goes negative: what Namadno's free stock (after the queue) does not cover waits for its buy — the money is
+      // taken now and the units arrive at the latest by the promise (fund settlement + one working day)
+      if (treasuryOf() && b.amount - fee > stockRoom(snapshot(), f.id) + 1) {
+        const eta = etaFor(f);
+        const tx = addTx(ud, {
+          category: 'trade', title: 'خرید ' + f.name, subtitle: f.symbol + ' · در انتظار تأمین', amount: -b.amount, units: (b.amount - fee) / f.nav, holdingKind: f.kind, status: 'pending',
+          details: [{ label: 'کارمزد', value: money(fee) + ' تومان' }, { label: 'وضعیت', value: 'در انتظار تأمین موجودی نمادنو' }, { label: 'تأمین تا', value: jDateTimeFa(eta) }],
+        });
+        queueBuy(ud, f, b.amount - fee, fee, tx.id);
+        return ok(tx);
+      }
       credit(ud, f.kind, b.amount - fee);
       onUserTrade(ud, f, 'buy', b.amount, fee);
       const tx = addTx(ud, { category: 'trade', title: 'خرید ' + f.name, subtitle: f.symbol, amount: -b.amount, units: (b.amount - fee) / f.nav, holdingKind: f.kind, details: [{ label: 'کارمزد', value: money(fee) + ' تومان' }, { label: 'NAV', value: money(f.nav) }] });
       return ok(tx);
     }
     if (!debit(ud, f.kind, b.amount)) return fail(422, 'insufficient_free', 'بخش آزاد این صندوق کافی نیست.');
+    // nothing goes negative: when Namadno's free rial (after the queue) does not cover the payout, it waits — the units
+    // are back in the stock now and the rial is paid at the latest by the promise
+    if (treasuryOf() && b.amount - fee > rialRoom(snapshot()) + 1) {
+      const eta = etaFor(f);
+      onUserTrade(ud, f, 'sell', b.amount, fee);
+      const tx = addTx(ud, {
+        category: 'trade', title: 'فروش ' + f.name, subtitle: f.symbol + ' · در انتظار واریز', amount: b.amount - fee, units: -(b.amount / f.nav), holdingKind: f.kind, status: 'pending',
+        details: [{ label: 'کارمزد', value: money(fee) + ' تومان' }, { label: 'وضعیت', value: 'در انتظار واریز از نمادنو' }, { label: 'واریز تا', value: jDateTimeFa(eta) }],
+      });
+      queueSell(ud, f, b.amount - fee, b.amount / f.nav, tx.id);
+      return ok(tx);
+    }
     credit(ud, 'rial', b.amount - fee);
     onUserTrade(ud, f, 'sell', b.amount, fee); // the units go back to the shared stock
     const tx = addTx(ud, { category: 'trade', title: 'فروش ' + f.name, subtitle: f.symbol + ' · واریز به کیف پول ریالی', amount: b.amount - fee, units: -(b.amount / f.nav), holdingKind: f.kind, status: 'pending', details: [{ label: 'کارمزد', value: money(fee) + ' تومان' }, { label: 'تسویه', value: f.settlement }] });
@@ -244,6 +283,10 @@ export const appHandlers = [
     const ud = u(request);
     const b = await body<{ amount: number; bankAccountId?: string }>(request);
     if (!(b.amount > 0)) return fail(422, 'bad_amount', 'مبلغ معتبر نیست.');
+    // fixed daily / monthly caps (/op/rules): within them no approval, above them refused
+    const lim = withdrawLimits(ud);
+    const over = overLimit(lim, b.amount);
+    if (over) return fail(422, over.code, over.message, { remainingToday: lim.remainingToday, remainingMonth: lim.remainingMonth });
     if (!debit(ud, 'rial', b.amount)) return fail(422, 'insufficient_free', 'مبلغ از موجودی قابل برداشت بیشتر است.');
     onUserCash(ud, 'withdrawal', b.amount);
     const acc = ud.bankAccounts.find((a) => a.id === b.bankAccountId) ?? ud.bankAccounts.find((a) => a.isDefault);

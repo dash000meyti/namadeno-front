@@ -1,10 +1,12 @@
 'use client';
 /**
- * Operator console — organizations & contracts. Kit list page: stats (status filters + live treasury totals) → list card
- * (status tabs, search, table with members' assets, open commitments and expected deposits, pager) → inspector with the
- * organization's treasury numbers (link to its cash), reserved assets and the contract editor (save in the inspector footer).
+ * Operator console — organizations & contracts. Kit list page: stats (status filters + organizations' free rial and the
+ * blocked «ریال رزرو») → list card (status tabs, search, table with members' assets and the organization's rial account,
+ * pager) → inspector with the organization's rial account (link to its cash), treasury numbers, reserved assets and the
+ * contract editor (save in the inspector footer).
  * Credit products stay hidden while facilities are off (FEATURES.orgCredit).
  */
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Fund, LockType, Organization } from '@/types/domain';
@@ -19,8 +21,9 @@ import { Icon } from '@/components/ui/Icon';
 import { LockBar, LockTypeChip } from '@/components/ui/LockBar';
 import { ContractEditor, VersionList, useContractDraft } from '@/components/op/core/ContractEditor';
 import { ICON, ORG_STATUS, PRODUCT_META, fb, orgProducts, pctFa, splitPct, type ProductKey } from '@/components/op/core/ui';
-import { amt } from '@/components/op/treasury/ui';
+import { ORG_RIAL, amt } from '@/components/op/treasury/ui';
 import { scaled } from '@/components/op/cash/money';
+import { RialSplit } from '@/components/op/cash/rial';
 import { FEATURES } from '@/lib/features';
 import { enDigits, faDigits, jDate, money } from '@/lib/format';
 import { routes } from '@/lib/routes';
@@ -47,7 +50,8 @@ export default function OpOrganizationsPage() {
   const cx = contracts.data ?? {};
   const tre = useMemo(() => new Map((treasury.data?.byOrg ?? []).map((r) => [r.orgId, r])), [treasury.data]);
   const treRows = treasury.data?.byOrg ?? [];
-  const overdueOrgs = treRows.filter((r) => r.depositsOverdue > 0);
+  const receiptOrgs = treRows.filter((r) => r.rial.pendingCount > 0);
+  const queuedOrgs = treRows.filter((r) => r.rial.queuedCount > 0);
   const counts = useMemo(() => {
     const c: Record<Organization['status'], number> = { active: 0, onboarding: 0, suspended: 0 };
     all.forEach((o) => { c[o.status] += 1; });
@@ -87,22 +91,17 @@ export default function OpOrganizationsPage() {
       },
     },
     {
-      key: 'commit', label: 'تعهد باز', width: '116px', col: true, render: (o) => {
-        const r = tre.get(o.id);
-        if (!r || r.commitments <= 0) return <Dash />;
-        return <><span className="num">{amt(r.commitments)}</span><span className="sm">{faDigits(r.pendingRecipients)} نفر در انتظار پذیرش</span></>;
-      },
-    },
-    {
-      key: 'dep', label: 'واریز در انتظار', width: '116px', col: true, render: (o) => {
-        const r = tre.get(o.id);
-        if (!r || r.depositsExpected <= 0) return <Dash />;
+      key: 'rial', label: 'حساب ریالی', width: 'minmax(0, 1.2fr)', col: true, render: (o) => {
+        const a = tre.get(o.id)?.rial;
+        if (!a || (a.free <= 0 && a.blocked <= 0 && a.pending <= 0 && a.queuedCount <= 0)) return <Dash />;
         return (
           <>
-            <span className="num">{amt(r.depositsExpected)}</span>
-            {r.depositsOverdue > 0
-              ? <span className="sm" style={{ color: 'var(--error-text)' }}>دیرکرد {amt(r.depositsOverdue)}</span>
-              : <span className="sm">در موعد</span>}
+            <span className="num el" style={{ maxWidth: '100%' }}>{ORG_RIAL.free.label} {amt(a.free)} · بلاک {amt(a.blocked)}</span>
+            {a.pending > 0
+              ? <span className="sm el" style={{ color: 'var(--warning-text)', maxWidth: '100%' }}>فیش در انتظار تأیید {amt(a.pending)}{a.queuedCount > 0 ? ` · ${faDigits(a.queuedCount)} بسته در صف` : ''}</span>
+              : a.queuedCount > 0
+                ? <span className="sm el" style={{ maxWidth: '100%' }}>{faDigits(a.queuedCount)} بسته در صف · فیش تازه لازم است</span>
+                : <span className="sm">فیشی در انتظار نیست</span>}
           </>
         );
       },
@@ -119,7 +118,7 @@ export default function OpOrganizationsPage() {
 
   return (
     <>
-      <PageHeading title="سازمان‌ها و قراردادها" crumbs={[{ label: 'مشتریان' }]} sub="قرارداد، دارایی کارکنان، تعهدها و واریزهای هر سازمان">
+      <PageHeading title="سازمان‌ها و قراردادها" crumbs={[{ label: 'مشتریان' }]} sub="قرارداد، دارایی کارکنان و حساب ریالی هر سازمان">
         <Link href={routes.op.orgNew} className="nm-btn"><Icon d={ICON.plus} size={17} strokeWidth={2} />افزودن سازمان</Link>
       </PageHeading>
 
@@ -129,14 +128,19 @@ export default function OpOrganizationsPage() {
         { label: 'معلق', value: faDigits(counts.suspended), unit: 'سازمان', note: FEATURES.orgCredit ? 'ارسال بسته و تسهیلات متوقف است' : 'ارسال بسته متوقف است', onClick: () => toggle('suspended'), active: filter === 'suspended' },
         ...(treasury.data ? [
           {
-            label: 'تعهد باز بسته‌ها', ...scaled(sum(treRows.map((r) => r.commitments))),
-            note: `${money(sum(treRows.map((r) => r.pendingRecipients)))} نفر در انتظار پذیرش`,
+            label: 'حساب آزاد سازمان‌ها', ...scaled(sum(treRows.map((r) => r.rial.free))),
+            note: `${faDigits(treRows.filter((r) => r.rial.free > 0).length)} سازمان · هنوز در بسته نیست`,
+            href: routes.op.cash,
           },
           {
-            label: 'واریز در انتظار', ...scaled(sum(treRows.map((r) => r.depositsExpected))),
-            note: overdueOrgs.length ? `${faDigits(overdueOrgs.length)} سازمان با دیرکرد · ${amt(sum(overdueOrgs.map((r) => r.depositsOverdue)))}` : 'همه در موعد',
-            trend: overdueOrgs.length ? 'down' as const : undefined,
-            href: overdueOrgs.length ? `${routes.op.cash}?status=overdue` : routes.op.cash,
+            label: 'ریال رزرو (بلاک)', ...scaled(sum(treRows.map((r) => r.rial.blocked))),
+            note: receiptOrgs.length
+              ? `فیش در انتظار تأیید ${faDigits(sum(receiptOrgs.map((r) => r.rial.pendingCount)))} · ${amt(sum(receiptOrgs.map((r) => r.rial.pending)))}`
+              : queuedOrgs.length
+                ? `${faDigits(sum(queuedOrgs.map((r) => r.rial.queuedCount)))} بسته در صف تأیید فیش`
+                : `${money(sum(treRows.map((r) => r.pendingRecipients)))} نفر در انتظار پذیرش`,
+            trend: receiptOrgs.length ? 'warn' as const : undefined,
+            href: receiptOrgs.length ? `${routes.op.cash}?status=expected` : routes.op.cash,
           },
         ] : []),
       ]} />
@@ -157,7 +161,7 @@ export default function OpOrganizationsPage() {
           onRowClick={(o) => setSelId((s) => (s === o.id ? null : o.id))} selectedKey={selId}
           loading={orgsQ.isLoading} error={orgsQ.isError ? orgsQ.error : undefined} onRetry={() => orgsQ.refetch()}
           empty={<Empty icon={ICON.search} title={needle ? 'سازمانی با این جستجو پیدا نشد' : 'سازمانی با این وضعیت نیست'} action={(needle || filter !== 'all') && <button type="button" className="nm-btn sm ghost" onClick={clear}>پاک کردن فیلترها</button>} />}
-          minWidth={FEATURES.orgCredit ? 1000 : 900}
+          minWidth={FEATURES.orgCredit ? 1000 : 920}
         />
         <TableFoot shown={pg.rows.length} total={filtered.length} unit="سازمان" page={pg.page} pages={pg.pages} onPage={pg.setPage} />
       </Card>
@@ -235,23 +239,39 @@ function ContractInspector({ org, ext, row, funds, monthsOptions, onClose }: { o
   );
 }
 
-/** Live treasury numbers of the organization (members' assets, open commitments, deposits) with a link to its cash. */
+/** The organization's rial account and live treasury numbers (members' stock, recipients, deposits) with a link to its cash. */
 function TreasurySection({ org, row: r }: { org: Organization; row: OrgTreasuryRow }) {
   const cash = `${routes.op.cash}?org=${encodeURIComponent(org.id)}`;
+  const a = r.rial;
   return (
-    <Section title="خزانه و تعهدات" action={<Link href={cash} className="nm-more">نقدینگی سازمان<Icon d={ICON.ext} size={14} /></Link>}>
-      <KV rows={[
-        ['سهم از موجودی صندوق‌ها', <span key="f" className="num">{amt(r.fundValue)} تومان</span>],
-        ['تعهد بسته‌های باز', <span key="c" className="num">{r.commitments > 0 ? `${amt(r.commitments)} تومان · ${faDigits(r.pendingRecipients)} نفر` : '—'}</span>],
-        ['واریز در انتظار', <span key="e" className="num">{r.depositsExpected > 0 ? `${amt(r.depositsExpected)} تومان` : '—'}</span>],
-        ['دیرکرد واریز', <span key="o" className="num" style={r.depositsOverdue > 0 ? { color: 'var(--error-text)' } : undefined}>{r.depositsOverdue > 0 ? `${amt(r.depositsOverdue)} تومان` : 'ندارد'}</span>],
-        ['دریافتی امسال', <span key="y" className="num">{amt(r.depositsReceivedYear)} تومان</span>],
-      ]} />
-      {r.depositsOverdue > 0 && (
-        <Note tone="err" action={<Link href={cash} className="nm-btn sm ghost">پیگیری</Link>}>
-          {amt(r.depositsOverdue)} تومان از واریزهای {org.name} از سررسید گذشته است.
-        </Note>
-      )}
-    </Section>
+    <>
+      <Section title="حساب ریالی" action={<Link href={cash} className="nm-more">نقدینگی سازمان<Icon d={ICON.ext} size={14} /></Link>}>
+        <RialSplit a={a} />
+        <KV rows={[
+          [ORG_RIAL.free.label, <span key="f" className="num">{amt(a.free)} تومان</span>],
+          [ORG_RIAL.blocked.label, <span key="b" className="num">{a.blocked > 0 ? `${amt(a.blocked)} تومان` : '—'}</span>],
+          ...(a.setAside > 0 ? [[ORG_RIAL.setAside.label, <span key="s" className="num">{amt(a.setAside)} تومان</span>] as [string, ReactNode]] : []),
+          [ORG_RIAL.queued.label, <span key="q" className="num">{a.queuedCount > 0 ? `${faDigits(a.queuedCount)} بسته · ${amt(a.queuedTotal)} تومان` : '—'}</span>],
+          [ORG_RIAL.pending.label, <span key="p" className="num">{a.pending > 0 ? `${amt(a.pending)} تومان · ${faDigits(a.pendingCount)} فیش` : '—'}</span>],
+        ]} />
+        {a.pendingCount > 0 ? (
+          <Note tone="warn" icon={ICON.clock} action={<Link href={`${cash}&status=expected`} className="nm-btn sm ghost">بررسی فیش</Link>}>
+            {faDigits(a.pendingCount)} فیش واریز {org.name} به مبلغ {amt(a.pending)} تومان در انتظار تأیید است.
+            {a.queuedCount > 0 ? ' بسته‌های در صف پس از تأیید ارسال می‌شوند.' : ''}
+          </Note>
+        ) : a.queuedCount > 0 ? (
+          <Note tone="info" icon={ICON.clock}>
+            {faDigits(a.queuedCount)} بسته‌ی {org.name} در صف است و تا فیش تازه و تأیید آن به همکاران ارسال نمی‌شود.
+          </Note>
+        ) : null}
+      </Section>
+      <Section title="خزانه">
+        <KV rows={[
+          ['سهم از موجودی صندوق‌ها', <span key="f" className="num">{amt(r.fundValue)} تومان</span>],
+          ['در انتظار پذیرش', <span key="c" className="num">{r.pendingRecipients > 0 ? `${faDigits(r.pendingRecipients)} نفر` : '—'}</span>],
+          ['دریافتی امسال', <span key="y" className="num">{amt(r.depositsReceivedYear)} تومان</span>],
+        ]} />
+      </Section>
+    </>
   );
 }
