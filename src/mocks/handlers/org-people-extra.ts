@@ -55,6 +55,7 @@ import { ASSET_META, LOCK_META } from '@/lib/locks';
 import { DEFAULT_UNIT, isOrgRequest, roleLabel } from '@/lib/org';
 import { panelUserOf } from '../identity';
 import { ledger } from './app';
+import { cashEntries, treasuryOf } from '../treasury';
 import { AUTO_DECIDER } from './org';
 
 // ───────────── helpers ─────────────
@@ -120,7 +121,7 @@ const LOCK_TEXT: Record<LockType, { title: string; condition: string }> = {
   vesting: { title: 'پاداش تیر ۱۴۰۵', condition: 'آزاد در ۱۴۰۵/۱۰/۱۵' },
   milestone: { title: 'قرارداد پروژه', condition: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود' },
   installment: { title: 'خرید اقساطی', condition: 'با پرداخت هر قسط، بخشی آزاد می‌شود' },
-  legal: { title: 'مسدودی قانونی', condition: 'با دستور مرجع رفع می‌شود' },
+  legal: { title: 'مسدود', condition: 'به دستور مرجع · با دستور رفع آزاد می‌شود' },
 };
 
 function synthHoldings(e: Employee, pr: OrgPeopleProfile, loan?: Loan): Holding[] {
@@ -437,6 +438,7 @@ const cleanName = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, ' ');
 // ───────────── notifications ─────────────
 const DAY = 86400000;
 /** Needs-action items are derived from the current data, so they disappear once handled. */
+const pkHref = (e: { packageId?: string }) => (e.packageId ? `/org/packages/${e.packageId}` : '/org');
 function notifications(orgId: string): Omit<OrgNotification, 'read'>[] {
   const t = now().getTime();
   const action: Omit<OrgNotification, 'read'>[] = [];
@@ -459,13 +461,24 @@ function notifications(orgId: string): Omit<OrgNotification, 'read'>[] {
     const last = invited.reduce((m, e) => (e.joinedAt > m ? e.joinedAt : m), invited[0].joinedAt);
     action.push({ id: `act-invited-${invited.length}`, kind: 'action', title: `${faDigits(invited.length)} همکار هنوز حساب خود را فعال نکرده‌اند`, body: 'کد فعال‌سازی را از پروفایل هر همکار دوباره بفرستید', createdAt: last > now().toISOString() ? now().toISOString() : last, href: '/org/employees' });
   }
+  // deposit receipts: a rejected one needs a new upload; a recently approved one is an update
+  const deps = treasuryOf() ? cashEntries(db(), { kind: 'org_deposit', orgId }) : [];
+  for (const e of deps) {
+    if (e.status === 'rejected' && !deps.some((x) => x.packageId && x.packageId === e.packageId && x.at > (e.rejectedAt ?? e.at) && x.status !== 'rejected')) {
+      const pk = e.packageId ? packages(orgId).find((x) => x.id === e.packageId) : undefined;
+      action.push({ id: `act-dep-rej-${e.id}`, kind: 'action', title: pk ? `فیش واریز «${pk.title}» رد شد` : 'فیش شارژ حساب رد شد', body: `${e.rejectReason ?? ''} · فیش تازه بارگذاری کنید`, createdAt: e.rejectedAt ?? e.at, href: pkHref(e) });
+    }
+  }
+  const depUpdates = deps
+    .filter((e) => e.status === 'done' && e.receipt && t - new Date(e.receivedAt ?? e.at).getTime() < 7 * DAY)
+    .map((e) => ({ id: `upd-dep-ok-${e.id}`, kind: 'update' as const, title: `فیش واریز تأیید شد · ${money(e.amount)} تومان`, body: e.packageId ? `${e.title} · بسته برای همکاران ارسال شد` : `${e.title} · به «آزاد» حساب ریالی اضافه شد`, createdAt: e.receivedAt ?? e.at, href: pkHref(e) }));
   const o = orgById(orgId);
   const end = new Date(o.contractEnd).getTime() - t;
   if (end > 0 && end < 60 * DAY) {
     action.push({ id: `act-contract-${o.contractEnd}`, kind: 'action', title: 'قرارداد سازمان رو به پایان است', body: `پایان قرارداد ${jDayMonth(o.contractEnd, true)} · برای تمدید با مدیر حساب هماهنگ کنید`, createdAt: new Date(t - DAY).toISOString(), href: '/org/contract' });
   }
   action.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const updates = ORG_UPDATES.map((u) => ({ ...u, kind: 'update' as const })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const updates = [...depUpdates, ...ORG_UPDATES.map((u) => ({ ...u, kind: 'update' as const }))].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return [...action, ...updates];
 }
 

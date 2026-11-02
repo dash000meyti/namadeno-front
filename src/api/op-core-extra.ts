@@ -77,10 +77,19 @@ export interface Facility {
   collateral?: { holdingKind: AssetKind; amount: Toman };
 }
 
-export interface UserMetaRow { facilities: FacilityKind[]; lockTypes: LockType[]; kyc: 'ok' | 'pending' | 'rejected' }
+export interface UserMetaRow {
+  facilities: FacilityKind[];
+  lockTypes: LockType[];
+  /** @deprecated Always 'ok': identity is verified automatically in the app (PlatformUser.kycLevel 1–3); there is no KYC review. */
+  kyc: 'ok' | 'pending' | 'rejected';
+}
 export interface UsersMeta {
   meta: Record<string, UserMetaRow>;
-  totals: { users: number; newThisMonth: number; locked: number; lockedPct: number; kycPending: number; kycAvgDays: number; legal: number; suspended: number };
+  /**
+   * kycPending / kycAvgDays are deprecated (always 0): there is no KYC review queue.
+   * blocked = people shown as «مسدود» (account blocked or part of the assets blocked, each once); legal and suspended are its parts.
+   */
+  totals: { users: number; newThisMonth: number; locked: number; lockedPct: number; kycPending: number; kycAvgDays: number; legal: number; suspended: number; blocked: number };
 }
 
 export interface UserNote { id: string; text: string; tag: 'security' | 'credit' | 'support'; by: string; at: ISODate }

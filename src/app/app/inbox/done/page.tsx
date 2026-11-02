@@ -1,5 +1,9 @@
 'use client';
-/** «به دارایی شما اضافه شد» — after accepting a package (design: app-inbox-done). */
+/**
+ * «به دارایی شما اضافه شد» — after accepting a package (design: app-inbox-done).
+ * A fund part Namadno's stock does not cover yet waits in the queue (transaction details «در انتظار تأمین طلا» =
+ * «… تومان · تا {date}»): its row reads «در انتظار تأمین» and a calm note says when it arrives at the latest.
+ */
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -15,6 +19,17 @@ import { FreeLockedBlock } from '@/components/app/core/ui';
 import { money, units } from '@/lib/format';
 import { HOURGLASS, LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
+import type { Transaction } from '@/types/domain';
+
+const WAIT_LABEL = 'در انتظار تأمین ';
+const WAIT_UNTIL = ' · تا ';
+/** Fund parts of an accepted package waiting for Namadno's stock: fund short name («طلا») and the promised time. */
+function stockWaits(tx?: Transaction): { fund: string; until: string }[] {
+  return (tx?.details ?? []).filter((d) => d.label.startsWith(WAIT_LABEL)).map((d) => {
+    const i = d.value.lastIndexOf(WAIT_UNTIL);
+    return { fund: d.label.slice(WAIT_LABEL.length), until: i >= 0 ? d.value.slice(i + WAIT_UNTIL.length) : '' };
+  });
+}
 
 export default function InboxDonePage() {
   return (
@@ -51,22 +66,24 @@ function DoneContent() {
 
   const split = pkg.acceptedSplit ?? pkg.fixedSplit ?? { gold: 50, fixed: 50 };
   const tag = policyTag(pkg.lockPolicy);
+  const tx = txs.data?.find((t) => t.title.includes(pkg.title));
+  const waits = stockWaits(tx);
   const done = PARTS.filter((p) => splitPct(split, p.key) > 0).map((p) => {
     const w = splitPct(split, p.key);
     const v = Math.round((pkg.amount * w) / 100);
     const nav = p.key === 'rial' ? undefined : funds.data?.find((f) => f.id === p.key)?.nav;
     const locked = p.key !== 'rial' && pkg.lockPolicy.type !== 'none';
+    const waiting = p.key !== 'rial' && waits.some((x) => x.fund === p.short);
     return {
       ...p, w, v,
       unitsText: p.key === 'rial' ? 'نقدی' : nav ? `${units(v / nav, 2)} واحد` : '',
-      tlabel: locked ? tag.label : 'آزاد',
-      tbg: locked ? tag.bg : 'var(--soft-success)',
-      tfg: locked ? tag.fg : 'var(--success-text)',
-      td: locked ? tag.d : LOCK_META.none.d,
+      tlabel: waiting ? 'در انتظار تأمین' : locked ? tag.label : 'آزاد',
+      tbg: waiting ? 'var(--soft-warning)' : locked ? tag.bg : 'var(--soft-success)',
+      tfg: waiting ? 'var(--warning-text)' : locked ? tag.fg : 'var(--success-text)',
+      td: waiting ? P.clock : locked ? tag.d : LOCK_META.none.d,
     };
   });
   const out = outcome(pkg, split);
-  const tx = txs.data?.find((t) => t.title.includes(pkg.title));
 
   return (
     <Scr gap={12}>
@@ -103,6 +120,16 @@ function DoneContent() {
           {done.map((dn) => <span key={dn.key} style={{ flex: dn.w, height: 8, borderRadius: 3, background: dn.color }} />)}
         </div>
       </div>
+
+      {/* fund parts waiting for Namadno's stock */}
+      {waits.length > 0 && (
+        <div role="status" style={{ boxSizing: 'border-box', padding: '10px 12px', borderRadius: 12, background: 'var(--soft-info)', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
+          <Icon d={P.clock} size={20} style={{ color: 'var(--info-text)', flex: 'none' }} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.8, color: 'var(--text-primary)' }}>
+            {waits.map((x) => `سهم ${x.fund} این بسته پس از تأمین موجودی نمادنو، ${x.until ? `حداکثر تا ${x.until}، ` : ''}به دارایی شما اضافه می‌شود.`).join(' ')}
+          </span>
+        </div>
+      )}
 
       {/* free vs reserved of this package */}
       <div className="card" style={{ boxSizing: 'border-box', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none' }}>

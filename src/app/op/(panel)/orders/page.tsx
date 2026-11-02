@@ -1,10 +1,11 @@
 'use client';
 /**
- * Operator console — orders to funds («سفارش‌ها»). Kit list page: heading («ثبت سفارش») → stats (open buys, open redeems,
- * due for settlement, settled this month, fees) → treasury suggestions (plan recommendations + position suggestions,
- * one per fund) → orders list (status tabs, side + fund filters, code search, pager) → inspector (details, effect on
- * free stock and coverage, «ثبت تسویه» / «لغو سفارش»).
- * Deep links: ?id=<order id or code> opens the inspector · ?status=placed|due|settled|cancelled|all · ?fund=<fundId>.
+ * Operator console — orders to funds («سفارش‌ها»): the ledger of executed orders. Cash-first: an order is recorded only
+ * when it is done (paid, units in or out of the stock at once), so there is nothing open, due or to settle.
+ * Kit list page: heading («ثبت سفارش», CSV) → stats (buys and redemptions this month, fees, treasury suggestions) →
+ * treasury suggestions (plan recommendations + position suggestions, one per fund → OrderDialog) → ledger (side tabs
+ * «همه / صدور / ابطال», fund filter, code search, pager) → inspector (when it was recorded, units, NAV, fee, cash, effect).
+ * Deep links: ?id=<order id or code> opens the inspector · ?side=buy|redeem · ?fund=<fundId> (?status= is ignored).
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -19,21 +20,22 @@ import {
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { OrderDialog } from '@/components/op/treasury/OrderDialog';
-import { SEVERITY, SIDE, TI, amt, fundUi, orderStatus, unitsText } from '@/components/op/treasury/ui';
+import { SEVERITY, SIDE, TI, amt, fundUi, isNeed, orderAt, thisMonth, unitsText } from '@/components/op/treasury/ui';
 import { OrderInspector } from '@/components/op/orders/OrderInspector';
 import { scaled } from '@/components/op/cash/money';
-import { downloadCsv, pctT, raw } from '@/components/op/system/fmt';
-import { JALALI_MONTHS, enDigits, faDigits, jDate, money } from '@/lib/format';
-import { jParts, jalaliToIsoAny } from '@/lib/jalali';
-import { now } from '@/lib/clock';
+import { dayTime, downloadCsv, pctT, raw } from '@/components/op/system/fmt';
+import { enDigits, faDigits, jDateTime, money } from '@/lib/format';
 import { routes } from '@/lib/routes';
 
-type Status = 'placed' | 'due' | 'settled' | 'cancelled' | 'all';
-const STATUSES: Status[] = ['placed', 'due', 'settled', 'cancelled', 'all'];
+type SideTab = OrderSide | 'all';
+/** Recommendation kinds that are orders (a `settle` recommendation is no longer produced and is never shown). */
+const ORDER_REC_KINDS = new Set<string>(['buy', 'redeem', 'settle', 'rebalance']);
+const SIDES: SideTab[] = ['all', 'buy', 'redeem'];
 const PAGE = 10;
 const SEV_RANK: Record<Severity, number> = { critical: 0, warning: 1, info: 2 };
+const SOURCE: Record<TreasuryOrder['source'], string> = { manual: 'ثبت دستی', suggestion: 'پیشنهاد خزانه' };
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
-const HEAD = { title: 'سفارش‌ها', crumbs: [{ label: 'خزانه' }], sub: 'سفارش‌های نمادنو به صندوق‌ها: «صدور» برای خرید واحد و «ابطال» برای بازگرداندن واحد به صندوق' };
+const HEAD = { title: 'سفارش‌ها', crumbs: [{ label: 'خزانه' }], sub: 'دفتر صدور و ابطال واحد نزد صندوق‌ها؛ هر سفارش همان لحظه‌ی ثبت پرداخت و انجام می‌شود' };
 
 interface Suggestion {
   key: string; fundId: string; side: OrderSide; amount: number; reason: string; severity: Severity; recId?: string; plan: boolean;
@@ -55,10 +57,9 @@ function OrdersInner() {
   const sp = useSearchParams();
   const router = useRouter();
   const linkId = sp.get('id');
-  const linkStatus = sp.get('status') as Status | null;
+  const linkSide = sp.get('side') as SideTab | null;
 
-  const [tab, setTab] = useState<Status>(() => (linkStatus && STATUSES.includes(linkStatus) ? linkStatus : 'placed'));
-  const [side, setSide] = useState<OrderSide | 'all'>('all');
+  const [tab, setTab] = useState<SideTab>(() => (linkSide && SIDES.includes(linkSide) ? linkSide : 'all'));
   const [fund, setFund] = useState<string>(() => sp.get('fund') ?? 'all');
   const [q, setQ] = useState('');
   const [selId, setSelId] = useState<string | null>(linkId);
@@ -66,46 +67,37 @@ function OrdersInner() {
   const seq = useRef(0);
 
   const allQ = useTreasuryOrders();
-  const listQ = useTreasuryOrders({ status: tab, fundId: fund === 'all' ? undefined : fund, side });
   const positions = useTreasuryPositions();
   const plan = useTreasuryPlan(30);
 
-  const all = useMemo(() => allQ.data ?? [], [allQ.data]);
+  // the ledger: every order is recorded when done, newest first (an old cancelled one, if any, is left out)
+  const all = useMemo(
+    () => (allQ.data ?? []).filter((o) => o.status !== 'cancelled').sort((a, b) => orderAt(b).localeCompare(orderAt(a))),
+    [allQ.data],
+  );
   const pos = useMemo(() => new Map((positions.data ?? []).map((p) => [p.fundId, p])), [positions.data]);
   const short = (id: string) => pos.get(id)?.shortName ?? id;
 
-  // ?id=<order id or code> (fund pages, action queue, activity): open its inspector and switch the list to the tab that
-  // holds it, also when a new link arrives while the page stays open. Unknown ids fall back to «همه».
+  // ?id=<order id or code> (fund pages, activity, notifications): open its inspector and show it in «همه», also when a
+  // new link arrives while the page stays open.
   const handledLink = useRef<string | null>(null);
   useEffect(() => {
     if (!linkId || handledLink.current === linkId || !allQ.data) return;
     handledLink.current = linkId;
     const o = allQ.data.find((x) => x.id === linkId || x.code === linkId);
     setSelId(o?.id ?? linkId);
-    if (linkStatus && STATUSES.includes(linkStatus)) return;
-    setTab(!o ? 'all' : o.status === 'placed' ? (o.dueNow ? 'due' : 'placed') : o.status);
-    setSide('all');
+    setTab('all');
     setFund('all');
     setQ('');
-  }, [linkId, linkStatus, allQ.data]);
+  }, [linkId, allQ.data]);
 
-  // ── numbers ──
-  const open = all.filter((o) => o.status === 'placed');
-  const openBuy = open.filter((o) => o.side === 'buy');
-  const openRedeem = open.filter((o) => o.side === 'redeem');
-  const due = open.filter((o) => o.dueNow);
-  const month = useMemo(() => {
-    const p = jParts(now());
-    const start = jalaliToIsoAny(p.y, p.m, 1);
-    return { name: JALALI_MONTHS[p.m - 1], from: start ? new Date(Date.parse(start) - 12 * 3_600_000).toISOString() : '' };
-  }, []);
-  const settledMonth = all.filter((o) => o.status === 'settled' && (o.settledAt ?? '') >= month.from);
-  const settledSum = sum(settledMonth.map((o) => o.amount));
-  const feesMonth = sum(settledMonth.map((o) => o.fee));
-  const counts: Record<Status, number> = {
-    placed: open.length, due: due.length, settled: all.filter((o) => o.status === 'settled').length,
-    cancelled: all.filter((o) => o.status === 'cancelled').length, all: all.length,
-  };
+  // ── numbers: this month's buys, redemptions and fees ──
+  const month = useMemo(() => thisMonth(), []);
+  const inMonth = all.filter((o) => orderAt(o) >= month.from);
+  const buys = inMonth.filter((o) => o.side === 'buy');
+  const redeems = inMonth.filter((o) => o.side === 'redeem');
+  const monthSum = sum(inMonth.map((o) => o.amount));
+  const feesMonth = sum(inMonth.map((o) => o.fee));
 
   // ── suggestions: plan recommendations first (they carry an id), then live position suggestions; one per fund ──
   const suggestions = useMemo(() => {
@@ -124,18 +116,23 @@ function OrdersInner() {
       seen.add(p.fundId);
       out.push({
         key: `pos-${p.fundId}`, fundId: p.fundId, side: p.suggestion.side, amount: p.suggestion.amount, reason: p.suggestion.reason, plan: false,
-        severity: p.state === 'shortfall' ? 'critical' : p.state === 'below' ? 'warning' : 'info',
+        // «نیاز به خرید»: items wait in the queue for this fund's stock
+        severity: isNeed(p.state) ? 'critical' : p.state === 'below' ? 'warning' : 'info',
       });
     }
     return out.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity]);
   }, [plan.data, positions.data, pos]);
-  /** «پیگیری واریزهای معوق» when the suggested buys need more cash than is free (plan recommendation). */
-  const collect = plan.data?.recommendations.find((r) => r.kind === 'collect_deposit');
+  const urgent = suggestions.filter((x) => x.severity === 'critical').length;
+  /** A cash note of the plan (a link-only recommendation outside the order kinds) — tolerated, not produced any more. */
+  const collect = plan.data?.recommendations.find((r) => !ORDER_REC_KINDS.has(r.kind) && r.action.type === 'link');
 
   // ── list ──
   const needle = enDigits(q.trim()).toLowerCase();
-  const rows = useMemo(() => (listQ.data ?? []).filter((o) => !needle || o.code.toLowerCase().includes(needle) || (o.note ?? '').includes(q.trim())), [listQ.data, needle, q]);
-  const pg = usePaging(rows, PAGE, `${tab}|${side}|${fund}|${needle}`);
+  const byFund = useMemo(() => all.filter((o) => fund === 'all' || o.fundId === fund), [all, fund]);
+  const rows = useMemo(() => byFund.filter((o) => (tab === 'all' || o.side === tab)
+    && (!needle || o.code.toLowerCase().includes(needle) || (o.note ?? '').includes(q.trim()))), [byFund, tab, needle, q]);
+  const pg = usePaging(rows, PAGE, `${tab}|${fund}|${needle}`);
+  const count = (t: SideTab) => (t === 'all' ? byFund.length : byFund.filter((o) => o.side === t).length);
   const sel = all.find((o) => o.id === selId || o.code === selId);
   const fundOptions = useMemo(() => {
     const n = new Map<string, number>();
@@ -149,37 +146,33 @@ function OrdersInner() {
     setSelId(null);
     if (linkId) router.replace(routes.op.orders, { scroll: false });
   };
-  const filterBy = (t: Status, s: OrderSide | 'all' = 'all') => { setTab(t); setSide(s); };
-  const isOn = (t: Status, s: OrderSide | 'all' = 'all') => tab === t && side === s && fund === 'all';
-  const clear = () => { setTab('all'); setSide('all'); setFund('all'); setQ(''); };
+  const toggleSide = (t: OrderSide) => setTab((x) => (x === t ? 'all' : t));
+  const clear = () => { setTab('all'); setFund('all'); setQ(''); };
 
   const exportCsv = () => {
     if (!rows.length) return;
     downloadCsv('namadno-fund-orders', [
-      ['کد', 'صندوق', 'نوع', 'مبلغ (تومان)', 'کارمزد', 'واحد', 'NAV', 'وضعیت', 'ثبت', 'سررسید/تسویه', 'ثبت‌کننده', 'منبع'],
-      ...rows.map((o) => [o.code, short(o.fundId), SIDE[o.side].label, raw(o.amount), raw(o.fee), o.units, raw(o.navAtSettle ?? o.navAtOrder), orderStatus(o).label,
-        jDate(o.placedAt), jDate(o.settledAt ?? o.cancelledAt ?? o.settleAt), o.by, o.source === 'suggestion' ? 'پیشنهاد خزانه' : 'دستی']),
+      ['کد', 'صندوق', 'نوع', 'مبلغ (تومان)', 'واحد', 'NAV', 'کارمزد', 'زمان ثبت', 'ثبت‌کننده', 'منبع', 'یادداشت'],
+      ...rows.map((o) => [o.code, short(o.fundId), SIDE[o.side].label, raw(o.amount), o.units, raw(o.navAtSettle ?? o.navAtOrder), raw(o.fee),
+        jDateTime(orderAt(o)), o.by, SOURCE[o.source], o.note ?? '']),
     ]);
     toast(`فایل ${faDigits(rows.length)} سفارش آماده شد`);
   };
 
   const columns: Column<TreasuryOrder>[] = [
     {
-      key: 'code', label: 'سفارش', width: 'minmax(0, 1.3fr)',
+      key: 'code', label: 'سفارش', width: 'minmax(0, 1.2fr)',
       render: (o) => <Ident lead={<Tile d={fundUi(o.fundId).d} tone={fundUi(o.fundId).tone} />} title={<span className="ltr num">{o.code}</span>} sub={short(o.fundId)} />,
     },
     { key: 'side', label: 'نوع', width: '84px', render: (o) => <Pill tone={SIDE[o.side].tone} icon={SIDE[o.side].d}>{SIDE[o.side].label}</Pill> },
-    { key: 'amount', label: 'مبلغ (تومان)', width: '136px', render: (o) => <span className="num">{money(o.amount)}</span> },
-    { key: 'units', label: 'واحد', width: '92px', render: (o) => <span className="num">{unitsText(o.units)}</span> },
-    { key: 'nav', label: 'NAV', width: '100px', render: (o) => <span className="num mute">{money(o.navAtSettle ?? o.navAtOrder)}</span> },
-    { key: 'st', label: 'وضعیت', width: '128px', render: (o) => { const s = orderStatus(o); return <Pill tone={s.tone} dot>{s.label}</Pill>; } },
+    { key: 'amount', label: 'مبلغ (تومان)', width: '128px', render: (o) => <span className="num">{money(o.amount)}</span> },
+    { key: 'units', label: 'واحد', width: '88px', render: (o) => <span className="num">{unitsText(o.units)}</span> },
+    { key: 'nav', label: 'NAV', width: '96px', render: (o) => <span className="num mute">{money(o.navAtSettle ?? o.navAtOrder)}</span> },
+    { key: 'fee', label: 'کارمزد', width: '88px', render: (o) => <span className="num mute">{amt(o.fee)}</span> },
+    { key: 'at', label: 'ثبت', width: '124px', col: true, render: (o) => <><span className="num">{dayTime(orderAt(o))}</span><span className="sm el">{o.by}</span></> },
     {
-      key: 'date', label: 'تاریخ تسویه', width: '96px',
-      render: (o) => <span className="num sm">{o.status === 'settled' && o.settledAt ? jDate(o.settledAt) : o.status === 'cancelled' ? '—' : jDate(o.settleAt)}</span>,
-    },
-    {
-      key: 'by', label: 'ثبت‌کننده', width: 'minmax(0, 1fr)', col: true,
-      render: (o) => <><span className="el">{o.by}</span><span className="sm el">{o.source === 'suggestion' ? 'پیشنهاد خزانه' : 'ثبت دستی'}</span></>,
+      key: 'note', label: 'یادداشت', width: 'minmax(0, 1fr)', col: true,
+      render: (o) => <><span className="el">{o.note || '—'}</span><span className="sm el">{SOURCE[o.source]}</span></>,
     },
   ];
 
@@ -192,33 +185,27 @@ function OrdersInner() {
 
       <StatStrip loading={allQ.isLoading} items={[
         {
-          label: 'صدور باز', ...scaled(sum(openBuy.map((o) => o.amount))),
-          note: openBuy.length ? `${faDigits(openBuy.length)} سفارش در انتظار تسویه` : 'سفارش بازی نیست',
-          onClick: () => filterBy(isOn('placed', 'buy') ? 'all' : 'placed', isOn('placed', 'buy') ? 'all' : 'buy'), active: isOn('placed', 'buy'),
+          label: `صدور ${month.name}`, ...scaled(sum(buys.map((o) => o.amount))),
+          note: buys.length ? `${faDigits(buys.length)} سفارش · ${faDigits(new Set(buys.map((o) => o.fundId)).size)} صندوق` : 'صدوری در این ماه ثبت نشده',
+          onClick: () => toggleSide('buy'), active: tab === 'buy',
         },
         {
-          label: 'ابطال باز', ...scaled(sum(openRedeem.map((o) => o.amount))),
-          note: openRedeem.length ? `${faDigits(openRedeem.length)} سفارش در انتظار تسویه` : 'سفارش بازی نیست',
-          onClick: () => filterBy(isOn('placed', 'redeem') ? 'all' : 'placed', isOn('placed', 'redeem') ? 'all' : 'redeem'), active: isOn('placed', 'redeem'),
-        },
-        {
-          label: 'سررسید تسویه', value: faDigits(due.length), unit: 'سفارش',
-          note: due.length ? `آماده‌ی تسویه · ${amt(sum(due.map((o) => o.amount)))}` : 'سفارشی سررسید نشده',
-          trend: due.length ? 'warn' : undefined,
-          onClick: () => filterBy(isOn('due') ? 'all' : 'due'), active: isOn('due'),
-        },
-        {
-          label: `تسویه‌شده در ${month.name}`, ...scaled(settledSum),
-          note: `${faDigits(settledMonth.length)} سفارش · ${faDigits(settledMonth.filter((o) => o.side === 'buy').length)} صدور، ${faDigits(settledMonth.filter((o) => o.side === 'redeem').length)} ابطال`,
-          onClick: () => filterBy(isOn('settled') ? 'all' : 'settled'), active: isOn('settled'),
+          label: `ابطال ${month.name}`, ...scaled(sum(redeems.map((o) => o.amount))),
+          note: redeems.length ? `${faDigits(redeems.length)} سفارش · ${faDigits(new Set(redeems.map((o) => o.fundId)).size)} صندوق` : 'ابطالی در این ماه ثبت نشده',
+          onClick: () => toggleSide('redeem'), active: tab === 'redeem',
         },
         {
           label: `کارمزد ${month.name}`, ...scaled(feesMonth),
-          note: settledSum ? `${pctT((feesMonth / settledSum) * 100, 2)} از مبلغ تسویه‌شده` : 'بدون تسویه در این ماه',
+          note: monthSum ? `${pctT((feesMonth / monthSum) * 100, 2)} از مبلغ سفارش‌ها` : 'بدون سفارش در این ماه',
+        },
+        {
+          label: 'پیشنهادهای خزانه', value: faDigits(suggestions.length), unit: 'پیشنهاد',
+          note: urgent ? `${faDigits(urgent)} فوری · نیاز به خرید` : suggestions.length ? 'برای ماندن در محدوده‌ی هدف' : 'همه در محدوده‌ی هدف',
+          trend: urgent ? 'down' : undefined,
         },
       ]} />
 
-      <Card title="پیشنهادهای خزانه" count={suggestions.length || undefined} sub="بر پایه‌ی هدف پوشش هر صندوق و پیش‌بینی ۳۰ روز" more={{ label: 'برنامه‌ریزی', href: routes.op.planning }}>
+      <Card title="پیشنهادهای خزانه" count={suggestions.length || undefined} sub="بر پایه‌ی حداقل و سقف هدف هر صندوق، صف تأمین و پیش‌بینی ۳۰ روز" more={{ label: 'برنامه‌ریزی', href: routes.op.planning }}>
         {(plan.isLoading && positions.isLoading) ? <SkeletonRows n={2} />
           : (plan.isError && positions.isError) ? <ErrorBlock error={plan.error} flat onRetry={() => { plan.refetch(); positions.refetch(); }} />
           : suggestions.length ? (
@@ -229,66 +216,60 @@ function OrdersInner() {
                 </Note>
               )}
               <List>
-                {suggestions.map((s) => {
-                  const u = fundUi(s.fundId);
-                  const sd = SIDE[s.side];
+                {suggestions.map((x) => {
+                  const u = fundUi(x.fundId);
+                  const sd = SIDE[x.side];
                   return (
                     <ListRow
-                      key={s.key}
+                      key={x.key}
                       lead={<Tile d={u.d} tone={u.tone} />}
-                      title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{sd.label} {short(s.fundId)}<Pill tone={SEVERITY[s.severity].tone}>{SEVERITY[s.severity].label}</Pill><Pill>{s.plan ? 'افق ۳۰ روز' : 'وضعیت فعلی'}</Pill></span>}
-                      sub={s.nowAmount ? `${s.reason} نیاز همین حالا: ${amt(s.nowAmount)} تومان.` : s.reason}
+                      title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{sd.label} {short(x.fundId)}<Pill tone={SEVERITY[x.severity].tone}>{SEVERITY[x.severity].label}</Pill><Pill>{x.plan ? 'افق ۳۰ روز' : 'وضعیت فعلی'}</Pill></span>}
+                      sub={x.nowAmount ? `${x.reason} نیاز همین حالا: ${amt(x.nowAmount)} تومان.` : x.reason}
                       trail={(
                         <>
                           <span className="nm-col" style={{ alignItems: 'flex-end', gap: 2 }}>
-                            <span className="num" style={{ fontWeight: 600 }}>{amt(s.amount)}</span>
+                            <span className="num" style={{ fontWeight: 600 }}>{amt(x.amount)}</span>
                             <span className="mute" style={{ fontSize: 12 }}>تومان</span>
                           </span>
                           <button
-                            type="button" className="nm-btn sm line" aria-label={`ثبت سفارش ${sd.label} ${short(s.fundId)}`}
-                            onClick={() => openOrder({ fundId: s.fundId, side: s.side, amount: s.amount, source: 'suggestion', recommendationId: s.recId, reason: s.reason })}
+                            type="button" className="nm-btn sm line" aria-label={`ثبت ${sd.label} ${short(x.fundId)}`}
+                            onClick={() => openOrder({ fundId: x.fundId, side: x.side, amount: x.amount, source: 'suggestion', recommendationId: x.recId, reason: x.reason })}
                           >
-                            ثبت سفارش
+                            ثبت {sd.label}
                           </button>
-                      </>
-                    )}
-                  />
-                );
-              })}
-            </List>
+                        </>
+                      )}
+                    />
+                  );
+                })}
+              </List>
             </>
           ) : <Note tone="ok">موجودی همه‌ی صندوق‌های فعال در محدوده‌ی هدف است؛ پیشنهادی برای صدور یا ابطال نیست.</Note>}
       </Card>
 
       <Card flush>
         <Toolbar>
-          <Tabs label="وضعیت سفارش" value={tab} onChange={setTab} items={[
-            { key: 'placed', label: 'باز', count: counts.placed },
-            { key: 'due', label: 'سررسید تسویه', count: counts.due, hot: true },
-            { key: 'settled', label: 'تسویه‌شده', count: counts.settled },
-            { key: 'cancelled', label: 'لغوشده', count: counts.cancelled },
-            { key: 'all', label: 'همه', count: counts.all },
+          <Tabs label="نوع سفارش" value={tab} onChange={setTab} items={[
+            { key: 'all', label: 'همه', count: count('all') },
+            { key: 'buy', label: SIDE.buy.label, count: count('buy') },
+            { key: 'redeem', label: SIDE.redeem.label, count: count('redeem') },
           ]} />
           <span className="grow" />
-          <Select label="نوع سفارش" prefix="نوع" value={side} onChange={setSide} align="end" options={[
-            { key: 'all', label: 'همه' }, { key: 'buy', label: SIDE.buy.label }, { key: 'redeem', label: SIDE.redeem.label },
-          ]} />
           <Select label="صندوق" prefix="صندوق" icon={TI.stock} value={fund} onChange={setFund} align="end" options={fundOptions} />
           <SearchField value={q} onChange={setQ} placeholder="کد سفارش، مثلاً TR-1042" label="جستجوی کد سفارش" width={210} />
         </Toolbar>
         <Table
           columns={columns} rows={pg.rows} rowKey={(o) => o.id} rowLabel={(o) => `${o.code} · ${SIDE[o.side].label} ${short(o.fundId)}`}
-          onRowClick={(o) => setSelId((s) => (s === o.id || s === o.code ? null : o.id))} selectedKey={sel?.id ?? null}
-          dimRow={(o) => o.status === 'cancelled'}
-          loading={listQ.isLoading} error={listQ.isError ? listQ.error : undefined} onRetry={() => listQ.refetch()}
+          onRowClick={(o) => setSelId((x) => (x === o.id || x === o.code ? null : o.id))} selectedKey={sel?.id ?? null}
+          loading={allQ.isLoading} error={allQ.isError ? allQ.error : undefined} onRetry={() => allQ.refetch()}
           empty={(
             <Empty
               icon={TI.order}
-              title={needle ? 'سفارشی با این کد پیدا نشد' : tab === 'due' ? 'سفارشی سررسید تسویه نیست' : tab === 'placed' ? 'سفارش بازی نیست' : 'سفارشی با این فیلترها نیست'}
-              action={(needle || tab !== 'all' || side !== 'all' || fund !== 'all') ? <button type="button" className="nm-btn sm ghost" onClick={clear}>نمایش همه‌ی سفارش‌ها</button> : undefined}
+              title={needle ? 'سفارشی با این کد پیدا نشد' : tab !== 'all' || fund !== 'all' ? 'سفارشی با این فیلترها نیست' : 'هنوز سفارشی ثبت نشده است'}
+              action={(needle || tab !== 'all' || fund !== 'all') ? <button type="button" className="nm-btn sm ghost" onClick={clear}>نمایش همه‌ی سفارش‌ها</button> : undefined}
             />
           )}
-          minWidth={980}
+          minWidth={1000}
         />
         <TableFoot shown={pg.rows.length} total={rows.length} unit="سفارش" page={pg.page} pages={pg.pages} onPage={pg.setPage}>
           {rows.length > 0 && <span className="num">جمع <b style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{amt(sum(rows.map((o) => o.amount)))}</b> تومان</span>}
@@ -301,7 +282,7 @@ function OrdersInner() {
         <OrderDialog
           key={`order-${dlg.n}`} open onClose={() => setDlg(null)}
           fundId={dlg.fundId} side={dlg.side} amount={dlg.amount} source={dlg.source} recommendationId={dlg.recommendationId} reason={dlg.reason}
-          onPlaced={(o) => { setTab('placed'); setSide('all'); setFund('all'); setQ(''); setSelId(o.id); }}
+          onPlaced={(o) => { setTab('all'); setFund('all'); setQ(''); setSelId(o.id); }}
         />
       )}
     </>

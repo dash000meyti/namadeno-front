@@ -37,23 +37,20 @@ const FUND_META: Record<string, { lock: Partial<LockMap>; holders: Partial<LockM
 const NEW_RULES: PlatformRule[] = [
   { id: 'r-pkg-min-amount', group: 'limits', title: 'حداقل مبلغ بسته', description: 'کمتر از این مبلغ ارسال نمی‌شود', enabled: true, value: 1_000_000, unit: 'تومان' },
   { id: 'r-pkg-cfo-approval', group: 'limits', title: 'نیاز به تأیید نهایی تأییدکننده‌ی سازمان', description: 'برای بسته‌های بالای ۵۰۰ میلیون', enabled: true },
-  { id: 'r-withdraw-manual', group: 'limits', title: 'نیاز به تأیید دستی', description: 'برداشت‌های بالای ۲۰۰ میلیون تومان', enabled: true },
+  { id: 'r-limit-withdraw-monthly', group: 'limits', title: 'سقف برداشت ماهانه', description: 'به ازای هر کاربر · ماه شمسی', enabled: true, value: 500_000_000, unit: 'تومان' },
   { id: 'r-credit-min-score', group: 'credit', title: 'حداقل امتیاز اعتباری', description: 'برای وام و خرید اقساطی · بازه ۳۰۰ تا ۹۰۰', enabled: true, value: 600, unit: 'امتیاز' },
   { id: 'r-credit-max-ltv', group: 'credit', title: 'حداکثر نسبت پشتوانه', description: 'سهم قابل رزرو از بخش آزاد هر صندوق', enabled: true, value: 70, unit: '٪' },
   { id: 'r-credit-overdue', group: 'credit', title: 'اقساط معوق مجاز', description: 'پس از آن پشتوانه نقد می‌شود', enabled: true, value: 2, unit: 'قسط' },
   { id: 'r-credit-auto-lock', group: 'credit', title: 'رزرو خودکار پشتوانه', description: 'هم‌زمان با تأیید وام یا خرید اقساطی', enabled: true },
-  { id: 'r-kyc-l1-docs', group: 'kyc', title: 'سطح ۱ — مشاهده', description: 'مدارک لازم', enabled: true, value: '1,0,0' },
-  { id: 'r-kyc-l2-docs', group: 'kyc', title: 'سطح ۲ — برداشت', description: 'مدارک لازم', enabled: true, value: '1,1,0' },
-  { id: 'r-kyc-l2-withdraw-cap', group: 'kyc', title: 'سقف برداشت بدون تأیید دستی', description: 'سطح ۲ · در هر روز', enabled: true, value: 10_000_000, unit: 'تومان' },
   { id: 'r-lock-collateral-ltv', group: 'locks', title: 'حداکثر نسبت پشتوانه', description: 'پشتوانه‌ی وام و اعتبار', enabled: true, value: 70, unit: '٪ آزاد' },
   { id: 'r-lock-installment-share', group: 'locks', title: 'حداکثر سهم از آزاد', description: 'پشتوانه‌ی خرید اقساطی', enabled: true, value: 50, unit: '٪' },
-  { id: 'r-lock-legal-ref', group: 'locks', title: 'شماره مرجع الزامی', description: 'مسدودی قانونی', enabled: true },
-  { id: 'r-lock-legal-2nd', group: 'locks', title: 'رفع با تأیید نفر دوم', description: 'مسدودی قانونی', enabled: true },
+  { id: 'r-lock-legal-ref', group: 'locks', title: 'شماره مرجع الزامی', description: 'مسدود', enabled: true },
+  { id: 'r-lock-legal-2nd', group: 'locks', title: 'رفع با تأیید نفر دوم', description: 'مسدود', enabled: true },
   { id: 'r-lock-collateral-by', group: 'locks', title: 'ایجادکننده رزرو پشتوانه', description: 'system,org,operator', enabled: true, value: 'system' },
   { id: 'r-lock-vesting-by', group: 'locks', title: 'ایجادکننده پس‌انداز سازمانی', description: 'system,org,operator', enabled: true, value: 'org' },
   { id: 'r-lock-installment-by', group: 'locks', title: 'ایجادکننده رزرو اقساطی', description: 'system,org,operator', enabled: true, value: 'system' },
   { id: 'r-lock-milestone-by', group: 'locks', title: 'ایجادکننده دریافت مرحله‌ای', description: 'system,org,operator', enabled: true, value: 'org' },
-  { id: 'r-lock-legal-by', group: 'locks', title: 'ایجادکننده مسدودی قانونی', description: 'system,org,operator', enabled: true, value: 'operator' },
+  { id: 'r-lock-legal-by', group: 'locks', title: 'ایجادکننده مسدودی', description: 'system,org,operator', enabled: true, value: 'operator' },
   { id: 'r-lock-total-cap', group: 'locks', title: 'سقف مجموع رزرو هر کاربر', description: 'درصد از کل دارایی', enabled: true, value: 80, unit: '٪ کل دارایی' },
   { id: 'r-lock-notify-release', group: 'locks', title: 'اعلان آزاد شدن رزرو به کاربر', description: 'پوش و اعلان درون‌برنامه', enabled: true },
   { id: 'r-risk-newdevice', group: 'risk', title: 'برداشت پس از دستگاه جدید', description: 'برداشت کلان تا ۲۴ ساعت پس از ورود جدید', enabled: true, value: 24, unit: 'ساعت' },
@@ -61,11 +58,7 @@ const NEW_RULES: PlatformRule[] = [
 ];
 
 const EXTRA_REQUESTS: ApprovalRequest[] = [
-  { id: 'RQ-3120', kind: 'cash_withdrawal', title: 'برداشت نقدی به حساب جدید', requesterId: 'u-2138', requesterName: 'الهام رستمی', orgId: 'org-novin', orgName: 'فناوری نوین', amount: 74_000_000, createdAt: minutesAgo(170), status: 'pending' },
-  { id: 'RQ-3117', kind: 'profile_change', title: 'ارتقای احراز هویت به سطح ۲', requesterId: 'u-2201', requesterName: 'حامد یزدانی', orgId: 'org-novin', orgName: 'فناوری نوین', createdAt: daysFromNow(-1, '17:30'), status: 'pending' },
-  { id: 'RQ-3116', kind: 'profile_change', title: 'احراز هویت — تطابق چهره', requesterId: 'u-5044', requesterName: 'پویا شریفی', orgId: 'org-kaveh', orgName: 'پتروشیمی کاوه', createdAt: daysFromNow(-1, '11:25'), status: 'pending' },
   { id: 'RQ-3109', kind: 'installment', title: 'خرید اقساطی لپ‌تاپ · ۱۰ قسط', requesterId: 'u-3019', requesterName: 'نرگس طاهری', orgId: 'org-pars', orgName: 'صنایع پارس', amount: 48_000_000, createdAt: minutesAgo(98), status: 'pending' },
-  { id: 'RQ-3095', kind: 'profile_change', title: 'احراز هویت سطح ۱', requesterId: 'u-4006', requesterName: 'بهراد کیانی', orgId: 'org-sepehr', orgName: 'گروه سپهر', createdAt: daysFromNow(-3, '09:40'), status: 'rejected', decidedAt: daysFromNow(-3, '13:15'), decidedBy: 'مهدی رحیمی', note: 'کد پرسنلی در لیست سازمان نیست' },
 ];
 
 type MetaRow = [slaMin: number, risk: number, details: [string, string][], factors: [string, 'success' | 'warning' | 'error'][], checks: boolean[]];
@@ -73,12 +66,8 @@ const REQUEST_META: Record<string, MetaRow> = {
   'RQ-2041': [42, 22, [['مدت', '۱۲ ماه'], ['قسط ماهانه', '۲٬۹۰۰٬۰۰۰'], ['رزرو پشتوانه پس از تأیید', '۳۰٬۰۰۰٬۰۰۰ درآمد ثابت'], ['سقف قرارداد', '۴۰٪ دارایی آزاد (۵۷٫۹ میلیون)']], [['وام فعال دیگری ندارد', 'success'], ['اقساط قبلی به‌موقع پرداخت شده', 'success']], [true, true, true, false, false]],
   'RQ-2040': [135, 12, [['قرارداد', 'پرتال منابع انسانی'], ['مرحله', '۳ از ۵ · ۳۰٪'], ['نوع رزرو', 'دریافت مرحله‌ای']], [['سازمان تحویل را تأیید کرده است', 'success']], [true, false, false]],
   'RQ-2039': [230, 18, [['سقف فعلی', '۲۵٬۰۰۰٬۰۰۰'], ['سقف درخواستی', '۵۰٬۰۰۰٬۰۰۰'], ['رزرو از کیف ریالی', '۲۵٪ سقف']], [['بازپرداخت کارت همیشه به‌موقع', 'success']], [true, true, false, false]],
-  'RQ-2038': [310, 12, [['مقصد', 'بانک ملت · IR•• •••• ۸۸۱۰'], ['منبع', 'کیف پول ریالی'], ['سیکل پایا', '۱۳:۴۵ امروز'], ['برداشت ۲۴ ساعت اخیر', '۰']], [['شبای ثبت‌شده و تأییدشده', 'success']], [true, true, false, false]],
-  'RQ-3112': [450, 41, [['مدت', '۶ ماه'], ['قسط ماهانه', '۳٬۶۰۰٬۰۰۰'], ['رزرو پشتوانه پس از تأیید', '۲۰٬۰۰۰٬۰۰۰ کیف ریالی']], [['احراز هویت سطح ۱ — نیاز به ارتقا', 'warning'], ['اولین درخواست تسهیلات', 'warning']], [false, true, true, true, false]],
+  'RQ-3112': [450, 41, [['مدت', '۶ ماه'], ['قسط ماهانه', '۳٬۶۰۰٬۰۰۰'], ['رزرو پشتوانه پس از تأیید', '۲۰٬۰۰۰٬۰۰۰ کیف ریالی']], [['اولین درخواست تسهیلات', 'warning']], [true, true, true, true, false]],
   'RQ-3108': [620, 9, [['سقف فعلی', '۲۰٬۰۰۰٬۰۰۰'], ['سقف درخواستی', '۴۰٬۰۰۰٬۰۰۰']], [['امتیاز اعتباری عالی', 'success']], [true, true, true, false]],
-  'RQ-3120': [65, 78, [['مقصد', 'بانک سامان · IR•• •••• ۰۲۴۹ (جدید)'], ['منبع', 'کیف پول ریالی + فروش طلا'], ['سیکل پایا', '۱۳:۴۵ امروز'], ['برداشت ۲۴ ساعت اخیر', '۳ بار · ۳۱ میلیون']], [['مسدودی قانونی فعال روی صندوق طلا', 'error'], ['شبای مقصد ۲ ساعت پیش اضافه شده', 'error'], ['فروش طلا درخواست شده؛ بخش آزاد طلا صفر است', 'warning']], [false, false, false, false]],
-  'RQ-3117': [230, 41, [['مدرک', 'کارت ملی هوشمند'], ['تطابق چهره', '۸۸٪'], ['استعلام شاهکار', 'موفق'], ['کد پرسنلی', '۲۲۰۷']], [['تصویر پشت کارت با نور کم', 'warning'], ['شماره موبایل جدید (۳ روز)', 'warning']], [false, false, false, false]],
-  'RQ-3116': [520, 55, [['مدرک', 'کارت ملی قدیمی + شناسنامه'], ['تطابق چهره', '۷۹٪'], ['استعلام شاهکار', 'ناموفق'], ['کد پرسنلی', '۵۰۴۴']], [['تطابق چهره زیر آستانه', 'error'], ['شاهکار: موبایل به نام دیگری', 'warning']], [false, false, false, false]],
   'RQ-3109': [135, 24, [['فروشگاه', 'فروشگاه الف'], ['کالا', 'لپ‌تاپ'], ['تعداد اقساط', '۱۰ قسط · ۵٬۱۰۰٬۰۰۰'], ['رزرو اقساطی پس از تأیید', '۲۰٬۰۰۰٬۰۰۰ درآمد ثابت']], [['خرید اقساطی فعال دیگری دارد', 'warning'], ['امتیاز اعتباری عالی', 'success']], [true, false, false, false]],
 };
 
@@ -89,6 +78,15 @@ const EXTRA_ALERTS: (RiskAlert & { signals: string[] })[] = [
   { id: 'AL-3321', title: 'خرید با کارت · خارج از شبکه', userId: 'u-1002', userName: 'علی کریمی', orgName: 'هلدینگ آرمان', score: 78, severity: 'high', status: 'investigating', createdAt: minutesAgo(25), ruleId: 'r-risk-night', amount: 24_900_000, signals: ['big', 'night'] },
   { id: 'AL-3320', title: 'خرید اقساطی · مبلغ بالا', userId: 'u-1004', userName: 'رضا حسینی', orgName: 'هلدینگ آرمان', score: 46, severity: 'medium', status: 'resolved', createdAt: minutesAgo(130), amount: 48_000_000, signals: ['big'] },
   { id: 'AL-3319', title: 'شارژ کارت از اعتبار · شب', userId: 'u-1001', userName: 'سارا محمدی', orgName: 'هلدینگ آرمان', score: 31, severity: 'low', status: 'dismissed', createdAt: daysFromNow(-1, '02:40'), ruleId: 'r-risk-night', amount: 2_400_000, signals: ['night'] },
+];
+
+/** News of the operator console, shown under «به‌روزرسانی‌ها» in its notifications (like ORG_UPDATES in the org panel). */
+export const OP_UPDATES: { id: string; title: string; body: string; createdAt: string; href?: string }[] = [
+  { id: 'upd-op-queue', title: 'صف تأمین و نیاز به خرید', body: 'هیچ موجودی‌ای منفی نمی‌شود؛ بسته‌ها و خریدهایی که موجودی ندارند در صف می‌مانند و با تسویه‌ی صدور خودکار تحویل می‌شوند.', createdAt: jalaliToIso(1405, 8, 15), href: '/op/funds?state=need_buy' },
+  { id: 'upd-op-receipts', title: 'فیش واریز سازمان‌ها', body: 'سازمان‌ها فیش واریز را بارگذاری می‌کنند؛ در «نقدینگی» تأیید یا با دلیل رد کنید.', createdAt: jalaliToIso(1405, 8, 14), href: '/op/cash?status=expected' },
+  { id: 'upd-op-withdraw', title: 'سقف ثابت برداشت', body: 'برداشت کاربران در سقف روزانه و ماهانه بدون تأیید انجام می‌شود؛ سقف‌ها را در «قوانین و محدودیت‌ها» تنظیم کنید.', createdAt: jalaliToIso(1405, 8, 13), href: '/op/rules' },
+  { id: 'upd-op-identity', title: 'احراز هویت خودکار', body: 'احراز هویت فقط سه سطح خودکار اپ است (شاهکار، ثبت احوال، سجام)؛ صف بررسی مدارک حذف شد.', createdAt: jalaliToIso(1405, 8, 12), href: '/op/users' },
+  { id: 'upd-op-rial', title: 'خزانه‌ی ریالی', body: '«ریال» و «ریال رزرو» کنار صندوق‌ها در «موجودی صندوق‌ها» و حساب ریالی هر سازمان در «نقدینگی».', createdAt: jalaliToIso(1405, 8, 11), href: '/op/funds' },
 ];
 
 export function seed_opSystem(db: MockDB) {
@@ -122,7 +120,7 @@ export function seed_opSystem(db: MockDB) {
     history: [
       { id: 'rh-7', at: jalaliToIso(1405, 7, 12), group: 'رزرو دارایی', text: 'افزودن نوع «دریافت مرحله‌ای»', by: 'علی نادری' },
       { id: 'rh-6', at: jalaliToIso(1405, 7, 9), group: 'تسهیلات', text: 'حداقل امتیاز اعتباری ۵۸۰ → ۶۰۰', by: 'علی نادری' },
-      { id: 'rh-5', at: jalaliToIso(1405, 6, 28), group: 'KYC', text: 'افزودن ویدیو به مدارک سطح ۲', by: 'سمیرا توکلی' },
+      { id: 'rh-5', at: jalaliToIso(1405, 6, 28), group: 'برداشت', text: 'سقف برداشت ماهانه ۳۰۰ → ۵۰۰ میلیون؛ حذف تأیید دستی برداشت', by: 'سمیرا توکلی' },
       { id: 'rh-4', at: jalaliToIso(1405, 6, 15), group: 'برداشت', text: 'سقف برداشت روزانه ۳۰ → ۵۰ میلیون', by: 'علی نادری' },
       { id: 'rh-3', at: jalaliToIso(1405, 5, 30), group: 'بسته‌ها', text: 'فعال‌سازی تأیید نهایی بسته‌های بالای ۵۰۰ میلیون', by: 'علی نادری' },
       { id: 'rh-2', at: jalaliToIso(1405, 5, 12), group: 'تسهیلات', text: 'فعال‌سازی رزرو خودکار پشتوانه', by: 'مهدی رحیمی' },
@@ -161,7 +159,7 @@ export function seed_opSystem(db: MockDB) {
   db.extra.opReportSchedules = [
     { id: 'sch-1', name: 'گزارش روزانهٔ AUM و NAV', period: 'روزانه · ۱۵:۰۰', recipients: 'مدیریت، مالی', format: 'PDF', nextAt: daysFromNow(1, '15:00'), enabled: true },
     { id: 'sch-2', name: 'گزارش ماهانهٔ تسهیلات و رزروهای پشتوانه', period: 'ماهانه · اول ماه', recipients: 'مالی، ریسک', format: 'XLSX', nextAt: jalaliToIso(1405, 9, 1), enabled: true },
-    { id: 'sch-3', name: 'دارایی رزروشده به تفکیک نوع و مسدودی‌های قانونی', period: 'هفتگی · شنبه', recipients: 'ریسک، حقوقی', format: 'XLSX', nextAt: jalaliToIso(1405, 8, 17), enabled: true },
+    { id: 'sch-3', name: 'دارایی رزروشده به تفکیک نوع و مسدودی‌ها', period: 'هفتگی · شنبه', recipients: 'ریسک، حقوقی', format: 'XLSX', nextAt: jalaliToIso(1405, 8, 17), enabled: true },
     { id: 'sch-4', name: 'گزارش سازمان‌ها برای هیئت‌مدیره', period: 'فصلی', recipients: 'هیئت‌مدیره', format: 'PDF', nextAt: jalaliToIso(1405, 10, 1), enabled: true },
     { id: 'sch-5', name: 'گزارش SLA و رخدادها', period: 'هفتگی · شنبه', recipients: 'فنی، پشتیبانی', format: 'PDF', nextAt: jalaliToIso(1405, 8, 17), enabled: true },
     { id: 'sch-6', name: 'گزارش مالیاتی سازمان‌ها', period: 'ماهانه · ۲۰ ماه', recipients: 'مالی', format: 'XLSX', nextAt: jalaliToIso(1405, 8, 20), enabled: false },

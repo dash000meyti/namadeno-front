@@ -3,7 +3,7 @@
  * /op/risk — risk & fraud. Kit list page: stats → section tabs
  *   flagged events   list card (status tabs, signal select, search, table) + 30-day alerts chart → alert inspector
  *                    (investigate / resolve / dismiss / reopen, review note)
- *   legal holds      list card (status tabs, search, table) → hold inspector (release with confirmation)
+ *   blocks («مسدودی‌ها») list card (status tabs, search, table) → hold inspector (release with confirmation)
  *   detection rules  settings group with switches
  * Alerts and insights refresh every 30 seconds.
  */
@@ -81,7 +81,7 @@ export default function OpRiskPage() {
 
   return (
     <>
-      <PageHeading title="ریسک و تقلب" crumbs={[{ label: 'پایش' }]} sub="رویدادهای مشکوک، مسدودی‌های قانونی و قوانین تشخیص در همه‌ی سازمان‌ها">
+      <PageHeading title="ریسک و تقلب" crumbs={[{ label: 'پایش' }]} sub="رویدادهای مشکوک، مسدودی‌ها و قوانین تشخیص در همه‌ی سازمان‌ها">
         <span className="mute" style={{ fontSize: 12.5 }}>به‌روزرسانی خودکار هر <span className="num">{faDigits(30)}</span> ثانیه</span>
       </PageHeading>
 
@@ -100,7 +100,7 @@ export default function OpRiskPage() {
 
       <Tabs label="بخش‌های ریسک و تقلب" size="lg" value={view} onChange={setView} items={[
         { key: 'events', label: 'رویدادهای پرچم‌گذاری‌شده', count: openCount, hot: true },
-        { key: 'legal', label: 'مسدودی‌های قانونی', count: liveHolds },
+        { key: 'legal', label: 'مسدودی‌ها', count: liveHolds },
         { key: 'rules', label: 'قوانین تشخیص' },
       ]} />
 
@@ -281,7 +281,7 @@ function HoldsCard({ holds, loading, error, onRetry }: { holds: LegalHold[]; loa
     if (!confirm) return;
     const h = confirm;
     release.mutate({ id: h.id }, {
-      onSuccess: () => { setConfirm(null); toast(`رفع مسدودی قانونی ${h.userName} · +${money(h.amount)} آزاد شد`); },
+      onSuccess: () => { setConfirm(null); toast(`رفع مسدودی ${h.userName} · +${money(h.amount)} آزاد شد`); },
       onError: (e) => { setConfirm(null); toast(errMsg(e), 'error'); },
     });
   };
@@ -304,10 +304,10 @@ function HoldsCard({ holds, loading, error, onRetry }: { holds: LegalHold[]; loa
         <Toolbar>
           <Tabs label="وضعیت مسدودی" value={lf} onChange={setLf} items={HOLD_TABS.map((t) => ({ ...t, count: scoped.filter((h) => holdMatch(h, t.key)).length }))} />
           <span className="grow" />
-          <SearchField value={q} onChange={setQ} placeholder="نام کاربر یا شماره مرجع" label="جستجوی مسدودی قانونی" width={220} />
+          <SearchField value={q} onChange={setQ} placeholder="نام کاربر یا شماره مرجع" label="جستجوی مسدودی" width={220} />
         </Toolbar>
         <Table
-          columns={columns} rows={pg.rows} rowKey={(h) => h.id} rowLabel={(h) => `مسدودی قانونی ${h.userName}`}
+          columns={columns} rows={pg.rows} rowKey={(h) => h.id} rowLabel={(h) => `مسدودی ${h.userName}`}
           onRowClick={(h) => setSel((s) => (s === h.id ? null : h.id))} selectedKey={sel}
           loading={loading} error={error} onRetry={onRetry}
           empty={<Empty icon={IC.lock} title="موردی یافت نشد" />}
@@ -320,7 +320,7 @@ function HoldsCard({ holds, loading, error, onRetry }: { holds: LegalHold[]; loa
 
       {selHold && (
         <Inspector
-          key={selHold.id} open onClose={() => setSel(null)} label={`مسدودی قانونی ${selHold.userName}`} title="مسدودی قانونی"
+          key={selHold.id} open onClose={() => setSel(null)} label={`مسدودی ${selHold.userName}`} title="مسدود"
           href={selHold.userId ? routes.op.user(selHold.userId) : undefined} hrefLabel="پروفایل کاربر"
           footer={selHold.status === 'pending' ? <button type="button" className="nm-btn" disabled={release.isPending} onClick={() => setConfirm(selHold)}><Icon d={IC.lock} size={17} />رفع مسدودی</button> : undefined}
         >
@@ -344,11 +344,11 @@ function HoldsCard({ holds, loading, error, onRetry }: { holds: LegalHold[]; loa
           </Section>
           {selHold.status === 'pending'
             ? <Note tone="info">دستور رفع از مرجع ثبت شده است. با رفع مسدودی، <b className="num">{money(selHold.amount)}</b> تومان از «{selHold.holding}» به بخش آزاد کاربر برمی‌گردد.</Note>
-            : <Note tone="mute" icon={IC.lock}>ثبت و رفع مسدودی قانونی فقط با شماره مرجع ممکن است.</Note>}
+            : <Note tone="mute" icon={IC.lock}>مسدود کردن دارایی و رفع آن فقط با شماره مرجع ممکن است.</Note>}
         </Inspector>
       )}
 
-      <Confirm open={!!confirm} onClose={() => setConfirm(null)} busy={release.isPending} onConfirm={doRelease} title="رفع مسدودی قانونی" confirmLabel="رفع مسدودی"
+      <Confirm open={!!confirm} onClose={() => setConfirm(null)} busy={release.isPending} onConfirm={doRelease} title="رفع مسدودی" confirmLabel="رفع مسدودی"
         body={confirm ? <>دستور رفع مرجع <b className="num">{faDigits(confirm.reference)}</b> برای {confirm.userName} ثبت شده است. با رفع مسدودی، <b className="num">{money(confirm.amount)}</b> تومان از «{confirm.holding}» به بخش آزاد کاربر برمی‌گردد.</> : null} />
     </>
   );

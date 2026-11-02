@@ -59,14 +59,16 @@ export async function api<T>(path: string, opts: { method?: Method; body?: unkno
   const url = new URL(API_BASE + path, typeof window === 'undefined' ? 'http://localhost' : window.location.origin);
   if (opts.query) for (const [k, v] of Object.entries(opts.query)) if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
   const session = getSession(roleForPath(path));
+  // files (e.g. a deposit receipt) go as multipart/form-data — the browser sets the boundary header
+  const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData;
   const send = () => fetch(url.toString(), {
     method: opts.method ?? 'GET',
     headers: {
-      'Content-Type': 'application/json',
+      ...(isForm ? {} : { 'Content-Type': 'application/json' }),
       Accept: 'application/json',
       ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
     },
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    body: isForm ? (opts.body as FormData) : opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });
   let res = await send();
   // mock mode: a non-JSON 404 means the request slipped past the mock worker → re-attach and retry once
@@ -82,5 +84,7 @@ export async function api<T>(path: string, opts: { method?: Method; body?: unkno
 
 export const get = <T,>(path: string, query?: Record<string, string | number | undefined | null>) => api<T>(path, { query });
 export const post = <T,>(path: string, body?: unknown) => api<T>(path, { method: 'POST', body: body ?? {} });
+/** POST multipart/form-data (file uploads). */
+export const postForm = <T,>(path: string, form: FormData) => api<T>(path, { method: 'POST', body: form });
 export const patch = <T,>(path: string, body?: unknown) => api<T>(path, { method: 'PATCH', body: body ?? {} });
 export const del = <T,>(path: string) => api<T>(path, { method: 'DELETE' });

@@ -143,9 +143,7 @@ export const REQUESTS: ApprovalRequest[] = [
   { id: 'RQ-2041', kind: 'loan', title: 'درخواست وام ۳۰٬۰۰۰٬۰۰۰ تومان · ۱۲ ماهه', requesterId: 'u-1003', requesterName: 'مریم احمدی', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 30_000_000, createdAt: minutesAgo(95), status: 'pending' },
   { id: 'RQ-2040', kind: 'milestone_release', title: 'آزادسازی مرحله ۳ «پیاده‌سازی نسخه اول»', requesterId: 'u-1001', requesterName: 'سارا محمدی', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 6_000_000, createdAt: minutesAgo(70), status: 'pending', note: 'تحویل نسخه اول در محیط تست انجام شده است.', packageId: 'pkg-ms-portal', stepId: 'ms-3', trigger: 'employee' },
   { id: 'RQ-2039', kind: 'credit_increase', title: 'افزایش سقف اعتبار کارت به ۵۰ میلیون', requesterId: 'u-1002', requesterName: 'علی کریمی', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 50_000_000, createdAt: daysFromNow(-1, '14:20'), status: 'pending' },
-  { id: 'RQ-2038', kind: 'cash_withdrawal', title: 'برداشت نقدی از بسته پاداش', requesterId: 'u-1006', requesterName: 'امیر جعفری', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 8_000_000, createdAt: daysFromNow(-1, '10:05'), status: 'pending' },
   { id: 'RQ-2037', kind: 'installment', title: 'خرید اقساطی یخچال · ۶ قسط', requesterId: 'u-1007', requesterName: 'حسین نوری', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 42_000_000, createdAt: daysFromNow(-2, '16:40'), status: 'approved', decidedAt: daysFromNow(-1, '09:10'), decidedBy: 'نیما رضایی' },
-  { id: 'RQ-2036', kind: 'profile_change', title: 'تغییر شماره موبایل', requesterId: 'u-1009', requesterName: 'محمد صادقی', orgId: 'org-arman', orgName: 'هلدینگ آرمان', createdAt: daysFromNow(-3, '11:00'), status: 'approved', decidedAt: daysFromNow(-3, '15:00'), decidedBy: 'لیلا کاظمی' },
   { id: 'RQ-2035', kind: 'loan', title: 'درخواست وام ۶۰٬۰۰۰٬۰۰۰ تومان · ۱۸ ماهه', requesterId: 'u-1005', requesterName: 'نگار موسوی', orgId: 'org-arman', orgName: 'هلدینگ آرمان', amount: 60_000_000, createdAt: daysFromNow(-5, '12:30'), status: 'rejected', decidedAt: daysFromNow(-4, '10:00'), decidedBy: 'نیما رضایی', note: 'بیش از سقف ۴۰٪ دارایی آزاد' },
   { id: 'RQ-3112', kind: 'loan', title: 'درخواست وام ۲۰٬۰۰۰٬۰۰۰ تومان · ۶ ماهه', requesterId: 'u-2201', requesterName: 'حامد یزدانی', orgId: 'org-novin', orgName: 'فناوری نوین', amount: 20_000_000, createdAt: daysFromNow(-1, '11:45'), status: 'pending' },
   { id: 'RQ-3108', kind: 'credit_increase', title: 'افزایش سقف اعتبار کارت', requesterId: 'u-3019', requesterName: 'نرگس طاهری', orgId: 'org-pars', orgName: 'صنایع پارس', amount: 40_000_000, createdAt: daysFromNow(-2, '09:30'), status: 'pending' },
@@ -156,11 +154,11 @@ type PURow = [id: string, name: string, orgId: string, code: string, rial: numbe
 const PU_ROWS: PURow[] = [
   ['u-1002', 'علی کریمی', 'org-arman', '1012', 8_200_000, 52_000_000, 31_900_000, 30_000_000, 698, 2, 'active', 22, [], 1],
   ['u-1003', 'مریم احمدی', 'org-arman', '1033', 12_800_000, 70_000_000, 62_000_000, 40_000_000, 761, 3, 'active', 15, [], 0],
-  ['u-2201', 'حامد یزدانی', 'org-novin', '2207', 18_200_000, 22_000_000, 18_000_000, 0, 0, 1, 'active', 40, ['kyc_pending'], 3],
+  ['u-2201', 'حامد یزدانی', 'org-novin', '2207', 18_200_000, 22_000_000, 18_000_000, 0, 0, 2, 'active', 40, [], 3],
   ['u-3019', 'نرگس طاهری', 'org-pars', '3019', 20_500_000, 110_000_000, 80_000_000, 25_000_000, 784, 3, 'active', 9, [], 0],
-  ['u-5044', 'پویا شریفی', 'org-kaveh', '5044', 6_400_000, 0, 6_000_000, 0, 534, 1, 'invited', 35, ['kyc_pending', 'inactive'], 41],
+  ['u-5044', 'پویا شریفی', 'org-kaveh', '5044', 6_400_000, 0, 6_000_000, 0, 534, 1, 'invited', 35, ['inactive'], 41],
   ['u-2138', 'الهام رستمی', 'org-novin', '2138', 3_000_000, 41_000_000, 32_000_000, 76_000_000, 455, 2, 'suspended', 82, ['legal_hold', 'card_blocked'], 6],
-  ['u-4006', 'بهراد کیانی', 'org-sepehr', '4006', 34_900_000, 0, 0, 0, 0, 1, 'invited', 61, ['kyc_rejected'], 999],
+  ['u-4006', 'بهراد کیانی', 'org-sepehr', '4006', 34_900_000, 0, 0, 0, 0, 1, 'invited', 61, [], 999],
   ['u-1004', 'رضا حسینی', 'org-arman', '1008', 40_000_000, 140_000_000, 88_000_000, 52_000_000, 802, 3, 'active', 6, [], 0],
   ['u-1013', 'مهسا تهرانی', 'org-arman', '1003', 14_000_000, 82_000_000, 58_000_000, 22_000_000, 776, 3, 'active', 8, [], 0],
   ['u-1014', 'نیما رضایی', 'org-arman', '1019', 6_500_000, 50_000_000, 40_000_000, 10_000_000, 731, 3, 'active', 10, [], 0],
@@ -175,6 +173,7 @@ export const PLATFORM_USERS: PlatformUser[] = PU_ROWS.map(([id, fullName, orgId,
     // one account per person: a member of هلدینگ آرمان has the same national ID, mobile and code as their employee record
     id, firstName, lastName: rest.join(' '), fullName, mobile: emp?.mobile ?? '0912' + id.replace(/\D/g, '').padStart(7, '0').slice(-7), nationalId: emp?.nationalId ?? '00' + id.replace(/\D/g, '').padStart(8, '1'),
     employeeCode: emp?.employeeCode ?? code, orgId, orgName: org.name, kycLevel: kyc, creditScore: score, joinedAt: jalaliToIso(1404, 6, 1), avatarLetter: fullName[0], status,
+    rialValue: rial, rialLocked: 0,
     portfolioValue: total, freeValue: total - locked, lockedValue: locked, riskScore: risk, lastActiveAt: daysFromNow(-lastDays), flags,
   };
 });
@@ -191,7 +190,7 @@ export const RULES: PlatformRule[] = [
   { id: 'r-lock-vesting', group: 'locks', title: 'پس‌انداز سازمانی (Vesting)', description: 'سازمان می‌تواند بسته را تا تاریخ مشخص برای همکار پس‌انداز کند.', enabled: true },
   { id: 'r-lock-milestone', group: 'locks', title: 'دریافت مرحله‌ای', description: 'سازمان مبلغ قرارداد را رزرو می‌کند و با تأیید هر مرحله، سهم همان مرحله آزاد می‌شود.', enabled: true },
   { id: 'r-lock-installment', group: 'locks', title: 'پشتوانه‌ی خرید اقساطی', description: 'با پرداخت هر قسط بخشی از پشتوانه آزاد می‌شود.', enabled: true },
-  { id: 'r-lock-legal', group: 'locks', title: 'مسدودی قانونی', description: 'فقط بهره‌بردار با شماره دستور مرجع می‌تواند اعمال یا رفع کند.', enabled: true },
+  { id: 'r-lock-legal', group: 'locks', title: 'مسدود', description: 'فقط بهره‌بردار با شماره دستور مرجع می‌تواند اعمال یا رفع کند.', enabled: true },
   { id: 'r-limit-withdraw-daily', group: 'limits', title: 'سقف برداشت روزانه', description: 'حداکثر برداشت از کیف پول ریالی در یک روز.', enabled: true, value: 100_000_000, unit: 'تومان' },
   { id: 'r-limit-trade', group: 'limits', title: 'سقف خرید/فروش روزانه صندوق', description: 'برای هر کاربر در هر صندوق.', enabled: true, value: 500_000_000, unit: 'تومان' },
   { id: 'r-credit-loan-pct', group: 'credit', title: 'سقف وام نسبت به دارایی آزاد', description: 'پس‌انداز سازمانی و دریافت مرحله‌ای در ظرفیت پشتوانه حساب نمی‌شوند.', enabled: true, value: 40, unit: 'درصد' },
@@ -244,7 +243,7 @@ export const BLOG: BlogPost[] = [
   { slug: 'free-vs-locked-assets', title: 'دارایی آزاد و رزروشده؛ هرآنچه باید بدانید', excerpt: 'چرا بخشی از دارایی شما رزرو است و چه زمانی آزاد می‌شود؟ پنج نوع رزرو در نمادنو را بشناسید.', category: 'آموزش', author: 'تیم محصول نمادنو', publishedAt: jalaliToIso(1405, 8, 10), readMinutes: 6, cover: 'security', body: [
     'در نمادنو هر کیف پول و هر دارایی دو بخش دارد: آزاد و رزروشده. بخش آزاد را می‌توانید هر زمان به ریال بفروشید یا برداشت کنید.',
     'بخش رزروشده همچنان متعلق به شماست و سود یا تغییر ارزش آن به حساب شما می‌آید؛ فقط تا رسیدن زمان یا شرط آزادسازی برای هدف مشخصی کنار گذاشته شده و پس از آن مثل بخش آزاد قابل فروش و برداشت است.',
-    'پنج نوع رزرو داریم: پشتوانه‌ی وام و اعتبار، پس‌انداز سازمانی، پشتوانه‌ی خرید اقساطی، دریافت مرحله‌ای قراردادها و مسدودی قانونی.',
+    'پنج نوع رزرو داریم: پشتوانه‌ی وام و اعتبار، پس‌انداز سازمانی، پشتوانه‌ی خرید اقساطی، دریافت مرحله‌ای قراردادها و مسدود (به دستور مرجع).',
   ] },
   { slug: 'gold-fund-inflation', title: 'طلا؛ سپری در برابر تورم', excerpt: 'دارایی طلا چطور کار می‌کند و چرا برای حفظ ارزش پاداش‌ها گزینه مناسبی است.', category: 'سرمایه‌گذاری', author: 'واحد تحلیل', publishedAt: jalaliToIso(1405, 7, 28), readMinutes: 5, cover: 'gold', body: [
     'طلای نمادنو با پشتوانه شمش و سکه، ارزش پس‌انداز شما را به قیمت جهانی طلا و نرخ ارز گره می‌زند.',

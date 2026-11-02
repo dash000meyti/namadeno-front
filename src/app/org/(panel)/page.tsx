@@ -3,6 +3,7 @@
  * Organization dashboard — kit overview page: key numbers, the latest batch, requests waiting for a decision,
  * sent packages chart and allocation by unit, team assets (free/reserved + mix), one quiet contract line.
  * The former «گزارش‌ها» page is merged here: its charts are cards and its exports sit in «خروجی گزارش».
+ * Under the key numbers: «حساب ریالی سازمان» (free / blocked / pending deposits, «اعلام واریز») — OrgAccountCard.
  */
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
@@ -19,6 +20,7 @@ import type { ApprovalRequest, OrgPackage } from '@/types/domain';
 import { usePanelToast } from '@/components/org/people/PanelToast';
 import { I, compactParts, errMsg } from '@/components/org/people/shared';
 import { perPersonText } from '@/components/org/packages/meta';
+import { OrgAccountCard } from '@/components/org/money/OrgAccountCard';
 
 const REQ_TYPE: Record<ApprovalRequest['kind'], string> = {
   milestone_release: 'تأیید مرحله قرارداد', loan: 'درخواست وام', cash_withdrawal: 'برداشت نقدی',
@@ -49,12 +51,14 @@ export default function OrgDashboardPage() {
   const org = d?.organization;
   const ins = insights.data;
 
-  // latest batch: the newest draft waiting for approval, otherwise the newest sent package
+  // latest batch: the newest draft waiting for approval, otherwise the newest sent package (or one in the queue: waiting for
+  // its deposit receipt or for Namadno's fund stock)
   const latest: OrgPackage | undefined = useMemo(() => {
     const list = pkgs.data ?? [];
     const drafts = list.filter((x) => x.status === 'draft').sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     if (drafts[0]) return drafts[0];
-    return list.filter((x) => x.sentAt && x.status !== 'cancelled').sort((a, b) => (b.sentAt ?? '').localeCompare(a.sentAt ?? ''))[0];
+    const at = (x: OrgPackage) => x.sentAt ?? x.stockQueuedAt ?? x.submittedAt ?? '';
+    return list.filter((x) => at(x) && x.status !== 'cancelled').sort((a, b) => at(b).localeCompare(at(a)))[0];
   }, [pkgs.data]);
 
   const requests = useMemo(() => {
@@ -93,15 +97,23 @@ export default function OrgDashboardPage() {
   // latest batch progress
   const batch = latest && (() => {
     const isDraft = latest.status === 'draft';
+    const awaiting = latest.status === 'awaiting_payment';
+    const stockWait = latest.status === 'awaiting_stock'; // paid; sent automatically once Namadno's stock arrives
+    const eta = latest.stockEta ? `${jDayMonth(latest.stockEta)} · ${time(latest.stockEta)}` : '';
     const n = latest.recipients.length;
     const accepted = latest.recipients.filter((r) => r.status === 'accepted').length;
     const waiting = latest.recipients.filter((r) => r.status === 'pending').length;
     return {
       isDraft, n,
-      status: isDraft ? 'در انتظار تأیید' : latest.status === 'completed' ? 'تکمیل شده' : 'ارسال شد',
-      date: isDraft ? `پیش‌نویس · ${jDayMonth(latest.createdAt)}` : `ارسال · ${jDayMonth(latest.sentAt!)}`,
-      fill: isDraft ? 2.5 / STEPS.length : n ? accepted / n : 1,
-      progress: isDraft ? `مرحله‌ی ${faDigits(3)} از ${faDigits(STEPS.length)} · ${STEPS[2]}` : waiting ? `${faDigits(accepted)} از ${faDigits(n)} نفر پذیرفته‌اند` : 'همه‌ی گیرندگان پذیرفته‌اند',
+      tone: isDraft || awaiting || stockWait ? 'warning' as const : 'success' as const,
+      status: isDraft ? 'در انتظار تأیید' : awaiting ? 'در انتظار تأیید واریز' : stockWait ? 'در انتظار تأمین موجودی' : latest.status === 'completed' ? 'تکمیل شده' : 'ارسال شد',
+      date: isDraft ? `پیش‌نویس · ${jDayMonth(latest.createdAt)}` : awaiting ? `ثبت · ${jDayMonth(latest.submittedAt ?? latest.createdAt)}`
+        : stockWait ? (eta ? `ارسال تا ${eta}` : `ثبت · ${jDayMonth(latest.stockQueuedAt ?? latest.createdAt)}`) : `ارسال · ${jDayMonth(latest.sentAt!)}`,
+      fill: isDraft ? 2.5 / STEPS.length : awaiting || stockWait ? 3.5 / STEPS.length : n ? accepted / n : 1,
+      progress: isDraft ? `مرحله‌ی ${faDigits(3)} از ${faDigits(STEPS.length)} · ${STEPS[2]}`
+        : awaiting ? 'پس از تأیید فیش واریز توسط نمادنو برای همکاران ارسال می‌شود'
+        : stockWait ? 'پرداخت شده · پس از تأمین موجودی نمادنو خودکار برای همکاران ارسال می‌شود'
+        : waiting ? `${faDigits(accepted)} از ${faDigits(n)} نفر پذیرفته‌اند` : 'همه‌ی گیرندگان پذیرفته‌اند',
     };
   })();
 
@@ -126,6 +138,9 @@ export default function OrgDashboardPage() {
         { label: 'مراحل قرارداد', value: faDigits(ins.milestones.count), unit: 'مرحله', href: `${routes.org.requests}?type=milestone_release`, note: ins.milestones.count ? `${compact(ins.milestones.amount)} در انتظار آزادسازی` : 'مرحله‌ای در انتظار نیست' },
       ] : []} />
 
+      {/* The organization's rial account with Namadno */}
+      <OrgAccountCard />
+
       <div className="nm-grid c2 stretch">
         {/* Latest batch */}
         <Card title="آخرین ارسال" more={{ label: 'همه‌ی بسته‌ها', href: routes.org.packages }}>
@@ -137,7 +152,7 @@ export default function OrgDashboardPage() {
             <>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <span className="nm-col"><b style={{ fontSize: 15 }}>{latest.title}</b><small>{batch.date}</small></span>
-                <Pill tone={batch.isDraft ? 'warning' : 'success'} dot>{batch.status}</Pill>
+                <Pill tone={batch.tone} dot>{batch.status}</Pill>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <Meter value={batch.fill} label={batch.progress} />

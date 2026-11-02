@@ -3,6 +3,10 @@
  * /op/requests — operator review queue for all organizations. Kit list page:
  * stats → list card (kind tabs, status / sort selects, search, table with quick approve / reject) → inspector
  * (requester, amount · SLA · risk, details, risk factors, manual review checklist, approve / reject with reason / refer to risk).
+ * Withdrawals are not reviewed here (they go through within the fixed daily / monthly caps of /op/rules), and identity is
+ * verified automatically in the app (شاهکار، ثبت احوال، سجام): there are no withdrawal or KYC requests.
+ * What is left — loans, installment purchases, credit increases — are credit products, so while facilities are off
+ * (FEATURES.orgCredit) the page is a calm «به‌زودی» notice, like «محصولات اعتباری».
  */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,8 +17,9 @@ import { useDecideOpRequest, useOpRequests, useOpUsers } from '@/api/op';
 import { useEscalateRequest, useReopenRequest, useRequestMeta, useUpdateRequestChecks, type RequestMeta } from '@/api/op-system-extra';
 import {
   Ava, Card, Chips, Dialog, Empty, Field, Ident, Inspector, KV, KeyStats, Legend, List, ListRow, Meter, Note, PageHeading, Pill,
-  SearchField, Section, Select, StatStrip, Table, TableFoot, Tabs, Toolbar, Who, usePaging, type Column, type Tone,
+  SearchField, Section, Select, StatStrip, Table, TableFoot, Tabs, Tile, Toolbar, Who, usePaging, type Column, type Tone,
 } from '@/components/panel/kit';
+import { FEATURES } from '@/lib/features';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { IC } from '@/components/op/system/ui';
@@ -24,27 +29,25 @@ import { now } from '@/lib/clock';
 import { routes } from '@/lib/routes';
 
 const KIND: Record<RequestKind, string> = {
-  loan: 'وام', installment: 'خرید اقساطی', cash_withdrawal: 'برداشت', profile_change: 'KYC', credit_increase: 'افزایش اعتبار', milestone_release: 'دریافت مرحله',
+  // cash_withdrawal / profile_change are no longer produced (labels kept for old records)
+  loan: 'وام', installment: 'خرید اقساطی', cash_withdrawal: 'برداشت', profile_change: 'تغییر اطلاعات', credit_increase: 'افزایش اعتبار', milestone_release: 'دریافت مرحله',
 };
-type TabKey = 'all' | 'loan' | 'bnpl' | 'wd' | 'kyc' | 'other';
+type TabKey = 'all' | 'loan' | 'bnpl' | 'other';
 const TABS: { key: TabKey; label: string; kinds: RequestKind[] | null }[] = [
   { key: 'all', label: 'همه', kinds: null },
   { key: 'loan', label: 'وام', kinds: ['loan'] },
   { key: 'bnpl', label: 'خرید اقساطی', kinds: ['installment'] },
-  { key: 'wd', label: 'برداشت', kinds: ['cash_withdrawal'] },
-  { key: 'kyc', label: 'KYC', kinds: ['profile_change'] },
   { key: 'other', label: 'سایر', kinds: ['credit_increase'] },
 ];
 const CHECKS: Record<RequestKind, string[]> = {
-  loan: ['هویت با KYC تطابق دارد', 'بخش آزاد برای رزرو پشتوانه کافی است', 'سقف قرارداد سازمان رعایت شده', 'وام فعال همزمان ندارد', 'قسط کمتر از ۴۰٪ ورودی ماهانه'],
+  loan: ['احراز هویت سطح ۲ در اپ کامل است', 'بخش آزاد برای رزرو پشتوانه کافی است', 'سقف قرارداد سازمان رعایت شده', 'وام فعال همزمان ندارد', 'قسط کمتر از ۴۰٪ ورودی ماهانه'],
   installment: ['فروشگاه طرف قرارداد و فعال است', 'فاکتور کالا با مبلغ تطابق دارد', 'بخش آزاد برای رزرو اقساطی کافی است', 'سقف خرید اقساطی سازمان رعایت شده'],
-  cash_withdrawal: ['شبای مقصد به نام کاربر است', 'مبلغ فقط از بخش آزاد است (نه رزروشده یا مسدود)', 'الگوی برداشت غیرعادی نیست', 'دستگاه و IP شناخته‌شده است'],
-  profile_change: ['تصویر کارت ملی خوانا است', 'تطابق چهره بالای ۸۵٪', 'استعلام شاهکار موفق', 'کد پرسنلی در لیست سازمان است'],
-  credit_increase: ['هویت با KYC تطابق دارد', 'بخش آزاد برای رزرو اعتبار کافی است', 'سقف قرارداد سازمان رعایت شده', 'سابقه بازپرداخت کارت سالم است'],
+  cash_withdrawal: [],
+  profile_change: [],
+  credit_increase: ['احراز هویت سطح ۲ در اپ کامل است', 'بخش آزاد برای رزرو اعتبار کافی است', 'سقف قرارداد سازمان رعایت شده', 'سابقه بازپرداخت کارت سالم است'],
   milestone_release: ['تحویل مرحله توسط سازمان تأیید شده', 'مستندات تحویل پیوست شده', 'مبلغ با سهم مرحله در قرارداد تطابق دارد'],
 };
 const REASONS: [string, string][] = [
-  ['مدارک ناقص', 'مدارک ارسالی شما کامل نیست. لطفاً از بخش حساب من مدارک را دوباره بارگذاری کنید.'],
   ['ریسک بالا', 'درخواست شما در بررسی امنیتی تأیید نشد. برای پیگیری با پشتیبانی تماس بگیرید.'],
   ['خارج از سقف قرارداد', 'مبلغ درخواست از سقف تعیین‌شده در قرارداد سازمان شما بیشتر است.'],
   ['سایر', ''],
@@ -72,6 +75,39 @@ function slaOf(r: ApprovalRequest, m?: RequestMeta): { t: string; min: number; t
 const slaColor = (s: ReturnType<typeof slaOf>) => (s.closed ? 'var(--text-disabled)' : s.tone ? `var(--${s.tone}-text)` : 'var(--text-secondary)');
 
 export default function OpRequestsPage() {
+  return FEATURES.orgCredit ? <RequestsPage /> : <RequestsComingSoon />;
+}
+
+/** The request kinds that arrive with the credit products (shown on the coming-soon page, no actions). */
+const SOON: { d: string; tone: Tone; title: string; sub: string }[] = [
+  { d: IC.percent, tone: 'info', title: 'وام با پشتوانه‌ی دارایی', sub: 'بررسی درخواست وام کاربران؛ پشتوانه از بخش آزاد دارایی رزرو می‌شود و دارایی فروخته نمی‌شود.' },
+  { d: IC.bag, tone: 'success', title: 'خرید اقساطی', sub: 'بررسی خرید اقساطی از فروشگاه‌های طرف قرارداد.' },
+  { d: IC.card, tone: 'primary', title: 'افزایش اعتبار کارت', sub: 'بررسی درخواست افزایش سقف اعتبار کارت نمادنو.' },
+];
+
+function RequestsComingSoon() {
+  return (
+    <>
+      <PageHeading title="درخواست‌ها" crumbs={[{ label: 'مشتریان' }]} sub="درخواست‌های اعتباری با فعال شدن محصولات اعتباری اینجا بررسی می‌شوند">
+        <Pill>به‌زودی</Pill>
+      </PageHeading>
+      <Card>
+        <Empty
+          icon={IC.inbox} tone="primary" title="درخواست‌ها به‌زودی"
+          sub="برداشت تأیید لازم ندارد (سقف ثابت روزانه و ماهانه) و احراز هویت خودکار در اپ انجام می‌شود؛ درخواست‌های این بخش فقط برای محصولات اعتباری است."
+        />
+        <List>
+          {SOON.map((p) => (
+            <ListRow key={p.title} lead={<Tile d={p.d} tone={p.tone} />} title={p.title}
+              sub={<span style={{ whiteSpace: 'normal' }}>{p.sub}</span>} trail={<Pill>به‌زودی</Pill>} />
+          ))}
+        </List>
+      </Card>
+    </>
+  );
+}
+
+function RequestsPage() {
   const toast = useToast();
   const reqs = useOpRequests();
   const metaQ = useRequestMeta();

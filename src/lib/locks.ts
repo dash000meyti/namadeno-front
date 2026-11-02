@@ -18,7 +18,7 @@ export const LOCK_META: Record<LockType | 'none', { label: string; short: string
   vesting: { label: 'پس‌انداز سازمانی', short: 'پس‌انداز', bg: 'var(--soft-warning)', fg: 'var(--warning-text)', d: SPROUT },
   installment: { label: 'پشتوانه‌ی خرید اقساطی', short: 'اقساطی', bg: 'var(--soft-secondary)', fg: 'var(--secondary-text)', d: CALENDAR },
   milestone: { label: 'دریافت مرحله‌ای', short: 'مرحله‌ای', bg: 'var(--soft-primary)', fg: 'var(--primary-text)', d: FLAG },
-  legal: { label: 'مسدودی قانونی', short: 'مسدودی', bg: 'var(--soft-error)', fg: 'var(--error-text)', d: LOCK },
+  legal: { label: 'مسدود', short: 'مسدود', bg: 'var(--soft-error)', fg: 'var(--error-text)', d: LOCK },
   none: { label: 'آزاد', short: 'آزاد', bg: 'var(--soft-success)', fg: 'var(--success-text)', d: CHECK },
 };
 

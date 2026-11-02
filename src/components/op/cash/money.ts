@@ -17,3 +17,19 @@ export function scaled(n: number): { value: string; unit: string } {
 
 /** Signed full amount for ledgers: «+۱۲٬۵۰۰٬۰۰۰» / «−۸۰۰٬۰۰۰». */
 export const signed = (n: number) => (n > 0 ? '+' : '') + money(n);
+
+const scaleOf = (ref: number) => { const a = Math.abs(ref); return a >= 1e12 ? 1e12 : a >= 1e9 ? 1e9 : a >= 1e6 ? 1e6 : 1; };
+const SCALE_WORD: Record<number, string> = { 1e12: 'هزار میلیارد', 1e9: 'میلیارد', 1e6: 'میلیون', 1: 'تومان' };
+
+/**
+ * Short numbers for a StatStrip note, in the scale of the cell's value (the unit is already shown on the value):
+ * noteAmounts(4.4e9, [10.5e9, 6.1e9]) → ['۱۰٫۵', '۶٫۱']; when an amount needs a larger scale its word is added.
+ */
+export function noteAmounts(value: number, xs: number[]): string[] {
+  const vs = scaleOf(value);
+  return xs.map((n) => {
+    const s = Math.max(vs, scaleOf(n));
+    const num = s === 1 ? money(n) : (n < 0 ? '−' : '') + faDigits(String(Math.round((Math.abs(n) / s) * 10) / 10), true);
+    return s === vs ? num : `${num} ${SCALE_WORD[s]}`;
+  });
+}

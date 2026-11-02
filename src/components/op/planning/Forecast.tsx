@@ -1,33 +1,37 @@
 'use client';
 /**
- * /op/planning — «پیش‌بینی» tab. Weekly demand vs returns, free stock per fund at the end of the horizon with the
- * suggested orders, recommendations, upcoming events, target progress and the forecast assumptions (read-only).
+ * /op/planning — «پیش‌بینی» tab. Weekly demand vs returns, Namadno's free rial at the end of the horizon, free stock
+ * per fund at the end of the horizon with the suggested orders, recommendations, upcoming events, target progress and
+ * the forecast assumptions (read-only).
  * Rows open the kit Inspector; every order goes through the shared OrderDialog (source 'suggestion' when prefilled).
  */
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import type { ForecastEvent, FundForecast, Recommendation, TreasuryAssumptions, TreasuryPlan, TreasuryPosition } from '@/api/op-treasury-extra';
+import { useRialTreasury, type ForecastEvent, type FundForecast, type Recommendation, type TreasuryAssumptions, type TreasuryPlan, type TreasuryPosition } from '@/api/op-treasury-extra';
 import {
-  Bars, Card, Empty, Ident, Inspector, KV, KeyStats, Legend, List, ListRow, Meter, Note, Pill, Ring, Section, Select, Table,
+  Bars, Card, Empty, Ident, Inspector, KV, KeyStats, Legend, List, ListRow, Meter, Note, Pill, Ring, Section, Select, Skel, Table,
   TableFoot, Tile, Toolbar, Who, usePaging, type Column, type Tone,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { OrderDialog } from '@/components/op/treasury/OrderDialog';
-import { EVENT_KIND, SEVERITY, SIDE, STOCK_STATE, TI, amt, buyNowCap, daysText, fundUi } from '@/components/op/treasury/ui';
+import { EVENT_KIND, RIAL_UI, SEVERITY, SIDE, STOCK_STATE, TI, amt, buyNowCap, fundUi, isNeed } from '@/components/op/treasury/ui';
 import { pctT } from '@/components/op/system/fmt';
 import { faDigits, jDate, jDayMonth, time } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import { daysUntil, demandOf, eventEffect, neededText, progressLine, returnsOf, sAmt, tm, totals, untilText, type OrderPrefill } from './shared';
 
-const EVENT_ICON: Record<ForecastEvent['kind'], string> = {
+// deposits have no due dates (receipts are reviewed), so no deposit events or «collect» recommendations: fallback icons only
+const EVENT_ICONS: Partial<Record<ForecastEvent['kind'], string>> = {
   vesting_release: 'M12 21V11M12 11c0-3.5 2.5-6 6-6 0 3.5-2.5 6-6 6M12 14c0-2.8-2-5-5-5 0 2.8 2 5 5 5',
   milestone_due: 'M5 21V4M5 4h11l-2 4 2 4H5',
   package_expiry: TI.clock,
   planned_package: 'M3 13l2.5-7h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 13h5l1.5 2.5h5L16 13h5',
-  order_settle: TI.order,
-  deposit_due: TI.deposit,
 };
-const REC_ICON: Record<Recommendation['kind'], string> = { buy: TI.buy, redeem: TI.redeem, collect_deposit: TI.cash, settle: TI.order, rebalance: TI.target };
+const eventIcon = (k: ForecastEvent['kind']) => EVENT_ICONS[k] ?? TI.deposit;
+const REC_ICONS: Partial<Record<Recommendation['kind'], string>> = { buy: TI.buy, redeem: TI.redeem, rebalance: TI.target };
+const recIcon = (k: Recommendation['kind']) => REC_ICONS[k] ?? TI.cash;
+/** A projected «نیاز به خرید»: nothing goes negative — the gap must be bought in advance. */
+const NEED_AHEAD = 'تا پایان افق تقاضا از موجودی بیشتر می‌شود؛ از پیش بخرید تا چیزی در صف تأمین نماند';
 
 type Sel = { type: 'fund' | 'event'; id: string } | null;
 
@@ -58,21 +62,31 @@ export function ForecastView({ plan, positions, onTargets }: { plan: TreasuryPla
     {
       key: 'fund', label: 'صندوق', width: 'minmax(0, 1.3fr)', render: (f) => {
         const u = fundUi(f.fundId);
-        return <Ident lead={<Tile d={u.d} tone={u.tone} />} title={posOf(f.fundId)?.name ?? nameOf(f.fundId)} sub={`پوشش اکنون ${daysText(f.coverageDays)}`} />;
+        return <Ident lead={<Tile d={u.d} tone={u.tone} />} title={posOf(f.fundId)?.name ?? nameOf(f.fundId)} sub={posOf(f.fundId)?.target ? `حداقل هدف ${amt(posOf(f.fundId)!.target!.minFreeValue)}` : 'بدون هدف'} />;
       },
     },
-    { key: 'now', label: 'آزاد اکنون', width: '104px', col: true, render: (f) => <><span className="num">{amt(f.availableNow)}</span>{f.pendingBuy > 0 && <span className="sm num">+{amt(f.pendingBuy)} در راه</span>}</> },
+    {
+      key: 'now', label: 'آزاد اکنون', width: '104px', col: true, render: (f) => {
+        const queued = posOf(f.fundId)?.queuedValue ?? 0;
+        return (
+          <>
+            <span className="num">{amt(f.availableNow)}</span>
+            {queued > 0 && <span className="sm num">−{amt(queued)} صف</span>}
+          </>
+        );
+      },
+    },
     { key: 'flow', label: 'تقاضا / برگشت', width: '116px', col: true, render: (f) => <><span className="num">{sAmt(-f.demand)}</span><span className="sm num">{sAmt(f.returns)}</span></> },
     {
       key: 'end', label: `پایان ${faDigits(h)} روز`, width: '124px', col: true, render: (f) => (
         <>
-          <span className="num" style={{ fontWeight: 600, color: f.projectedEnd < 0 ? 'var(--error-text)' : undefined }}>{amt(f.projectedEnd)}</span>
+          <EndValue v={f.projectedEnd} />
           {f.minTarget > 0 && <Meter value={f.projectedEnd / f.minTarget} tone={STOCK_STATE[f.state].tone} width={88} thin label={`پایان افق نسبت به حداقل هدف: ${faDigits(Math.max(0, Math.round((f.projectedEnd / f.minTarget) * 100)))}٪`} />}
         </>
       ),
     },
     { key: 'min', label: 'حداقل هدف', width: '96px', render: (f) => (f.minTarget > 0 ? <span className="num mute">{amt(f.minTarget)}</span> : <span style={{ color: 'var(--text-disabled)' }}>بدون هدف</span>) },
-    { key: 'state', label: 'وضعیت', width: '88px', render: (f) => <Pill tone={STOCK_STATE[f.state].tone} dot title={STOCK_STATE[f.state].hint}>{STOCK_STATE[f.state].label}</Pill> },
+    { key: 'state', label: 'وضعیت', width: '88px', render: (f) => <Pill tone={STOCK_STATE[f.state].tone} dot title={isNeed(f.state) ? NEED_AHEAD : STOCK_STATE[f.state].hint}>{STOCK_STATE[f.state].label}</Pill> },
     {
       key: 'act', label: '', width: '140px', align: 'end', render: (f) => f.suggestion
         ? (
@@ -92,7 +106,10 @@ export function ForecastView({ plan, positions, onTargets }: { plan: TreasuryPla
     <>
       <div className="nm-grid side">
         <FlowCard plan={plan} />
-        <RecsCard recs={plan.recommendations} onOrder={orderRec} />
+        <div className="nm-stack">
+          <RialCard plan={plan} />
+          <RecsCard recs={plan.recommendations} onOrder={orderRec} />
+        </div>
       </div>
 
       <Card flush title={`موجودی آزاد صندوق‌ها تا ${faDigits(h)} روز آینده`} count={plan.perFund.length} sub={needs ? `${faDigits(needs)} صندوق نیاز به سفارش دارد` : 'موجودی همه‌ی صندوق‌ها در محدوده‌ی هدف است'}>
@@ -101,7 +118,7 @@ export function ForecastView({ plan, positions, onTargets }: { plan: TreasuryPla
           onRowClick={(f) => toggle('fund', f.fundId)} selectedKey={sel?.type === 'fund' ? sel.id : null}
           empty={<Empty icon={TI.stock} title="صندوق فعالی برای پیش‌بینی نیست" />} minWidth={880}
         />
-        <div className="nm-tfoot"><span>پایان افق = آزاد اکنون + صدور در راه − تقاضا + برگشت · حداقل هدف = بیشترِ «حداقل موجودی» و «تقاضای روزانه × روزهای پوشش»</span></div>
+        <div className="nm-tfoot"><span>پایان افق = آزاد اکنون − صف تأمین − تقاضا + برگشت؛ کمتر از صفر یعنی «نیاز به خرید» · حداقل هدف = «حداقل موجودی» هر صندوق</span></div>
       </Card>
 
       <div className="nm-grid side">
@@ -128,6 +145,12 @@ export function ForecastView({ plan, positions, onTargets }: { plan: TreasuryPla
       )}
     </>
   );
+}
+
+/** Projected free stock at the end of the horizon; a gap reads «نیاز به خرید» (nothing goes negative). */
+function EndValue({ v }: { v: number }) {
+  if (v >= 0) return <span className="num" style={{ fontWeight: 600 }}>{amt(v)}</span>;
+  return <span className="num" style={{ fontWeight: 600, color: 'var(--error-text)' }} title={NEED_AHEAD}>نیاز {amt(-v)}</span>;
 }
 
 // ───────────── weekly flow ─────────────
@@ -170,6 +193,59 @@ function FlowCard({ plan }: { plan: TreasuryPlan }) {
   );
 }
 
+// ───────────── Namadno's free rial ─────────────
+
+/**
+ * «ریال آزاد تا N روز»: Namadno's free rial now − the suggested buy orders, against the minimum target.
+ * Organizations' deposit receipts are not part of it: once approved they go to the organizations' rial accounts and
+ * «ریال رزرو», not to Namadno's free rial (that rises later, when recipients accept and buy fund units from our stock).
+ */
+function RialCard({ plan }: { plan: TreasuryPlan }) {
+  const rq = useRialTreasury(30);
+  const h = plan.horizon;
+  const buys = plan.recommendations.filter((r) => r.kind === 'buy');
+  // what can be ordered now (already capped by free rial above its minimum); the rest of the horizon's need waits
+  const orderNow = buys.filter((r) => r.action.type === 'order');
+  const buySum = orderNow.reduce((a, r) => a + (r.action.type === 'order' ? r.action.amount : 0), 0);
+  const needAll = buys.reduce((a, r) => a + (r.horizonAmount ?? r.amount ?? 0), 0);
+  const main = rq.data?.main;
+  const now = main?.available ?? 0;
+  const end = now - buySum;
+  const min = main?.target?.minFreeValue;
+  const max = main?.target?.maxFreeValue;
+  // nothing goes negative: suggested buys beyond the free rial wait — «نیاز به تأمین ریال» (state need_buy)
+  const state = end < 0 ? 'need_buy' : min != null && end < min ? 'below' : max != null && end > max ? 'surplus' : 'ok';
+  const st = state === 'need_buy' ? { ...STOCK_STATE.need_buy, label: 'نیاز به تأمین ریال' } : STOCK_STATE[state];
+  return (
+    <Card title={`ریال آزاد تا ${faDigits(h)} روز`} sub="ریال آزاد نمادنو" actions={main ? <Pill tone={st.tone} dot>{st.label}</Pill> : undefined}>
+      {rq.isError ? <Note tone="err">ریال آزاد دریافت نشد.</Note> : !main ? <Skel h={120} /> : (
+        <>
+          <KeyStats items={[['اکنون', amt(now)], [end < 0 ? 'نیاز به تأمین' : `پایان ${faDigits(h)} روز`, amt(Math.abs(end))], ['حداقل هدف', min != null ? amt(min) : '—']]} />
+          <KV rows={[
+            ['ریال آزاد اکنون', <span key="n" className="num">{tm(now)}</span>],
+            [`صدور پیشنهادی اکنون (${faDigits(orderNow.length)} صندوق)`, <span key="b" className="num">{buySum > 0 ? sAmt(-buySum) : '۰'}</span>],
+            [<b key="k">{end < 0 ? 'نیاز به تأمین ریال' : 'ریال آزاد پایان افق'}</b>, <b key="e" className="num" style={{ fontWeight: 600, color: end < 0 ? 'var(--error-text)' : undefined }}>{tm(Math.abs(end))}</b>],
+          ]} />
+          {min != null && min > 0 && <Meter value={Math.max(0, end) / min} tone={st.tone} thin label={`ریال آزاد پایان افق نسبت به حداقل هدف: ${faDigits(Math.max(0, Math.round((end / min) * 100)))}٪`} />}
+          {state === 'need_buy'
+            ? <Note tone="err" icon={RIAL_UI.rial.d}>صدورهای پیشنهادی از ریال آزاد نمادنو بیشتر است؛ صدور را کمتر یا مرحله‌ای ثبت کنید، یا ریال آزاد را از پیش با ابطال تأمین کنید.</Note>
+            : state === 'below'
+              ? <Note tone="warn" icon={RIAL_UI.rial.d}>با این پیش‌بینی ریال آزاد پایان افق کمتر از حداقل {amt(min ?? 0)} است؛ صدور را کمتر یا مرحله‌ای ثبت کنید.</Note>
+              : null}
+          {needAll > buySum + 1 && (
+            <span className="mute" style={{ fontSize: 12, lineHeight: 1.7 }}>
+              کل نیاز صدور {faDigits(h)} روز آینده حدود {amt(needAll)} است؛ باقی آن با بالا رفتن ریال آزاد در نوبت‌های بعد ثبت می‌شود.
+            </span>
+          )}
+          <span className="mute" style={{ fontSize: 12, lineHeight: 1.7 }}>
+            فیش‌های واریز سازمان‌ها پس از تأیید به حساب ریالی همان سازمان‌ها و «ریال رزرو» می‌رود، نه ریال آزاد نمادنو؛ ریال آزاد با پذیرش گیرندگان و خرید سهم صندوق‌ها از موجودی بالا می‌رود.
+          </span>
+        </>
+      )}
+    </Card>
+  );
+}
+
 // ───────────── recommendations ─────────────
 
 function RecsCard({ recs, onOrder }: { recs: Recommendation[]; onOrder: (r: Recommendation) => void }) {
@@ -183,7 +259,7 @@ function RecsCard({ recs, onOrder }: { recs: Recommendation[]; onOrder: (r: Reco
             const sv = SEVERITY[r.severity];
             return (
               <div key={r.id} className="nm-li" style={{ alignItems: 'flex-start', padding: '12px 0' }}>
-                <Tile d={REC_ICON[r.kind]} tone={sv.tone} />
+                <Tile d={recIcon(r.kind)} tone={sv.tone} />
                 <span className="nm-col" style={{ gap: 4 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     <b className="nm-el">{r.title}</b>
@@ -333,14 +409,14 @@ function FundInspector({ f, pos, horizon, events, onClose, onOrder, onTargets, o
         sub={pos ? <>{pos.symbol} · تسویه <span className="num ltr">{pos.settlement}</span></> : undefined}
         pills={<>{nowSt && <Pill tone={nowSt.tone} dot>اکنون: {nowSt.label}</Pill>}<Pill tone={st.tone} dot>پایان افق: {st.label}</Pill></>}
       />
-      <KeyStats items={[['آزاد اکنون', amt(f.availableNow)], [`پایان ${faDigits(horizon)} روز`, amt(f.projectedEnd)], ['پوشش اکنون', daysText(f.coverageDays)]]} />
+      <KeyStats items={[['آزاد اکنون', amt(f.availableNow)], [f.projectedEnd < 0 ? 'نیاز به خرید' : `پایان ${faDigits(horizon)} روز`, amt(Math.abs(f.projectedEnd))], ['حداقل هدف', f.minTarget > 0 ? amt(f.minTarget) : '—']]} />
       <Section title={`جریان موجودی آزاد در ${faDigits(horizon)} روز`}>
         <KV rows={[
           ['موجودی آزاد اکنون', <span key="a" className="num">{tm(f.availableNow)}</span>],
-          ['صدور در راه', <span key="p" className="num">{sAmt(f.pendingBuy)}</span>],
+          ...((pos?.queuedValue ?? 0) > 0 ? [['در صف تأمین', <span key="q" className="num">{sAmt(-(pos?.queuedValue ?? 0))}</span>] as [string, React.ReactNode]] : []),
           ['تقاضا (بسته‌ها و خرید کاربران)', <span key="d" className="num">{sAmt(-f.demand)}</span>],
           ['برگشت به موجودی', <span key="r" className="num">{sAmt(f.returns)}</span>],
-          ['موجودی پایان افق', <b key="e" className="num" style={{ fontWeight: 600, color: f.projectedEnd < 0 ? 'var(--error-text)' : undefined }}>{tm(f.projectedEnd)}</b>],
+          [f.projectedEnd < 0 ? 'نیاز به خرید تا پایان افق' : 'موجودی پایان افق', <b key="e" className="num" style={{ fontWeight: 600, color: f.projectedEnd < 0 ? 'var(--error-text)' : undefined }}>{tm(Math.abs(f.projectedEnd))}</b>],
         ]} />
       </Section>
       <Section title="هدف موجودی">
@@ -348,11 +424,9 @@ function FundInspector({ f, pos, horizon, events, onClose, onOrder, onTargets, o
           <>
             <KV rows={[
               ['حداقل موجودی', <span key="m" className="num">{tm(pos.target.minFreeValue)}</span>],
-              ['روزهای پوشش هدف', <span key="d" className="num">{faDigits(pos.target.targetDays)} روز</span>],
               ['سقف موجودی', <span key="x" className="num">{pos.target.maxFreeValue ? tm(pos.target.maxFreeValue) : '—'}</span>],
-              ['حداقل مؤثر', <span key="e" className="num">{tm(f.minTarget)}</span>],
             ]} />
-            {f.minTarget > 0 && <Meter value={f.projectedEnd / f.minTarget} tone={st.tone} label={`پایان افق نسبت به حداقل هدف`} />}
+            {f.minTarget > 0 && <Meter value={Math.max(0, f.projectedEnd) / f.minTarget} tone={st.tone} label={`پایان افق نسبت به حداقل هدف`} />}
           </>
         ) : (
           <Note tone="mute" action={<button type="button" className="nm-btn sm text" onClick={onTargets}>تعیین هدف</button>}>برای این صندوق هدف موجودی تعیین نشده است.</Note>
@@ -363,7 +437,7 @@ function FundInspector({ f, pos, horizon, events, onClose, onOrder, onTargets, o
         <Section title="رویدادهای این صندوق">
           <List>
             {events.slice(0, 5).map((e) => (
-              <ListRow key={e.id} onClick={() => onEvent(e)} lead={<Tile d={EVENT_ICON[e.kind]} tone={EVENT_KIND[e.kind].tone} size="sm" />}
+              <ListRow key={e.id} onClick={() => onEvent(e)} lead={<Tile d={eventIcon(e.kind)} tone={EVENT_KIND[e.kind].tone} size="sm" />}
                 title={e.title} sub={`${jDayMonth(e.at)} · ${untilText(e.at)}`} trail={<span className="num">{amt(e.value)}</span>} />
             ))}
           </List>
@@ -378,7 +452,7 @@ function EventInspector({ e, a, fundName, onClose }: { e: ForecastEvent; a: Trea
   const eff = eventEffect(e, a);
   return (
     <Inspector open onClose={onClose} title="رویداد پیش‌رو" label={`جزئیات رویداد ${e.title}`} href={e.href} hrefLabel="مشاهده">
-      <Who lead={<Tile d={EVENT_ICON[e.kind]} tone={k.tone} size="xl" />} title={e.title} sub={<><span className="num">{jDate(e.at)}</span> · <span className="num">{time(e.at)}</span> · {untilText(e.at)}</>} pills={<Pill tone={k.tone}>{k.label}</Pill>} />
+      <Who lead={<Tile d={eventIcon(e.kind)} tone={k.tone} size="xl" />} title={e.title} sub={<><span className="num">{jDate(e.at)}</span> · <span className="num">{time(e.at)}</span> · {untilText(e.at)}</>} pills={<Pill tone={k.tone}>{k.label}</Pill>} />
       <KeyStats items={e.count ? [['مبلغ', amt(e.value)], ['گیرندگان', `${faDigits(e.count)} نفر`], ['تاریخ', jDayMonth(e.at)]] : [['مبلغ', amt(e.value)], ['تاریخ', jDayMonth(e.at)]]} />
       <Section title="اثر بر خزانه">
         <Note tone="mute">{eff.text}</Note>

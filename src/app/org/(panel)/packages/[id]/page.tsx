@@ -4,11 +4,21 @@
  * Regular package: recipients table (status tabs, search, remind) + accepted allocation, package facts and timeline.
  * Milestone contract: the current step (approve / «بازپس‌گیری» with a reason, or a note when it is released automatically),
  * all steps with their due date and «نیاز به تأیید» (editable until settled, saved at once), contract facts and timeline.
+ * Money wording: a sent package's amount stays blocked in the organization's rial account («حساب ریالی سازمان») until recipients accept.
+ * «در انتظار تأیید واریز» (`awaiting_payment`): in the queue with a deposit receipt; recipients are not notified and nothing is
+ * blocked yet (only what «آزاد» covered is set aside). The «پرداخت»
+ * card shows the latest receipt of the package (GET /org/account entries by packageId: preview, amount, description, state);
+ * a rejected one shows the reason, «بارگذاری فیش تازه» (AnnounceDepositDialog with packageId) and «لغو بسته».
+ * «در انتظار تأمین موجودی» (`awaiting_stock`): paid (its whole amount set aside from «آزاد»), but Namadno's fund stock is short;
+ * recipients are not notified yet and it is sent automatically once the stock arrives, at the latest by `stockEta`. The timeline
+ * shows a «تأمین موجودی» step; «لغو بسته» (heading) returns the set-aside amount to «آزاد». No new receipt is asked for.
  */
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCancelPackage, useOrgMe, useOrgPackage, useReleaseMilestone } from '@/api/org';
+import { useOrgAccount, type OrgAccountEntry } from '@/api/org-money-extra';
 import { usePackageInsights, useReclaimMilestone, useRemindPackage, useUpdateMilestoneStep, type PackageInsights, type PackageRecipientInsight } from '@/api/org-packages-extra';
 import {
   Allocation, Ava, BigNum, Card, Confirm, Dialog, Empty, ErrorBlock, Field, FreeLocked, Ident, KV, List, ListRow, Note, PageHeading, Pill,
@@ -17,13 +27,16 @@ import {
 } from '@/components/panel/kit';
 import { DateInput } from '@/components/ui/DateInput';
 import { Icon } from '@/components/ui/Icon';
+import { ReceiptView } from '@/components/ui/Receipt';
 import { useToast } from '@/components/ui/Toast';
+import { AnnounceDepositDialog } from '@/components/org/money/AnnounceDepositDialog';
+import { OM, entryState, latestReceiptFor } from '@/components/org/money/meta';
 import { LockTag, StepMark, type StepState } from '@/components/org/packages/Stepper';
 import { I, allocationText, isAutoStep, milestoneStats, parseJalali, perPersonText, reasonMeta, splitCompact, statusLabel, type Tone as MetaTone } from '@/components/org/packages/meta';
 import { errMsg } from '@/components/org/packages/ui';
 import { LOCK_META } from '@/lib/locks';
 import { routes } from '@/lib/routes';
-import { enDigits, faDigits, jDate, jDayMonth, money, relTime, time } from '@/lib/format';
+import { enDigits, faDigits, jDate, jDateTime, jDayMonth, money, relTime, time } from '@/lib/format';
 import { now } from '@/lib/clock';
 import type { AllocationSplit, MilestoneStep, OrgPackage } from '@/types/domain';
 
@@ -51,6 +64,7 @@ export default function OrgPackageDetailPage() {
   const insQ = usePackageInsights(id);
   const ins = insQ.data;
   const { data: me } = useOrgMe();
+  const acctQ = useOrgAccount();
   const release = useReleaseMilestone();
   const cancel = useCancelPackage();
   const remind = useRemindPackage();
@@ -58,6 +72,7 @@ export default function OrgPackageDetailPage() {
   const [tab, setTab] = useState<RTab>('all');
   const [q, setQ] = useState('');
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [renewOpen, setRenewOpen] = useState(false);
 
   const recipients = useMemo(() => ins?.recipients ?? [], [ins]);
   const text = q.trim();
@@ -82,6 +97,16 @@ export default function OrgPackageDetailPage() {
   const isMs = pkg.lockPolicy.type === 'milestone';
   const isDraft = pkg.status === 'draft';
   const isSent = pkg.status === 'sent';
+  const awaiting = pkg.status === 'awaiting_payment';
+  /** Paid, waiting for Namadno's fund stock (sent automatically at the latest by `stockEta`). */
+  const stockWait = pkg.status === 'awaiting_stock';
+  const queued = awaiting || stockWait;
+  /** «۱۸ آبان · ۰۹:۰۰» — the latest promised send time of a package waiting for stock. */
+  const etaShort = pkg.stockEta ? `${jDayMonth(pkg.stockEta)} · ${time(pkg.stockEta)}` : '';
+  const etaLong = pkg.stockEta ? jDateTime(pkg.stockEta) : '';
+  /** Latest deposit receipt of this package (packages funded from «آزاد» have none). */
+  const rc = latestReceiptFor(acctQ.data?.entries, pkg.id);
+  const rcRejected = rc?.status === 'rejected';
   const rm = reasonMeta(pkg.reason);
   const sl = statusLabel(pkg);
   const n = pkg.recipients.length;
@@ -108,15 +133,39 @@ export default function OrgPackageDetailPage() {
   const lck = splitCompact(lockAmt);
 
   // ───── timeline ─────
+  /** «تأیید فیش واریز توسط نمادنو» — only for packages registered with a receipt. */
+  const payStep: TimelineStep | null = awaiting || rc ? {
+    label: 'تأیید فیش واریز توسط نمادنو',
+    sub: !rc ? (pkg.submittedAt ? `ثبت ${jDate(pkg.submittedAt)} · در انتظار فیش` : 'در انتظار فیش')
+      : rc.status === 'done' ? `${jDate(rc.receivedAt ?? rc.at)} · تأیید شد`
+      : rc.status === 'rejected' ? `فیش رد شد${rc.rejectReason ? ` · ${rc.rejectReason}` : ''}`
+      : `ثبت ${jDate(rc.at)} · در انتظار تأیید نمادنو`,
+    state: rc?.status === 'done' && !awaiting ? 'done' : awaiting ? 'current' : 'pending',
+  } : null;
+  /** «تأمین موجودی» — only for packages that waited (or wait) for Namadno's fund stock. */
+  const stockStep: TimelineStep | null = stockWait || pkg.stockQueuedAt ? {
+    label: 'تأمین موجودی',
+    sub: stockWait ? `ثبت ${jDate(pkg.stockQueuedAt ?? pkg.createdAt)} · موجودی صندوق نمادنو در حال تأمین است`
+      : pkg.sentAt ? `${jDate(pkg.sentAt)} · تأمین شد` : 'لغو شد',
+    state: stockWait ? 'current' : pkg.sentAt ? 'done' : 'pending',
+  } : null;
+  const sendSub = pkg.sentAt ? `${jDate(pkg.sentAt)} · ${time(pkg.sentAt)}` : awaiting ? 'پس از تأیید فیش' : stockWait ? (etaShort ? `تا ${etaShort}` : 'پس از تأمین موجودی') : null;
   const steps: TimelineStep[] = isMs ? [
     { label: 'ایجاد قرارداد', sub: `${jDate(pkg.createdAt)} · ${admin}`, state: 'done' },
-    { label: 'ارسال به کارمند', sub: pkg.sentAt ? `${jDate(pkg.sentAt)} · ${time(pkg.sentAt)}` : 'در انتظار ارسال', state: pkg.sentAt ? 'done' : 'current' },
+    ...(payStep ? [payStep] : []),
+    ...(stockStep ? [stockStep] : []),
+    { label: 'ارسال به کارمند', sub: sendSub ?? 'در انتظار ارسال', state: pkg.sentAt ? 'done' : queued ? 'pending' : 'current' },
     { label: 'پذیرش کارمند', sub: acc.length ? `${jDate(acc[0].acceptedAt ?? pkg.sentAt ?? pkg.createdAt)} · ${money(acc.reduce((s, r) => s + r.amount, 0))} تومان رزرو شد` : 'در انتظار پذیرش', state: acc.length === n && n ? 'done' : pkg.sentAt ? 'current' : 'pending' },
     { label: LOCK_META.milestone.label, sub: `${faDigits(ms.relN)} از ${faDigits(stepCount)} مرحله · ${faDigits(ms.relPct)}٪ آزاد شده${ms.backN ? ` · ${faDigits(ms.backN)} بازپس‌گرفته` : ''}`, state: ms.donePct >= 100 ? 'done' : acc.length ? 'current' : 'pending' },
   ] : [
     { label: 'ایجاد بسته', sub: `${jDate(pkg.createdAt)} · ${admin}`, state: 'done' },
-    { label: 'کنترل بودجه', sub: pkg.sentAt ? `${jDate(pkg.sentAt)} · تأیید شد` : isDraft ? 'پیش از ارسال' : 'لغو شد', state: pkg.sentAt ? 'done' : isDraft ? 'current' : 'pending' },
-    { label: 'ارسال به کارکنان', sub: pkg.sentAt ? `${jDate(pkg.sentAt)} · ${time(pkg.sentAt)}` : 'ارسال نشده', state: pkg.sentAt ? 'done' : 'pending' },
+    payStep ?? {
+      label: 'کنترل حساب ریالی و سقف بودجه',
+      sub: pkg.sentAt || stockWait ? `${jDate(pkg.stockQueuedAt ?? pkg.sentAt ?? pkg.createdAt)} · تأیید شد` : isDraft ? 'پیش از ارسال' : 'لغو شد',
+      state: pkg.sentAt || stockWait ? 'done' : isDraft ? 'current' : 'pending',
+    },
+    ...(stockStep ? [stockStep] : []),
+    { label: 'ارسال به کارکنان', sub: sendSub ?? 'ارسال نشده', state: pkg.sentAt ? 'done' : 'pending' },
     { label: 'تأیید دریافت کارکنان', sub: pkg.sentAt ? `${faDigits(acc.length)} از ${faDigits(n)} · ${acc.length === n ? 'تکمیل' : 'در جریان'}` : '—', state: pkg.sentAt ? (acc.length === n ? 'done' : 'current') : 'pending' },
   ];
 
@@ -128,7 +177,11 @@ export default function OrgPackageDetailPage() {
     onError: (e) => toast(errMsg(e), 'error'),
   });
   const doCancel = () => cancel.mutate(pkg.id, {
-    onSuccess: () => { setConfirmCancel(false); toast(`پیش‌نویس «${pkg.title}» لغو شد`); router.push(routes.org.packages); },
+    onSuccess: () => {
+      setConfirmCancel(false);
+      if (isDraft) { toast(`پیش‌نویس «${pkg.title}» لغو شد`); router.push(routes.org.packages); }
+      else toast(`بسته‌ی «${pkg.title}» لغو شد؛ برای همکاران ارسال نمی‌شود`);
+    },
     onError: (e) => { setConfirmCancel(false); toast(errMsg(e), 'error'); },
   });
 
@@ -144,10 +197,17 @@ export default function OrgPackageDetailPage() {
         : ms.donePct >= 100 ? (ms.backN ? 'همه‌ی مراحل تعیین تکلیف شد' : 'همه‌ی مراحل آزاد شد') : 'مرحله‌ای در انتظار نیست',
     },
   ] : [
-    { label: 'گیرندگان', value: faDigits(n), unit: 'نفر', note: `${ins ? `${faDigits(units)} واحد · ` : ''}${pkg.sentAt ? 'ارسال ' + relTime(pkg.sentAt, now()) : 'ارسال نشده'}` },
+    { label: 'گیرندگان', value: faDigits(n), unit: 'نفر', note: `${ins ? `${faDigits(units)} واحد · ` : ''}${pkg.sentAt ? 'ارسال ' + relTime(pkg.sentAt, now()) : awaiting ? 'ارسال پس از تأیید فیش' : stockWait ? 'ارسال پس از تأمین موجودی' : 'ارسال نشده'}` },
     { label: 'دریافت‌شده', value: faDigits(acc.length), unit: 'نفر', note: acceptedToday ? `${faDigits(accPct)}٪ · +${faDigits(acceptedToday)} امروز` : `${faDigits(accPct)}٪ پذیرش`, trend: acceptedToday ? 'up' : undefined },
-    { label: 'در انتظار پذیرش', value: faDigits(pend.length), unit: 'نفر', note: `${cmp(pendSum)} تومان · ${pkg.expiresAt ? 'مهلت تا ' + jDayMonth(pkg.expiresAt) : '۳۰ روز مهلت'}`, trend: isSent && pend.length ? 'warn' : undefined },
-    { label: 'جمع بسته', value: total.value, unit: `${total.unit} تومان`.trim(), note: isDraft ? 'پیش‌نویس' : 'رزرو از حساب سازمان' },
+    awaiting
+      ? { label: 'در صف', value: faDigits(n), unit: 'نفر', note: 'تا تأیید فیش ارسال نمی‌شود' }
+      : stockWait
+      ? { label: 'در صف', value: faDigits(n), unit: 'نفر', note: etaShort ? `ارسال تا ${etaShort}` : 'ارسال پس از تأمین موجودی' }
+      : { label: 'در انتظار پذیرش', value: faDigits(pend.length), unit: 'نفر', note: `${cmp(pendSum)} تومان · ${pkg.expiresAt ? 'مهلت تا ' + jDayMonth(pkg.expiresAt) : '۳۰ روز مهلت'}`, trend: isSent && pend.length ? 'warn' : undefined },
+    {
+      label: 'جمع بسته', value: total.value, unit: `${total.unit} تومان`.trim(),
+      note: isDraft ? 'پیش‌نویس' : awaiting ? 'در صف تأیید فیش · چیزی بلاک نشده' : stockWait ? 'در صف تأمین موجودی · کنار گذاشته از آزاد' : pkg.status === 'cancelled' ? 'لغو شد' : pend.length ? 'بلاک در حساب ریالی سازمان تا دریافت همکاران' : acc.length < n ? 'سهم‌های دریافت‌نشده به «آزاد» برگشت' : 'پرداخت‌شده به همکاران',
+    },
   ];
 
   const recCols: Column<PackageRecipientInsight>[] = [
@@ -167,7 +227,7 @@ export default function OrgPackageDetailPage() {
     },
     {
       key: 'st', label: 'وضعیت', width: '112px', col: true, render: (r) => {
-        const [l, t] = isDraft ? ['در انتظار ارسال', 'neutral' as Tone] : pkg.status === 'cancelled' ? ['ارسال نشد', 'neutral' as Tone] : RSTATUS[r.status];
+        const [l, t] = isDraft || queued ? ['در انتظار ارسال', 'neutral' as Tone] : pkg.status === 'cancelled' ? ['ارسال نشد', 'neutral' as Tone] : RSTATUS[r.status];
         return <><Pill tone={t} dot>{l}</Pill>{r.acceptedAt && <span className="num sm" title="تاریخ پذیرش">{jDate(r.acceptedAt)}</span>}</>;
       },
     },
@@ -177,6 +237,13 @@ export default function OrgPackageDetailPage() {
         : <button type="button" className="nm-btn sm line" onClick={() => remindOne(r)} disabled={remind.isPending}>یادآوری</button>),
     }] : []),
   ];
+
+  const payCard = awaiting || rc ? (
+    <PaymentCard
+      entry={rc} awaiting={awaiting} stockWait={stockWait} cancelled={pkg.status === 'cancelled'} loading={acctQ.isLoading}
+      onRenew={() => setRenewOpen(true)} onCancel={() => setConfirmCancel(true)} busy={cancel.isPending} funding={pkg.funding}
+    />
+  ) : null;
 
   return (
     <>
@@ -192,6 +259,9 @@ export default function OrgPackageDetailPage() {
             <Icon d={I.mail} size={17} />{!ins || unreminded.length ? 'یادآوری به همه' : 'یادآوری ارسال شد'}
           </button>
         )}
+        {stockWait && (
+          <button type="button" className="nm-btn line danger" onClick={() => setConfirmCancel(true)} disabled={cancel.isPending}><Icon d={I.ban} size={17} />لغو بسته</button>
+        )}
         {isDraft && (
           <>
             <button type="button" className="nm-btn line danger" onClick={() => setConfirmCancel(true)}><Icon d={I.ban} size={17} />لغو پیش‌نویس</button>
@@ -203,11 +273,23 @@ export default function OrgPackageDetailPage() {
       <StatStrip items={stats} />
 
       {pkg.status === 'cancelled' && <Note tone="mute" icon={I.ban}>این بسته لغو شده و برای کارکنان ارسال نمی‌شود.</Note>}
+      {awaiting && (
+        <Note tone={rcRejected ? 'err' : 'warn'} icon={rcRejected ? undefined : OM.clock}>
+          {rcRejected
+            ? 'فیش واریز این بسته رد شد؛ فیش تازه بارگذاری کنید یا بسته را لغو کنید. همکاران هنوز از این بسته باخبر نشده‌اند.'
+            : 'این بسته در صف تأیید فیش واریز است؛ تا تأیید نمادنو همکاران باخبر نمی‌شوند و چیزی بلاک نمی‌شود. پس از تأیید برای آن‌ها ارسال می‌شود.'}
+        </Note>
+      )}
+      {stockWait && (
+        <Note tone="info" icon={OM.clock}>
+          این بسته پرداخت شده و در صف تأمین موجودی است؛ همکاران هنوز باخبر نشده‌اند و {etaLong ? <>حداکثر تا <span className="num">{etaLong}</span></> : 'پس از تأمین موجودی'} برای آن‌ها ارسال می‌شود.
+        </Note>
+      )}
 
       {isMs ? (
         <MilestoneView
           pkg={pkg} ins={ins} firstName={firstName} relAmt={relAmt} lockAmt={lockAmt} steps={steps}
-          onApprove={approve} busy={release.isPending}
+          onApprove={approve} busy={release.isPending} pay={payCard}
         />
       ) : (
         <div className="nm-grid side">
@@ -229,6 +311,7 @@ export default function OrgPackageDetailPage() {
             <TableFoot shown={pg.rows.length} total={filtered.length} unit="گیرنده" page={pg.page} pages={pg.pages} onPage={pg.setPage} />
           </Card>
           <div className="nm-stack">
+            {payCard}
             <AllocationCard allocation={ins?.allocation} loading={insQ.isLoading} />
             <FactsCard pkg={pkg} allocation={ins?.allocation} />
             <Card title="روند بسته"><Timeline steps={steps} /></Card>
@@ -238,10 +321,73 @@ export default function OrgPackageDetailPage() {
 
       <Confirm
         open={confirmCancel} onClose={() => setConfirmCancel(false)} danger busy={cancel.isPending} onConfirm={doCancel}
-        title="لغو پیش‌نویس" confirmLabel={cancel.isPending ? 'در حال لغو…' : 'لغو پیش‌نویس'}
-        body={<span className="mute">پیش‌نویس «{pkg.title}» برای {faDigits(n)} نفر لغو می‌شود و دیگر قابل ارسال نیست. ادامه می‌دهید؟</span>}
+        title={isDraft ? 'لغو پیش‌نویس' : 'لغو بسته'} confirmLabel={cancel.isPending ? 'در حال لغو…' : isDraft ? 'لغو پیش‌نویس' : 'لغو بسته'}
+        body={isDraft
+          ? <span className="mute">پیش‌نویس «{pkg.title}» برای {faDigits(n)} نفر لغو می‌شود و دیگر قابل ارسال نیست. ادامه می‌دهید؟</span>
+          : awaiting
+            ? <span className="mute">بسته‌ی «{pkg.title}» از صف خارج و لغو می‌شود و فیش در انتظار آن هم لغو می‌شود{pkg.funding?.fromFree ? '؛ مبلغ کنار گذاشته به «آزاد» برمی‌گردد' : ''}. ادامه می‌دهید؟</span>
+            : stockWait
+            ? <span className="mute">بسته‌ی «{pkg.title}» از صف خارج و لغو می‌شود و برای {faDigits(n)} همکار ارسال نمی‌شود؛ مبلغ کنار گذاشته (<span className="num">{money(pkg.funding?.fromFree ?? pkg.total)}</span> تومان) به «آزاد» حساب ریالی سازمان برمی‌گردد. ادامه می‌دهید؟</span>
+            : <span className="mute">بسته‌ی «{pkg.title}» لغو می‌شود و برای {faDigits(n)} همکار ارسال نمی‌شود؛ مبلغ بلاک‌شده به «آزاد» حساب ریالی سازمان برمی‌گردد. ادامه می‌دهید؟</span>}
       />
+      <AnnounceDepositDialog open={renewOpen} amount={rc?.amount} minAmount={pkg.funding?.toDeposit} packageId={pkg.id} packageTitle={pkg.title} onClose={() => setRenewOpen(false)} />
     </>
+  );
+}
+
+/**
+ * «پرداخت» — the latest deposit receipt of a package registered with one: preview, amount, description and state
+ * («در انتظار تأیید نمادنو» / «رد شد» + reason / «تأیید شد»). While the package waits and the receipt is rejected (or an approved
+ * one did not cover it): «بارگذاری فیش تازه» and «لغو بسته».
+ */
+function PaymentCard({ entry, awaiting, stockWait, cancelled, loading, onRenew, onCancel, busy, funding }: {
+  entry?: OrgAccountEntry; awaiting: boolean; loading: boolean; onRenew: () => void; onCancel: () => void; busy: boolean;
+  /** Paid and waiting for Namadno's fund stock: the receipt is settled, no new one is asked for. */
+  stockWait?: boolean;
+  /** The package was cancelled (e.g. while it waited for stock after its receipt was approved). */
+  cancelled?: boolean;
+  /** How the package is paid: `fromFree` set aside from «آزاد», `toDeposit` by receipt. */
+  funding?: { fromFree: number; toDeposit: number };
+}) {
+  const st = entry ? entryState(entry) : undefined;
+  const label = entry?.status === 'expected' ? 'در انتظار تأیید نمادنو' : st?.label;
+  // a waiting package needs a new receipt when the latest one was rejected, approved without covering it, or missing
+  const renew = awaiting && !loading && (!entry || entry.status !== 'expected');
+  return (
+    <Card title="پرداخت" actions={st && <Pill tone={st.tone} dot>{label}</Pill>}>
+      {loading ? <SkeletonRows n={3} /> : entry ? (
+        <>
+          <ReceiptView receipt={entry.receipt} maxHeight={260} />
+          <KV rows={[
+            ['مبلغ فیش', <span key="a" className="num">{money(entry.amount)} تومان</span>],
+            ['زمان ثبت', <span key="t" className="num">{jDateTime(entry.at)}</span>],
+            ['توضیحات', entry.note ? <span key="n" className="num">{faDigits(entry.note)}</span> : <span key="n" className="mute">—</span>],
+            ...((awaiting || stockWait) && funding && funding.fromFree > 0 ? [['کنار گذاشته از «آزاد»', <span key="f" className="num">{money(funding.fromFree)} تومان</span>] as [string, ReactNode]] : []),
+            ...(entry.status === 'done' ? [['تأیید', <span key="d" className="num">{jDateTime(entry.receivedAt ?? entry.at)}</span>] as [string, ReactNode]] : []),
+          ]} />
+          {entry.status === 'expected' && (
+            <Note tone="mute" icon={OM.clock}>نمادنو فیش را بررسی می‌کند؛ پس از تأیید، مبلغ به حساب ریالی اضافه و بسته برای همکاران ارسال می‌شود. تا آن زمان بسته در صف می‌ماند.</Note>
+          )}
+          {entry.status === 'rejected' && (
+            <Note tone="err">فیش رد شد{entry.rejectedAt ? <> · <span className="num">{jDate(entry.rejectedAt)}</span></> : null}{entry.rejectReason ? `: ${entry.rejectReason}` : '.'}{awaiting ? ' بسته تا فیش تازه و تأیید آن در صف می‌ماند.' : ''}</Note>
+          )}
+          {entry.status === 'done' && awaiting && (
+            <Note tone="warn">فیش تأیید شد، اما «آزاد» حساب ریالی هنوز کل بسته را پوشش نمی‌دهد؛ برای باقی‌مانده فیش تازه بارگذاری کنید.</Note>
+          )}
+          {entry.status === 'done' && stockWait && <Note tone="mute" icon={OM.clock}>فیش تأیید شد؛ بسته پس از تأمین موجودی نمادنو برای همکاران ارسال می‌شود.</Note>}
+          {entry.status === 'done' && cancelled && <Note tone="mute">فیش تأیید شد و مبلغ آن به حساب ریالی سازمان اضافه شد؛ بسته لغو شد و برای همکاران ارسال نشد.</Note>}
+          {entry.status === 'done' && !awaiting && !stockWait && !cancelled && <Note tone="ok">فیش تأیید شد و بسته برای همکاران ارسال شد.</Note>}
+        </>
+      ) : (
+        <Empty icon={OM.deposit} title="فیشی برای این بسته ثبت نشده است" sub="برای ارسال بسته، فیش واریز مبلغ باقی‌مانده را بارگذاری کنید." />
+      )}
+      {renew && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="nm-btn" onClick={onRenew}><Icon d={OM.deposit} size={16} />بارگذاری فیش تازه</button>
+          <button type="button" className="nm-btn line danger" onClick={onCancel} disabled={busy}><Icon d={I.ban} size={16} />لغو بسته</button>
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -310,11 +456,13 @@ const timeOf = (iso?: string | null) => (iso ? new Date(iso).getTime() : NaN);
 /** A typed date is complete when day and month have two digits (or it came from the calendar). */
 const fullDate = (text: string) => /^\d{4}\/\d{2}\/\d{2}$/.test(enDigits(text).trim());
 
-function MilestoneView({ pkg, ins, firstName, relAmt, lockAmt, steps, onApprove, busy: approving }: {
+function MilestoneView({ pkg, ins, firstName, relAmt, lockAmt, steps, onApprove, busy: approving, pay }: {
   pkg: OrgPackage;
   ins?: PackageInsights;
   firstName: string; relAmt: number; lockAmt: number; steps: TimelineStep[];
   onApprove: (stepId: string, idx: number, pct: number) => void; busy: boolean;
+  /** «پرداخت» card (a package registered with a deposit receipt), on top of the side column. */
+  pay?: ReactNode;
 }) {
   const ms = milestoneStats(pkg);
   const lp = pkg.lockPolicy;
@@ -404,7 +552,7 @@ function MilestoneView({ pkg, ins, firstName, relAmt, lockAmt, steps, onApprove,
     const note = backNote.trim();
     if (note.length < 3) { setBackErr('توضیح برای کارمند را بنویسید'); return; }
     reclaim.mutate({ packageId: pkg.id, stepId: back.s.id, note }, {
-      onSuccess: () => { toast(`مرحله‌ی ${faDigits(back.i + 1)} بازپس گرفته شد · ${money(stepAmt(back.s))} تومان به سازمان برگشت`); setBack(null); },
+      onSuccess: () => { toast(`مرحله‌ی ${faDigits(back.i + 1)} بازپس گرفته شد · ${money(stepAmt(back.s))} تومان به «آزاد» حساب ریالی سازمان برگشت`); setBack(null); },
       onError: (e) => toast(errMsg(e), 'error'),
     });
   };
@@ -502,6 +650,7 @@ function MilestoneView({ pkg, ins, firstName, relAmt, lockAmt, steps, onApprove,
       </Card>
 
       <div className="nm-stack">
+        {pay}
         <Card title="مشخصات قرارداد" actions={<LockTag type="milestone" />}>
           {single ? (
             <List>
@@ -544,7 +693,7 @@ function MilestoneView({ pkg, ins, firstName, relAmt, lockAmt, steps, onApprove,
             </>
           )}
         >
-          <span className="mute">سهم این مرحله (<span className="num">{money(stepAmt(back.s))}</span> تومان) از دارایی {firstName} برداشته می‌شود و به سازمان برمی‌گردد. این کار بازگشت ندارد.</span>
+          <span className="mute">سهم این مرحله (<span className="num">{money(stepAmt(back.s))}</span> تومان) از دارایی {firstName} برداشته می‌شود و به «آزاد» حساب ریالی سازمان برمی‌گردد. این کار بازگشت ندارد.</span>
           <Field label="توضیح برای کارمند" htmlFor="ms-back-note" help="این توضیح در اعلان کارمند نمایش داده می‌شود." error={backErr || undefined}>
             <textarea
               id="ms-back-note" className="nm-ta" rows={3} value={backNote} autoFocus aria-label="توضیح برای کارمند" aria-invalid={!!backErr}

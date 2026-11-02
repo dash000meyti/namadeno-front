@@ -1,5 +1,10 @@
 'use client';
-/** /op/rules — kit settings page: general rules and lock types as settings groups, change history, sticky save bar. */
+/**
+ * /op/rules — kit settings page: general rules and lock types as settings groups, change history, sticky save bar.
+ * Withdrawals have fixed daily and monthly caps per user: within them a withdrawal goes through at once (no approval),
+ * above them it is not possible. Identity verification is the app's three automated levels (شاهکار، ثبت احوال، سجام);
+ * there are no document / KYC settings here.
+ */
 import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import { useOpRules } from '@/api/op';
@@ -19,11 +24,9 @@ import { Icon } from '@/components/ui/Icon';
 type Val = { enabled: boolean; value?: number | string };
 type RowDef =
   | { kind: 'field'; id: string; label: string; sub: string; suffix: string; w: number; min?: number; max?: number; decimals?: boolean }
-  | { kind: 'switch'; id: string; label: string; sub: string }
-  | { kind: 'chips'; id: string; label: string; sub: string; options: string[] };
-interface GroupDef { title: string; d: string; tone: Tone; rows: RowDef[] }
+  | { kind: 'switch'; id: string; label: string; sub: string };
+interface GroupDef { title: string; d: string; tone: Tone; rows: RowDef[]; footer?: string }
 
-const DOCS = ['کارت ملی', 'سلفی', 'ویدیو'];
 const GROUPS: GroupDef[] = [
   { title: 'بسته‌های دارایی', d: IC.inbox, tone: 'primary', rows: [
     { kind: 'field', id: 'r-pkg-min-amount', label: 'حداقل مبلغ بسته', sub: 'کمتر از این مبلغ ارسال نمی‌شود', suffix: 'تومان', w: 100, min: 0 },
@@ -35,15 +38,10 @@ const GROUPS: GroupDef[] = [
     { kind: 'field', id: 'r-credit-overdue', label: 'اقساط معوق مجاز', sub: 'پس از آن پشتوانه نقد می‌شود', suffix: 'قسط', w: 52, min: 0, max: 24 },
     { kind: 'switch', id: 'r-credit-auto-lock', label: 'رزرو خودکار پشتوانه', sub: 'هم‌زمان با تأیید وام یا خرید اقساطی' },
   ] },
-  { title: 'برداشت نقدی', d: IC.wallet, tone: 'info', rows: [
-    { kind: 'field', id: 'r-limit-withdraw-daily', label: 'سقف برداشت روزانه', sub: 'به ازای هر کاربر', suffix: 'تومان', w: 100, min: 0 },
-    { kind: 'switch', id: 'r-withdraw-manual', label: 'نیاز به تأیید دستی', sub: 'برداشت‌های بالای ۲۰۰ میلیون تومان' },
-  ] },
-  { title: 'احراز هویت (KYC)', d: IC.id, tone: 'warning', rows: [
-    { kind: 'chips', id: 'r-kyc-l1-docs', label: 'سطح ۱ — مشاهده', sub: 'مدارک لازم', options: DOCS },
-    { kind: 'chips', id: 'r-kyc-l2-docs', label: 'سطح ۲ — برداشت', sub: 'مدارک لازم', options: DOCS },
-    { kind: 'field', id: 'r-kyc-l2-withdraw-cap', label: 'سقف برداشت بدون تأیید دستی', sub: 'سطح ۲ · در هر روز', suffix: 'تومان', w: 100, min: 0 },
-  ] },
+  { title: 'برداشت از کیف پول ریالی', d: IC.wallet, tone: 'info', rows: [
+    { kind: 'field', id: 'r-limit-withdraw-daily', label: 'سقف برداشت روزانه', sub: 'به ازای هر کاربر', suffix: 'تومان', w: 110, min: 0 },
+    { kind: 'field', id: 'r-limit-withdraw-monthly', label: 'سقف برداشت ماهانه', sub: 'به ازای هر کاربر · ماه شمسی', suffix: 'تومان', w: 110, min: 0 },
+  ], footer: 'برداشت در این سقف‌ها بدون نیاز به تأیید انجام می‌شود و بیشتر از آن ممکن نیست؛ فقط از بخش آزاد کیف پول.' },
 ];
 
 const CREATORS: [string, string][] = [['system', 'سیستم'], ['org', 'سازمان'], ['operator', 'بهره‌بردار']];
@@ -56,7 +54,7 @@ const LOCK_TYPES: { type: LockType; cond: string; limits: LimitDef[] }[] = [
   { type: 'legal', cond: 'تا رفع دستور مرجع / پایان بررسی ریسک · فقط در پنل بهره‌بردار', limits: [{ kind: 'switch', id: 'r-lock-legal-ref', label: 'شماره مرجع الزامی' }, { kind: 'switch', id: 'r-lock-legal-2nd', label: 'رفع با تأیید نفر دوم' }] },
 ];
 
-const dotOf = (text: string, group: string) => (text.startsWith('فعال‌سازی') ? '--success-main' : text.startsWith('غیرفعال') ? '--error-main' : group === 'برداشت' ? '--info-main' : group === 'KYC' || group === 'رزرو دارایی' ? '--warning-main' : group === 'ریسک' ? '--error-main' : '--primary-main');
+const dotOf = (text: string, group: string) => (text.startsWith('فعال‌سازی') ? '--success-main' : text.startsWith('غیرفعال') ? '--error-main' : group === 'برداشت' ? '--info-main' : group === 'رزرو دارایی' ? '--warning-main' : group === 'ریسک' ? '--error-main' : '--primary-main');
 const valText = (v: unknown) => (typeof v === 'number' ? money(v) : faDigits(String(v ?? '—')));
 
 export default function OpRulesPage() {
@@ -119,11 +117,6 @@ export default function OpRulesPage() {
   const num = (id: string, label: string, suffix: string, w: number, disabled?: boolean) => (
     <NumberInput value={Number(get(id).value ?? NaN)} onChange={(n) => put(id, { value: n })} width={w} suffix={suffix} label={label} invalid={invalidId(id)} disabled={disabled} />
   );
-  const chipsOf = (r: Extract<RowDef, { kind: 'chips' }>) => {
-    const arr = String(get(r.id).value ?? '').split(',').map((x) => x === '1');
-    const on = r.options.map((_, i) => i).filter((i) => arr[i]);
-    return <Chips label={r.label} value={on} onChange={(i) => { const n = r.options.map((_, j) => (j === i ? !arr[j] : !!arr[j])); put(r.id, { value: n.map((b) => (b ? '1' : '0')).join(',') }); }} options={r.options.map((o, i) => ({ key: i, label: o }))} />;
-  };
 
   const enabledN = LOCK_TYPES.filter((t) => get(`r-lock-${t.type}`).enabled).length;
   const history = meta.data?.history ?? [];
@@ -145,12 +138,11 @@ export default function OpRulesPage() {
                 {[0, 1].map((col) => (
                   <div key={col} className="nm-stack">
                     {GROUPS.filter((_, i) => i % 2 === col).map((g) => (
-                      <SettingsGroup key={g.title} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Tile d={g.d} tone={g.tone} size="sm" />{g.title}</span>}>
+                      <SettingsGroup key={g.title} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Tile d={g.d} tone={g.tone} size="sm" />{g.title}</span>} footer={g.footer}>
                         {g.rows.filter((r) => byId[r.id]).map((r) => (
-                          <SettingRow key={r.id} label={r.label} desc={r.sub} stack={r.kind === 'chips'}>
+                          <SettingRow key={r.id} label={r.label} desc={r.sub}>
                             {r.kind === 'field' && num(r.id, r.label, r.suffix, r.w)}
                             {r.kind === 'switch' && sw(r.id, r.label)}
-                            {r.kind === 'chips' && chipsOf(r)}
                           </SettingRow>
                         ))}
                       </SettingsGroup>

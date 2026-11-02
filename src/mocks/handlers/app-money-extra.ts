@@ -13,6 +13,11 @@
  *   }
  *   Errors: 404 not_found (no such holding), 422 not_a_fund (rial wallet)
  *
+ * GET /api/v1/me/withdrawals/limits
+ *   Response: WithdrawLimits { daily, monthly, usedToday, usedMonth, remainingToday, remainingMonth } (Toman; null = no cap)
+ *   Fixed caps from the rules r-limit-withdraw-daily / r-limit-withdraw-monthly (src/mocks/withdraw-limits.ts). Within them a
+ *   withdrawal needs no approval; POST /me/withdrawals refuses more with 422 over_daily_limit | over_monthly_limit.
+ *
  * Cost basis is tracked per user/fund in db.extra.appMoney.basis and reconciled lazily:
  * units added since the last read are booked at the current NAV, units removed reduce the
  * basis proportionally (average cost stays the same).
@@ -21,6 +26,7 @@ import { http, type HttpHandler } from 'msw';
 import { db, userData } from '../db';
 import { fail, latency, ok, p, who } from '../http';
 import type { AppMoneyExtra } from '../seed/extra-app-money';
+import { withdrawLimits } from '../withdraw-limits';
 
 function extra(): AppMoneyExtra {
   const d = db();
@@ -33,6 +39,10 @@ function extra(): AppMoneyExtra {
 }
 
 export const appMoneyHandlers: HttpHandler[] = [
+  http.get(p('/me/withdrawals/limits'), async ({ request }) => {
+    await latency();
+    return ok(withdrawLimits(userData(who(request, 'employee').userId)));
+  }),
   http.get(p('/me/holdings/:kind/stats'), async ({ request, params }) => {
     await latency();
     const userId = who(request, 'employee').userId;

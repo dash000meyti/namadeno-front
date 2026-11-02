@@ -1,9 +1,14 @@
 'use client';
-/** /app/withdraw — design: app-withdraw (free part of the rial wallet → bank account, Paya). */
+/**
+ * /app/withdraw — design: app-withdraw (free part of the rial wallet → bank account, Paya).
+ * Fixed daily and monthly caps (set by Namadno, GET /me/withdrawals/limits): within them the withdrawal goes through at once,
+ * with no approval; the maximum is the smallest of «آزاد» and what is left of today's and this month's cap.
+ */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useBankAccounts, useHolding, useWithdraw } from '@/api/app';
+import { useWithdrawLimits } from '@/api/app-money-extra';
 import { AppHeader } from '@/components/app/AppHeader';
 import { BottomNav } from '@/components/app/BottomNav';
 import { ErrorState, Scr, Skeleton } from '@/components/app/Screen';
@@ -36,6 +41,7 @@ export default function WithdrawPage() {
   const hq = useHolding('rial');
   const banks = useBankAccounts();
   const withdraw = useWithdraw();
+  const lim = useWithdrawLimits().data;
   const [amount, setAmount] = useState<number | null>(null);
   const [acctId, setAcctId] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
@@ -64,19 +70,26 @@ export default function WithdrawPage() {
   }
 
   const h = hq.data.holding;
-  const MAX = Math.max(0, Math.floor(h.free));
+  const FREE = Math.max(0, Math.floor(h.free));
+  // the caps are fixed: what is left of today's and this month's cap (null = no cap)
+  const leftToday = lim?.remainingToday ?? Infinity;
+  const leftMonth = lim?.remainingMonth ?? Infinity;
+  const MAX = Math.max(0, Math.floor(Math.min(FREE, leftToday, leftMonth)));
   const LOCKED = h.locked;
   const accounts = banks.data ?? [];
   const acct = accounts.find((a) => a.id === acctId) ?? accounts.find((a) => a.isDefault) ?? accounts[0];
   const amt = amount ?? Math.min(10_000_000, MAX);
-  const chips: [string, number][] = [['۵ میلیون', 5_000_000], ['۱۰ میلیون', 10_000_000], ['همه', MAX]];
-  const invalid = !acct ? 'ابتدا یک حساب بانکی به نام خودتان اضافه کنید.' : amt <= 0 ? 'مبلغ را وارد کنید.' : amt > MAX ? 'مبلغ از موجودی قابل برداشت بیشتر است.' : null;
+  const chips: [string, number][] = [['۵ میلیون', 5_000_000], ['۱۰ میلیون', 10_000_000], ['حداکثر', MAX]];
+  const invalid = !acct ? 'ابتدا یک حساب بانکی به نام خودتان اضافه کنید.' : amt <= 0 ? 'مبلغ را وارد کنید.'
+    : amt > FREE ? 'مبلغ از موجودی قابل برداشت بیشتر است.'
+      : amt > leftToday ? `از باقی‌مانده‌ی سقف برداشت امروز (${money(leftToday)} تومان) بیشتر است.`
+        : amt > leftMonth ? `از باقی‌مانده‌ی سقف برداشت این ماه (${money(leftMonth)} تومان) بیشتر است.` : null;
   const cycle = faDigits(nextPayaCycle());
   const summary = [
     { k: 'مبلغ برداشت', v: money(amt) + ' تومان', w: 500, c: 'var(--text-primary)' },
     { k: 'کارمزد', v: 'رایگان', w: 700, c: 'var(--success-text)' },
     { k: 'مبلغ واریزی', v: money(amt) + ' تومان', w: 500, c: 'var(--text-primary)' },
-    { k: 'موجودی آزاد پس از برداشت', v: money(Math.max(0, MAX - amt)) + ' تومان', w: 400, c: 'var(--text-secondary)' },
+    { k: 'موجودی آزاد پس از برداشت', v: money(Math.max(0, FREE - amt)) + ' تومان', w: 400, c: 'var(--text-secondary)' },
   ];
 
   const submit = () => {
@@ -99,7 +112,7 @@ export default function WithdrawPage() {
           <span style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--soft-default)', color: 'var(--default-text)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon d={D.wallet} size={20} /></span>
           <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, lineHeight: 1.3 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>از کیف پول ریالی · قابل برداشت (آزاد)</span>
-            <span className="num" style={{ fontSize: 20, whiteSpace: 'nowrap' }}>{money(MAX)} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-secondary)' }}>تومان</span></span>
+            <span className="num" style={{ fontSize: 20, whiteSpace: 'nowrap' }}>{money(FREE)} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-secondary)' }}>تومان</span></span>
           </span>
         </div>
 
@@ -153,6 +166,22 @@ export default function WithdrawPage() {
             })}
           </div>
         </div>
+
+        {/* fixed caps: no approval within them */}
+        {lim && (lim.daily !== null || lim.monthly !== null) && (
+          <div className="card" style={{ boxSizing: 'border-box', padding: '4px 14px 10px', display: 'flex', flexDirection: 'column', flex: 'none' }}>
+            {([['سقف امروز', lim.daily, lim.remainingToday], ['سقف این ماه', lim.monthly, lim.remainingMonth]] as const).filter(([, cap]) => cap !== null).map(([k, cap, left], i) => (
+              <div key={k} style={{ minHeight: 40, display: 'flex', alignItems: 'center', gap: 12, borderBottom: i === 0 && lim.daily !== null && lim.monthly !== null ? '1px dashed var(--divider)' : '1px dashed transparent' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{k}</span>
+                <span style={{ marginRight: 'auto', fontSize: 13, whiteSpace: 'nowrap' }}>
+                  <span className="num" style={{ fontWeight: 600 }}>{money(left ?? 0)}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}> باقی‌مانده از <span className="num">{money(cap ?? 0)}</span></span>
+                </span>
+              </div>
+            ))}
+            <span style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--text-secondary)' }}>برداشت در این سقف‌ها بدون نیاز به تأیید انجام می‌شود.</span>
+          </div>
+        )}
 
         {/* paya info */}
         <div style={{ boxSizing: 'border-box', padding: '10px 12px', borderRadius: 12, background: 'var(--soft-info)', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>

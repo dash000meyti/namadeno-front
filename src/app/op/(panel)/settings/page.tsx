@@ -1,18 +1,20 @@
 'use client';
 /**
  * /op/settings — kit settings page: section tabs →
- *   general · security · integrations · notifications   settings groups (Switch, NumberInput, Chips, text) + sticky save bar
+ *   general · notifications                              settings groups (Switch, NumberInput, text) + sticky save bar
  *   users & roles                                        team table (invite dialog, activate / deactivate) + role matrix (save bar while edited)
  *   system status                                        service health table + incident history
+ * Security (sign-in policy, sessions) and integrations (API keys, webhooks) are set by the development team in code, and
+ * the panel language (always Persian) and time zone (always Tehran) are fixed — none of them is a setting here.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useOpSettings } from '@/api/op';
 import {
-  useInviteTeamMember, useRefreshSystemStatus, useRevokeSessions, useRotateApiKey, useSetTeamMemberStatus, useSystemStatus, useUpdateOpSettingsX,
+  useInviteTeamMember, useRefreshSystemStatus, useSetTeamMemberStatus, useSystemStatus, useUpdateOpSettingsX,
   type Incident, type OpSettingsX, type OpTeamMember, type PermKey, type RoleKey, type ServiceHealth,
 } from '@/api/op-system-extra';
 import {
-  ActionBar, Ava, Card, Chips, Confirm, Dialog, Empty, ErrorBlock, Field, Ident, Note, NumInput, NumberInput, PageHeading, Pill,
+  ActionBar, Ava, Card, Chips, Dialog, Empty, ErrorBlock, Field, Ident, Note, NumInput, NumberInput, PageHeading, Pill,
   SettingRow, SettingsGroup, SkeletonCard, Switch, Table, Tabs, type Column, type Tone,
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
@@ -21,11 +23,11 @@ import { IC } from '@/components/op/system/ui';
 import { dayTime, errMsg } from '@/components/op/system/fmt';
 import { faDigits, jDate, money, time } from '@/lib/format';
 import { routes } from '@/lib/routes';
+import { FEATURES } from '@/lib/features';
 
-type Tab = 'general' | 'users' | 'security' | 'integ' | 'notif' | 'status';
+type Tab = 'general' | 'users' | 'notif' | 'status';
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'general', label: 'عمومی' }, { key: 'users', label: 'کاربران و نقش‌ها' }, { key: 'security', label: 'امنیت' },
-  { key: 'integ', label: 'یکپارچه‌سازی' }, { key: 'notif', label: 'اعلان‌ها' }, { key: 'status', label: 'وضعیت سیستم' },
+  { key: 'general', label: 'عمومی' }, { key: 'users', label: 'کاربران و نقش‌ها' }, { key: 'notif', label: 'اعلان‌ها' }, { key: 'status', label: 'وضعیت سیستم' },
 ];
 
 export default function OpSettingsPage() {
@@ -37,7 +39,7 @@ export default function OpSettingsPage() {
   const down = issues.some((x) => x.status === 'down');
   return (
     <>
-      <PageHeading title="تنظیمات" sub="پلتفرم، تیم بهره‌بردار، امنیت، یکپارچه‌سازی، اعلان‌ها و پایش سرویس‌ها">
+      <PageHeading title="تنظیمات" sub="پلتفرم، تیم بهره‌بردار، اعلان‌ها و پایش سرویس‌ها">
         <span className="mute" style={{ fontSize: 12.5 }}>نسخهٔ پلتفرم <span className="num ltr" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{faDigits(s?.platformVersion ?? '—', true)}</span></span>
       </PageHeading>
 
@@ -61,7 +63,7 @@ const ROLES: Record<RoleKey, { role: string; short: string; tone: Tone }> = {
 const ROLE_KEYS: RoleKey[] = ['pm', 'fin', 'risk', 'sup'];
 const PERMS: [PermKey, string][] = [
   ['orgs', 'مشاهده سازمان‌ها'], ['contracts', 'ویرایش قراردادها'], ['requests', 'تأیید درخواست‌ها'], ['funds', 'مدیریت صندوق‌ها'],
-  ['rules', 'تغییر قوانین و ریسک'], ['legal', 'اعمال و رفع مسدودی قانونی'], ['users', 'مشاهده و تعلیق کاربران'],
+  ['rules', 'تغییر قوانین و ریسک'], ['legal', 'مسدود کردن و رفع مسدودی'], ['users', 'مشاهده‌ی کاربران'],
 ];
 const OWNER_ID = 'op-301';
 const memberStatus = (m: OpTeamMember): { label: string; tone: Tone } => (m.status === 'inactive' ? { label: 'غیرفعال', tone: 'neutral' } : m.status === 'invited' ? { label: 'دعوت‌شده', tone: 'warning' } : { label: 'فعال', tone: 'success' });
@@ -201,11 +203,9 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
 // ───────────────────────── Settings sections ─────────────────────────
 type Draft = Partial<OpSettingsX>;
 type Row =
-  | { kind: 'text'; key: string; label: string; sub: string; w: number; ltr?: boolean; readOnly?: boolean; get: (d: OpSettingsX) => string; set: (v: string) => Draft; validate?: (v: string, d: OpSettingsX) => string | null }
+  | { kind: 'text'; key: string; label: string; sub: string; w: number; ltr?: boolean; get: (d: OpSettingsX) => string; set: (v: string) => Draft; validate?: (v: string, d: OpSettingsX) => string | null }
   | { kind: 'num'; key: string; label: string; sub: string; w: number; suffix: string; min: number; max: number; get: (d: OpSettingsX) => number; set: (v: number) => Draft }
-  | { kind: 'switch'; key: string; label: string; sub: string; get: (d: OpSettingsX) => boolean; set: (v: boolean, d: OpSettingsX) => Draft }
-  | { kind: 'chips'; key: string; label: string; sub: string; options: [string, string][]; get: (d: OpSettingsX) => string; set: (v: string) => Draft }
-  | { kind: 'action'; key: string; label: string; sub: (d: OpSettingsX) => string; button: string; action: 'rotate' | 'revoke' };
+  | { kind: 'switch'; key: string; label: string; sub: string; get: (d: OpSettingsX) => boolean; set: (v: boolean, d: OpSettingsX) => Draft };
 type PanelKey = Exclude<Tab, 'users' | 'status'>;
 interface GroupDef { title: string; footer?: string; rows: Row[] }
 
@@ -216,43 +216,19 @@ const notifySw = (key: keyof typeof NOTIFY_DEF, label: string, sub: string): Row
 const faToEn = (v: string) => v.replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)));
 const PANELS: Record<PanelKey, { title: string; groups: GroupDef[] }> = {
   general: { title: 'تنظیمات عمومی', groups: [
-    { title: 'پلتفرم', footer: 'نام، زبان و منطقهٔ زمانی پلتفرم', rows: [
+    { title: 'پلتفرم', footer: 'زبان پنل‌ها و اپ همیشه فارسی و زمان‌ها به وقت تهران است.', rows: [
       { kind: 'text', key: 'platformName', label: 'نام نمایشی پلتفرم', sub: 'در اپ و ایمیل‌ها نشان داده می‌شود', w: 160, get: (d) => d.platformName, set: (v) => ({ platformName: v }), validate: (v) => (v.trim().length < 2 ? 'نام نمایشی پلتفرم الزامی است.' : null) },
-      { kind: 'chips', key: 'lang', label: 'زبان پیش‌فرض پنل', sub: 'زبان اپ کاربران از تنظیمات خودشان خوانده می‌شود', options: [['fa', 'فارسی'], ['en', 'English']], get: (d) => d.lang ?? 'fa', set: (v) => ({ lang: v as 'fa' | 'en' }) },
-      { kind: 'text', key: 'timezone', label: 'منطقهٔ زمانی', sub: 'برای زمان‌بندی NAV و گزارش‌ها', w: 140, ltr: true, get: (d) => d.timezone ?? 'Asia/Tehran', set: (v) => ({ timezone: v }), validate: (v) => (/^[A-Za-z_]+\/[A-Za-z_]+$/.test(v.trim()) ? null : 'منطقهٔ زمانی معتبر نیست (مثلاً Asia/Tehran).') },
-      { kind: 'text', key: 'navTime', label: 'ساعت به‌روزرسانی NAV', sub: 'پس از پایان معاملات', w: 80, ltr: true, get: (d) => faDigits(d.navTime ?? '14:00'), set: (v) => ({ navTime: faToEn(v) }), validate: (v) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(faToEn(v)) ? null : 'ساعت به‌روزرسانی NAV باید به شکل ۱۴:۰۰ باشد.') },
+      { kind: 'text', key: 'navTime', label: 'ساعت به‌روزرسانی NAV', sub: 'به وقت تهران · پس از پایان معاملات', w: 80, ltr: true, get: (d) => faDigits(d.navTime ?? '14:00'), set: (v) => ({ navTime: faToEn(v) }), validate: (v) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(faToEn(v)) ? null : 'ساعت به‌روزرسانی NAV باید به شکل ۱۴:۰۰ باشد.') },
     ] },
     { title: 'نگهداری', rows: [
       { kind: 'switch', key: 'maintenance', label: 'حالت نگهداری', sub: 'اپ کاربران فقط‌خواندنی می‌شود', get: (d) => d.maintenance, set: (v) => ({ maintenance: v }) },
     ] },
   ] },
-  security: { title: 'امنیت', groups: [
-    { title: 'ورود', footer: 'سیاست‌های ورود و نشست کاربران پنل', rows: [
-      { kind: 'switch', key: 'twoFactorRequired', label: 'ورود دومرحله‌ای اجباری', sub: 'برای همهٔ کاربران پنل بهره‌بردار', get: (d) => d.twoFactorRequired, set: (v) => ({ twoFactorRequired: v }) },
-      { kind: 'num', key: 'minPasswordLength', label: 'حداقل طول رمز', sub: 'همراه با حرف بزرگ و عدد', w: 56, suffix: 'کاراکتر', min: 8, max: 64, get: (d) => d.minPasswordLength ?? 12, set: (v) => ({ minPasswordLength: v }) },
-      { kind: 'switch', key: 'ipRestrict', label: 'محدودسازی IP', sub: 'فقط از شبکهٔ دفتر و VPN', get: (d) => !!d.ipRestrict, set: (v) => ({ ipRestrict: v }) },
-    ] },
-    { title: 'نشست‌ها', rows: [
-      { kind: 'num', key: 'sessionMinutes', label: 'مهلت نشست بدون فعالیت', sub: 'پس از آن خروج خودکار', w: 56, suffix: 'دقیقه', min: 5, max: 240, get: (d) => d.sessionMinutes, set: (v) => ({ sessionMinutes: v }) },
-      { kind: 'action', key: 'sessions', label: 'نشست‌های فعال', sub: (d) => `${faDigits(d.activeSessions ?? 1)} نشست در ${faDigits(d.activeDevices ?? 1)} دستگاه`, button: 'خروج از همهٔ نشست‌ها', action: 'revoke' },
-    ] },
-  ] },
-  integ: { title: 'یکپارچه‌سازی', groups: [
-    { title: 'کلید API', footer: 'API، وب‌هوک و اتصال سیستم‌های HR سازمان‌ها و فروشگاه‌های طرف قرارداد', rows: [
-      { kind: 'text', key: 'apiKeyMasked', label: 'کلید API فعال', sub: '', w: 170, ltr: true, readOnly: true, get: (d) => d.apiKeyMasked ?? '—', set: () => ({}) },
-      { kind: 'action', key: 'rotate', label: 'چرخش کلید', sub: () => 'کلید قبلی ۲۴ ساعت معتبر می‌ماند', button: 'ساخت کلید جدید', action: 'rotate' },
-      { kind: 'num', key: 'rateLimit', label: 'سقف فراخوانی', sub: 'به ازای هر کلید', w: 64, suffix: 'در دقیقه', min: 10, max: 10000, get: (d) => d.rateLimit ?? 600, set: (v) => ({ rateLimit: v }) },
-    ] },
-    { title: 'وب‌هوک', rows: [
-      { kind: 'switch', key: 'webhookEnabled', label: 'وب‌هوک رویدادها', sub: 'تأیید بسته، تغییر NAV، وضعیت درخواست', get: (d) => d.webhookEnabled !== false, set: (v) => ({ webhookEnabled: v }) },
-      { kind: 'text', key: 'webhookUrl', label: 'آدرس وب‌هوک', sub: 'POST با امضای HMAC', w: 220, ltr: true, get: (d) => d.webhookUrl ?? '', set: (v) => ({ webhookUrl: v }), validate: (v, d) => (d.webhookEnabled !== false && !/^https:\/\/[^\s/]+\.[^\s]+$/.test(v.trim()) ? 'آدرس وب‌هوک باید با https:// شروع شود.' : null) },
-    ] },
-  ] },
   notif: { title: 'اعلان‌ها', groups: [
     { title: 'رویدادها', footer: 'چه رویدادهایی به تیم بهره‌بردار اطلاع داده شود', rows: [
-      notifySw('requests', 'درخواست جدید نیازمند تأیید', 'وام، برداشت بالای سقف، تغییر قرارداد'),
+      ...(FEATURES.orgCredit ? [notifySw('requests', 'درخواست جدید نیازمند تأیید', 'وام، خرید اقساطی و افزایش اعتبار')] : []),
       notifySw('risk', 'هشدار ریسک بحرانی', 'امتیاز ریسک بالای ۸۰'),
-      notifySw('legal', 'مسدودی قانونی', 'ثبت، دستور رفع یا رفع مسدودی با شماره مرجع'),
+      notifySw('legal', 'مسدودی', 'مسدود شدن حساب یا دارایی، دستور رفع یا رفع مسدودی'),
       notifySw('services', 'اختلال سرویس', 'از پایش سلامت سرویس‌ها'),
       notifySw('orgs', 'سازمان جدید', 'ثبت یا عقد قرارداد'),
     ] },
@@ -265,11 +241,8 @@ const PANELS: Record<PanelKey, { title: string; groups: GroupDef[] }> = {
 function PanelTab({ tab, s }: { tab: PanelKey; s: OpSettingsX }) {
   const toast = useToast();
   const save = useUpdateOpSettingsX();
-  const rotate = useRotateApiKey();
-  const revoke = useRevokeSessions();
   const panel = PANELS[tab];
   const [draft, setDraft] = useState<Draft>({});
-  const [confirm, setConfirm] = useState<'rotate' | 'revoke' | null>(null);
   const [err, setErr] = useState('');
   const cur: OpSettingsX = { ...s, ...draft };
   const dirty = Object.keys(draft).length > 0;
@@ -284,32 +257,20 @@ function PanelTab({ tab, s }: { tab: PanelKey; s: OpSettingsX }) {
     if (!dirty) return toast('تغییری برای ذخیره وجود ندارد', 'info');
     save.mutate(draft, { onSuccess: () => { setDraft({}); toast(`تنظیمات «${panel.title}» ذخیره شد`); }, onError: (e) => setErr(errMsg(e)) });
   };
-  const runAction = () => {
-    const a = confirm;
-    if (a === 'rotate') rotate.mutate({}, { onSuccess: () => { setConfirm(null); toast('کلید جدید ساخته شد؛ کلید قبلی تا ۲۴ ساعت معتبر است'); }, onError: (e) => { setConfirm(null); toast(errMsg(e), 'error'); } });
-    if (a === 'revoke') revoke.mutate({}, { onSuccess: () => { setConfirm(null); toast('همهٔ نشست‌ها به‌جز نشست فعلی خاتمه یافت'); }, onError: (e) => { setConfirm(null); toast(errMsg(e), 'error'); } });
-  };
-
   const control = (r: Row) => {
     const id = 'st-' + r.key;
     switch (r.kind) {
       case 'text':
-        return r.readOnly
-          ? <span className="nm-in" style={{ background: 'var(--bg-neutral)' }}><input id={id} aria-label={r.label} readOnly dir={r.ltr ? 'ltr' : undefined} value={r.get(cur)} style={{ width: r.w, color: 'var(--text-secondary)' }} /></span>
-          : <NumInput text id={id} label={r.label} ltr={r.ltr} width={r.w} value={r.get(cur)} onChange={(v) => apply(r.set(v))} />;
+        return <NumInput text id={id} label={r.label} ltr={r.ltr} width={r.w} value={r.get(cur)} onChange={(v) => apply(r.set(v))} />;
       case 'num': {
         const v = r.get(cur);
         return <NumberInput id={id} label={r.label} width={r.w} suffix={r.suffix} value={v} onChange={(n) => apply(r.set(n))} invalid={!(v >= r.min && v <= r.max)} />;
       }
       case 'switch':
         return <Switch on={r.get(cur)} onChange={() => apply(r.set(!r.get(cur), cur))} label={r.label} />;
-      case 'chips':
-        return <Chips label={r.label} value={r.get(cur)} onChange={(v) => apply(r.set(v))} options={r.options.map(([k, l]) => ({ key: k, label: l }))} />;
-      case 'action':
-        return <button type="button" className={r.action === 'revoke' ? 'nm-btn sm line danger' : 'nm-btn sm line'} onClick={() => setConfirm(r.action)}>{r.button}</button>;
     }
   };
-  const subOf = (r: Row) => (r.kind === 'action' ? r.sub(cur) : r.key === 'apiKeyMasked' ? `ساخته‌شده در ${cur.apiKeyCreatedAt ? jDate(cur.apiKeyCreatedAt) : '—'} · فقط‌خواندنی` : r.sub);
+  const subOf = (r: Row) => r.sub;
 
   return (
     <>
@@ -340,9 +301,6 @@ function PanelTab({ tab, s }: { tab: PanelKey; s: OpSettingsX }) {
         {dirty ? <Pill tone="warning" dot>تغییرات ذخیره‌نشده</Pill> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Icon d={IC.info} size={16} />تغییرات این بخش پس از ذخیره اعمال می‌شود</span>}
       </ActionBar>
 
-      <Confirm open={confirm !== null} onClose={() => setConfirm(null)} busy={rotate.isPending || revoke.isPending} onConfirm={runAction} danger={confirm === 'revoke'}
-        title={confirm === 'rotate' ? 'ساخت کلید API جدید' : 'خروج از همهٔ نشست‌ها'} confirmLabel={confirm === 'rotate' ? 'ساخت کلید جدید' : 'خروج از همهٔ نشست‌ها'}
-        body={confirm === 'rotate' ? 'کلید فعلی تا ۲۴ ساعت معتبر می‌ماند؛ پس از آن، سیستم‌های HR و فروشگاه‌هایی که با کلید قبلی متصل‌اند باید کلید جدید را دریافت کنند.' : 'همهٔ کاربران پنل به‌جز نشست فعلی شما خارج می‌شوند و باید دوباره با ورود دومرحله‌ای وارد شوند.'} />
     </>
   );
 }

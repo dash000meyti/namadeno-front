@@ -93,7 +93,13 @@ export function milestoneStats(pkg: OrgPackage) {
   return { steps, relN: rel.length, relPct, backN: back.length, backPct, donePct: relPct + backPct, pending, waiting, pendingIdx: pending ? steps.indexOf(pending) + 1 : 0 };
 }
 
-/** Status shown in lists: «sent» packages that are fully accepted (and fully released) read as completed. */
+/**
+ * Status shown in lists: «sent» packages that are fully accepted (and fully released) read as completed.
+ * Two queue states (nothing reaches the recipients or is blocked meanwhile):
+ * `awaiting_payment` = with a deposit receipt: delivered (and blocked) only after Namadno approves it;
+ * `awaiting_stock` = paid (its whole amount set aside from «آزاد») but Namadno's fund stock is short: sent automatically
+ * once the stock arrives, at the latest by `stockEta`.
+ */
 export function effectiveStatus(pkg: OrgPackage): OrgPackage['status'] {
   if (pkg.status !== 'sent') return pkg.status;
   const allAccepted = pkg.recipients.length > 0 && pkg.recipients.every((r) => r.status !== 'pending');
@@ -101,9 +107,15 @@ export function effectiveStatus(pkg: OrgPackage): OrgPackage['status'] {
   return allAccepted ? 'completed' : 'sent';
 }
 
+/** A package in the queue: waiting for its receipt approval or for Namadno's fund stock. */
+export const isQueued = (pkg: Pick<OrgPackage, 'status'>) => pkg.status === 'awaiting_payment' || pkg.status === 'awaiting_stock';
+
+/** Status pill text and tone (lists, inspectors, detail heading). */
 export function statusLabel(pkg: OrgPackage): { text: string; tone: Tone } {
   const st = effectiveStatus(pkg);
   if (st === 'draft') return { text: 'پیش‌نویس', tone: 'default' };
+  if (st === 'awaiting_payment') return { text: 'در انتظار تأیید واریز', tone: 'warning' };
+  if (st === 'awaiting_stock') return { text: 'در انتظار تأمین موجودی', tone: 'warning' };
   if (st === 'cancelled') return { text: 'لغوشده', tone: 'error' };
   if (st === 'completed') return { text: 'تکمیل‌شده', tone: 'success' };
   const ms = milestoneStats(pkg);

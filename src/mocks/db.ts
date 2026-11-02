@@ -54,9 +54,15 @@ export interface MockDB {
 }
 
 const STORAGE_KEY = 'nm-mock-db';
-export const DB_VERSION = 18;
+export const DB_VERSION = 27;
 
 let state: MockDB | null = null;
+
+// Several tabs share the demo data (e.g. the organization panel in one tab, the operator console in another): when another
+// tab saves, drop this tab's copy so its next request reads the latest instead of writing an old copy over it.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => { if (e.key === STORAGE_KEY) state = null; });
+}
 
 function load(): MockDB {
   if (typeof window !== 'undefined') {

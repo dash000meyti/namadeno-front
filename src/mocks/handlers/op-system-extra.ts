@@ -64,7 +64,7 @@ function sectionOf(id: string) {
   if (id.startsWith('r-pkg')) return 'بسته‌ها';
   if (id.startsWith('r-limit-withdraw') || id.startsWith('r-withdraw')) return 'برداشت';
   if (id.startsWith('r-credit')) return 'تسهیلات';
-  if (id.startsWith('r-kyc')) return 'KYC';
+  if (id.startsWith('r-kyc')) return 'احراز هویت';
   if (id.startsWith('r-lock')) return 'رزرو دارایی';
   if (id.startsWith('r-risk')) return 'ریسک';
   return 'محدودیت‌ها';
@@ -334,7 +334,7 @@ export const opSystemHandlers: HttpHandler[] = [
         if (!l) continue;
         h.locks = h.locks.filter((x) => x.id !== id);
         recalcHoldings(ud);
-        ledger.notify(ud, { title: 'مسدودی قانونی حساب شما رفع شد', body: `${money(l.amount)} تومان از ${h.name} آزاد شد.`, tone: 'success', icon: 'unlock' });
+        ledger.notify(ud, { title: 'مسدودی دارایی شما رفع شد', body: `${money(l.amount)} تومان از ${h.name} آزاد شد.`, tone: 'success', icon: 'unlock' });
         const out: LegalHold = { id, source: 'lock', userId: ud.profile.id, userName: ud.profile.fullName, reference: l.reference ?? '—', holding: h.name, reason: l.condition, amount: l.amount, createdAt: l.createdAt, status: 'done', releasedAt: nowIso() };
         return ok(out);
       }

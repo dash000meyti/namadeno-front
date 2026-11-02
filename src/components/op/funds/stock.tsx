@@ -1,7 +1,7 @@
 'use client';
 /**
  * Treasury stock pieces shared by /op/funds (list + inspector) and /op/funds/[id] (stock tab):
- * the stock breakdown (held → allocated / reserved / committed / pending redeem → free), coverage against the target band,
+ * the stock breakdown (held → allocated / reserved / committed → free), free stock against the target band,
  * the suggestion callout, and the stock-movement table + inspector.
  * Wording: «رزرو» (never «قفل»), «صدور» = buying units from a fund, «ابطال» = redeeming them.
  */
@@ -12,7 +12,7 @@ import type { StockMovement, TreasuryPosition } from '@/api/op-treasury-extra';
 import {
   Allocation, Inspector, KV, KeyStats, Meter, Note, Pill, Section, Tile, Who, type Column,
 } from '@/components/panel/kit';
-import { ACTOR, MOVE_KIND, SIDE, STOCK_STATE, TI, amt, daysText, fundUi, unitsText } from '@/components/op/treasury/ui';
+import { ACTOR, MOVE_KIND, SIDE, STOCK_STATE, TI, amt, fundUi, unitsText } from '@/components/op/treasury/ui';
 import { dayTime, dec } from '@/components/op/system/fmt';
 import { faDigits, jDateTime } from '@/lib/format';
 import { routes } from '@/lib/routes';
@@ -30,8 +30,7 @@ export const bnOr = (n: number): ReactNode => (Math.abs(n) >= 1e6 ? sbn(n) : <sp
 /** Compact Toman with a real minus sign. */
 export const samt = (n: number) => (n < 0 ? '−' : '') + amt(Math.abs(n));
 
-/** Lower edge of the target band: max(minFreeValue, net daily demand × targetDays) — same rule as the treasury engine. */
-/** Lower edge of the target band (from the API; 0 without a target). */
+/** Lower edge of the target band: the minimum free stock (from the API; 0 without a target). */
 export function minTargetOf(p: Pick<TreasuryPosition, 'minTargetValue'>): number {
   return p.minTargetValue ?? 0;
 }
@@ -56,7 +55,7 @@ const COL = {
   holding: 'var(--chart-1)',
   reserved: 'var(--chart-4)',
   committed: 'var(--warning-main)',
-  redeem: 'var(--info-main)',
+  queue: 'var(--error-main)',
   free: 'var(--chart-2)',
 };
 
@@ -85,18 +84,26 @@ export function OpLabel({ op, children, sub, strong }: { op?: '−' | '+' | '=';
 }
 
 /**
- * Where the held units are: one bar of shares + the waterfall held − allocated − committed − pending redeem = free.
+ * Where the held units are: one bar of shares + the waterfall held − allocated − committed = free (orders are recorded
+ * when done, so nothing is on its way in or out).
  * `reserved` is part of `allocated` (users own it; it is set aside for savings, collateral, milestones …).
+ * Nothing goes negative: what the free stock cannot cover waits in the queue («در صف تأمین»), so the waterfall ends with
+ * «آزاد پس از صف» — or «نیاز به خرید» when the queue is larger than the free stock.
  */
 export function PositionBreakdown({ p }: { p: TreasuryPosition }) {
+  const free = Math.max(0, p.availableValue);
+  const queued = p.queuedValue ?? 0;
+  const inQueue = Math.min(queued, free);
+  const need = p.needBuyValue ?? 0;
+  const u = (v: number) => (p.nav ? v / p.nav : 0);
   const items = [
     { label: 'در اختیار کاربران', value: p.allocatedValue - p.reservedValue, color: COL.holding },
     { label: 'رزرو', value: p.reservedValue, color: COL.reserved },
     { label: 'تعهد بسته‌ها', value: p.committedValue, color: COL.committed },
-    ...(p.pendingRedeemValue > 0 ? [{ label: 'در انتظار ابطال', value: p.pendingRedeemValue, color: COL.redeem }] : []),
-    { label: 'آزاد', value: Math.max(0, p.availableValue), color: COL.free },
+    ...(inQueue > 0 ? [{ label: 'در صف تأمین', value: inQueue, color: COL.queue }] : []),
+    ...(queued > 0 && free - inQueue <= 0 ? [] : [{ label: queued > 0 ? 'آزاد پس از صف' : 'آزاد', value: free - inQueue, color: COL.free }]),
   ];
-  const short = p.availableValue < 0;
+  const row = (k: string, label: ReactNode, v: ReactNode): [ReactNode, ReactNode] => [<span key={k}>{label}</span>, v];
   return (
     <div className="nm-stack" style={{ gap: 14 }}>
       <Allocation compact items={items} />
@@ -104,27 +111,35 @@ export function PositionBreakdown({ p }: { p: TreasuryPosition }) {
         [<OpLabel key="h" strong>موجودی خزانه</OpLabel>, <Amt key="h" v={p.heldValue} u={p.heldUnits} strong />],
         [<OpLabel key="a" op="−" sub={`شامل رزرو ${samt(p.reservedValue)}`}>تخصیص به کاربران</OpLabel>, <Amt key="a" v={p.allocatedValue} u={p.allocatedUnits} />],
         [<OpLabel key="c" op="−">تعهد بسته‌های ارسالی</OpLabel>, <Amt key="c" v={p.committedValue} u={p.committedUnits} />],
-        ...(p.pendingRedeemUnits > 0 ? [[<OpLabel key="r" op="−">در انتظار ابطال</OpLabel>, <Amt key="r" v={p.pendingRedeemValue} u={p.pendingRedeemUnits} />] as [ReactNode, ReactNode]] : []),
-        [<OpLabel key="f" op="=" strong>{short ? 'کسری موجودی' : 'موجودی آزاد'}</OpLabel>, <Amt key="f" v={Math.abs(p.availableValue)} u={Math.abs(p.availableUnits)} strong tone={short ? 'var(--error-text)' : undefined} />],
-        ...(p.pendingBuyUnits > 0 ? [[<OpLabel key="b" op="+">صدور در راه</OpLabel>, <Amt key="b" v={p.pendingBuyValue} u={p.pendingBuyUnits} />] as [ReactNode, ReactNode]] : []),
+        [<OpLabel key="f" op="=" strong>موجودی آزاد</OpLabel>, <Amt key="f" v={free} u={Math.max(0, p.availableUnits)} strong />],
+        ...(queued > 0 ? [
+          row('q', <OpLabel op="−" sub={`${faDigits(p.queuedCount)} مورد منتظر موجودی`}>در صف تأمین</OpLabel>, <Amt key="q" v={queued} u={u(queued)} />),
+          need > 0
+            ? row('n', <OpLabel op="=" strong sub="با ثبت صدور، صف همان لحظه تحویل می‌شود"><span style={{ color: 'var(--error-text)' }}>نیاز به خرید</span></OpLabel>, <Amt key="n" v={need} u={u(need)} strong tone="var(--error-text)" />)
+            : row('n', <OpLabel op="=" strong>آزاد پس از صف</OpLabel>, <Amt key="n" v={free - queued} u={u(free - queued)} strong />),
+        ] : []),
       ]} />
     </div>
   );
 }
 
-/** Coverage days against the target band (min free value / target days / max free value) and the net daily drain. */
+/**
+ * Free stock (after the queue) against the target band (minimum / maximum free stock) and the net daily drain.
+ * Cover days are not used: the band is the minimum and the maximum the operator sets.
+ */
 export function CoverageBlock({ p, minTarget = minTargetOf(p) }: { p: TreasuryPosition; minTarget?: number }) {
   const t = p.target;
   const s = STOCK_STATE[p.state];
-  const ratio = t && p.coverageDays != null ? p.coverageDays / t.targetDays : p.coverageDays == null ? 1 : 0;
+  const free = Math.max(0, p.availableValue - p.queuedValue);
+  const ratio = t && minTarget > 0 ? free / minTarget : 1;
   return (
     <div className="nm-stack" style={{ gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-        <span className="nm-big"><span className="num">{daysText(p.coverageDays)}</span></span>
-        {t && <span className="mute" style={{ fontSize: 12.5 }}>هدف <span className="num">{faDigits(t.targetDays)}</span> روز</span>}
+        <span className="nm-big"><span className="num">{samt(free)}</span><span className="u">تومان آزاد</span></span>
+        {t && <span className="mute" style={{ fontSize: 12.5 }}>حداقل <span className="num">{samt(minTarget)}</span></span>}
         <span style={{ marginRight: 'auto' }}><StatePill p={p} /></span>
       </div>
-      {t && <Meter value={ratio} tone={s.tone === 'neutral' ? 'primary' : s.tone} label={`پوشش ${daysText(p.coverageDays)} از هدف ${faDigits(t.targetDays)} روز`} />}
+      {t && minTarget > 0 && <Meter value={ratio} tone={s.tone === 'neutral' ? 'primary' : s.tone} label={`موجودی آزاد ${samt(free)} از حداقل ${samt(minTarget)} تومان`} />}
       <KV rows={[
         ['حداقل موجودی آزاد', t ? <span key="m" className="num">{samt(minTarget)} تومان</span> : <span key="m" className="mute">بدون هدف</span>],
         ['سقف موجودی آزاد', t?.maxFreeValue ? <span key="x" className="num">{samt(t.maxFreeValue)} تومان</span> : <span key="x" className="mute">تعیین نشده</span>],
@@ -132,7 +147,7 @@ export function CoverageBlock({ p, minTarget = minTargetOf(p) }: { p: TreasuryPo
           ? <span key="d" className="num">{samt(p.demandPerDay)} تومان</span>
           : <span key="d" className="mute">موجودی رشد می‌کند{p.demandPerDay < 0 ? ` (${samt(-p.demandPerDay)} در روز)` : ''}</span>],
       ]} />
-      {p.state !== 'inactive' && <span className="mute" style={{ fontSize: 12 }}>{s.hint}. پوشش با احتساب صدورهای در راه است.</span>}
+      {p.state !== 'inactive' && <span className="mute" style={{ fontSize: 12 }}>{s.hint}.</span>}
     </div>
   );
 }

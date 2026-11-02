@@ -1,5 +1,9 @@
 'use client';
-/** /app/receipt?tx=<id> — design: app-done (operation receipt). */
+/**
+ * /app/receipt?tx=<id> — design: app-done (operation receipt).
+ * A fund trade waiting in Namadno's queue (`tradeWait`: a purchase the stock does not cover yet, or a sale its free rial does
+ * not cover yet) says when it completes at the latest («تأمین تا» / «واریز تا» from the transaction details).
+ */
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
@@ -12,7 +16,7 @@ import { useToast } from '@/components/ui/Toast';
 import { jDateTime, money, units as fmtUnits } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { Transaction } from '@/types/domain';
-import { STATUS_LABEL, TONE, assetMeta, downloadText, receiptText, shareText } from '@/components/app/money/lib';
+import { STATUS_LABEL, TONE, assetMeta, downloadText, receiptText, shareText, tradeWait } from '@/components/app/money/lib';
 import '@/components/app/money/money.css';
 
 export default function ReceiptPage() {
@@ -63,6 +67,8 @@ function ReceiptScreen() {
   const ok = tx.status === 'success';
   const pending = tx.status === 'pending';
   const headTone = ok ? TONE.success : pending ? TONE.warning : TONE.error;
+  /** Waiting for Namadno's stock (buy) or rial (sell): the promised time is in the details. */
+  const wait = tradeWait(tx);
   const rows: { k: string; v: string; ltr?: boolean }[] = [
     { k: 'کد پیگیری', v: tx.trackingCode, ltr: true },
     { k: 'تاریخ', v: jDateTime(tx.at) },
@@ -87,9 +93,9 @@ function ReceiptScreen() {
           <span className="mn-pop" style={{ width: 72, height: 72, borderRadius: '50%', background: headTone[0], color: headTone[1], display: 'grid', placeItems: 'center' }}>
             <Icon name={ok ? 'check' : pending ? 'clock' : 'close'} size={36} strokeWidth={2} />
           </span>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{ok ? 'با موفقیت انجام شد' : pending ? 'درخواست شما ثبت شد' : 'عملیات ناموفق بود'}</h2>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.5 }}>
-            {pending ? 'پس از تسویه، وضعیت در تاریخچه به‌روز می‌شود.' : 'عملیات شما ثبت شد و در تاریخچه قابل مشاهده است.'}
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{ok ? 'با موفقیت انجام شد' : wait ? wait.title : pending ? 'درخواست شما ثبت شد' : 'عملیات ناموفق بود'}</h2>
+          <span style={{ maxWidth: 320, fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.7 }}>
+            {wait ? wait.text : pending ? 'پس از تسویه، وضعیت در تاریخچه به‌روز می‌شود.' : 'عملیات شما ثبت شد و در تاریخچه قابل مشاهده است.'}
           </span>
         </div>
 

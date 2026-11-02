@@ -143,9 +143,10 @@ function portfolioFromMeta(m: PlatformUserMeta): Portfolio {
   return { total, free: total - locked, locked, changeToday: 0, changeTodayPct: 0, holdings: m.holdings, updatedAt: nowIso() };
 }
 
-function kycState(u: { kycLevel: number; flags?: string[] }): UserMetaRow['kyc'] {
-  if (u.flags?.includes('kyc_rejected')) return 'rejected';
-  return u.kycLevel < 2 ? 'pending' : 'ok';
+/** Deprecated field: identity is the app's automated levels (no review queue), so there is no pending / rejected state. */
+function kycState(u: { kycLevel: number }): UserMetaRow['kyc'] {
+  void u;
+  return 'ok';
 }
 
 function metaRow(holdings: Holding[], facilities: Facility[], kyc: UserMetaRow['kyc']): UserMetaRow {
@@ -322,15 +323,18 @@ export const opCoreHandlers: HttpHandler[] = [
     }
     const rows = Object.values(meta);
     const statuses = [...Object.values(db().users).map((u) => u.profile.status), ...db().platformUsers.filter((x) => !db().users[x.id]).map((x) => x.status)];
+    const statusOf = new Map<string, string>([...db().platformUsers.map((x) => [x.id, x.status] as [string, string]), ...Object.values(db().users).map((u) => [u.profile.id, u.profile.status] as [string, string])]);
+    const blocked = Object.entries(meta).filter(([id, r]) => statusOf.get(id) === 'suspended' || r.lockTypes.includes('legal')).length;
     const users = 12_831 + rows.length;
     const locked = 3_904 + rows.filter((r) => r.lockTypes.length > 0).length;
     const out: UsersMeta = {
       meta,
       totals: {
         users, newThisMonth: 860, locked, lockedPct: Math.round((locked / users) * 100),
-        kycPending: 236 + rows.filter((r) => r.kyc === 'pending').length, kycAvgDays: 1.8,
+        kycPending: 0, kycAvgDays: 0, // deprecated: no KYC review queue
         legal: 47 + rows.filter((r) => r.lockTypes.includes('legal')).length,
         suspended: 17 + statuses.filter((s) => s === 'suspended').length,
+        blocked: 61 + blocked, // «مسدود»: account blocked or part of the assets blocked (each person once)
       },
     };
     return ok(out);
@@ -413,10 +417,10 @@ export const opCoreHandlers: HttpHandler[] = [
       const h = ud.holdings.find((x) => x.kind === b.holdingKind);
       if (!h) return fail(422, 'no_holding', 'کاربر در این دارایی موجودی ندارد.');
       if (b.amount > h.free) return fail(422, 'exceeds_free', `مبلغ مسدودی از بخش آزاد «${h.name}» (${money(h.free)} تومان) بیشتر است.`, { free: h.free });
-      const lock = ledger.addLock(ud, b.holdingKind, { type: 'legal', amount: b.amount, title: 'مسدودی قانونی — شماره ' + faDigits(b.reference), condition: 'تا رفع دستور مرجع · ' + reason, reference: b.reference });
-      ledger.addTx(ud, { category: 'lock', title: 'مسدودی قانونی — ' + h.name, subtitle: 'تا رفع دستور مرجع', amount: b.amount, holdingKind: b.holdingKind, lockType: 'legal', lockEvent: 'locked' });
-      ledger.notify(ud, { title: 'مسدودی قانونی روی حساب شما اعمال شد', body: `${money(b.amount)} تومان از ${h.name} تا رفع دستور مرجع مسدود شد. برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.`, tone: 'error', icon: 'lock', href: '/app/support' });
-      addLog(id, `اعمال مسدودی قانونی ${money(b.amount)} روی «${h.name}» — شماره ${faDigits(b.reference)}`, 'error');
+      const lock = ledger.addLock(ud, b.holdingKind, { type: 'legal', amount: b.amount, title: 'مسدود — دستور شماره ' + faDigits(b.reference), condition: 'تا رفع دستور مرجع · ' + reason, reference: b.reference });
+      ledger.addTx(ud, { category: 'lock', title: 'مسدود — ' + h.name, subtitle: 'تا رفع دستور مرجع', amount: b.amount, holdingKind: b.holdingKind, lockType: 'legal', lockEvent: 'locked' });
+      ledger.notify(ud, { title: 'بخشی از دارایی شما مسدود شد', body: `${money(b.amount)} تومان از ${h.name} تا رفع دستور مرجع مسدود شد. برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.`, tone: 'error', icon: 'lock', href: '/app/support' });
+      addLog(id, `مسدود کردن ${money(b.amount)} روی «${h.name}» — شماره ${faDigits(b.reference)}`, 'error');
       return ok(lock);
     }
     const pu = db().platformUsers.find((x) => x.id === id);
@@ -427,10 +431,10 @@ export const opCoreHandlers: HttpHandler[] = [
     const h = m.holdings.find((x) => x.kind === b.holdingKind);
     if (!h) return fail(422, 'no_holding', 'کاربر در این دارایی موجودی ندارد.');
     if (b.amount > h.free) return fail(422, 'exceeds_free', `مبلغ مسدودی از بخش آزاد «${h.name}» (${money(h.free)} تومان) بیشتر است.`, { free: h.free });
-    const lock: Lock = { id: newId('lk'), type: 'legal', holdingKind: b.holdingKind, amount: b.amount, title: 'مسدودی قانونی — شماره ' + faDigits(b.reference), condition: 'تا رفع دستور مرجع · ' + reason, createdAt: nowIso(), reference: b.reference };
+    const lock: Lock = { id: newId('lk'), type: 'legal', holdingKind: b.holdingKind, amount: b.amount, title: 'مسدود — دستور شماره ' + faDigits(b.reference), condition: 'تا رفع دستور مرجع · ' + reason, createdAt: nowIso(), reference: b.reference };
     h.locks.push(lock);
     syncPlatformUser(pu, m);
-    addLog(id, `اعمال مسدودی قانونی ${money(b.amount)} روی «${name}» — شماره ${faDigits(b.reference)}`, 'error');
+    addLog(id, `مسدود کردن ${money(b.amount)} روی «${name}» — شماره ${faDigits(b.reference)}`, 'error');
     return ok(lock);
   }),
 
@@ -445,9 +449,9 @@ export const opCoreHandlers: HttpHandler[] = [
       if (!h || !lock) return fail(404, 'not_found', 'مسدودی پیدا نشد.');
       h.locks = h.locks.filter((l) => l.id !== lockId);
       recalcHoldings(ud);
-      ledger.addTx(ud, { category: 'lock', title: 'رفع مسدودی قانونی — ' + h.name, subtitle: 'به بخش آزاد برگشت', amount: lock.amount, holdingKind: h.kind, lockType: 'legal', lockEvent: 'released' });
-      ledger.notify(ud, { title: 'مسدودی قانونی حساب شما رفع شد', body: `${money(lock.amount)} تومان از ${h.name} آزاد شد.`, tone: 'success', icon: 'unlock', href: '/app' });
-      addLog(id, `رفع مسدودی قانونی · +${money(lock.amount)} آزاد شد (${h.name})`, 'success');
+      ledger.addTx(ud, { category: 'lock', title: 'رفع مسدودی — ' + h.name, subtitle: 'به بخش آزاد برگشت', amount: lock.amount, holdingKind: h.kind, lockType: 'legal', lockEvent: 'released' });
+      ledger.notify(ud, { title: 'مسدودی دارایی شما رفع شد', body: `${money(lock.amount)} تومان از ${h.name} آزاد شد.`, tone: 'success', icon: 'unlock', href: '/app' });
+      addLog(id, `رفع مسدودی · +${money(lock.amount)} آزاد شد (${h.name})`, 'success');
       return ok({ ok: true });
     }
     const pu = db().platformUsers.find((x) => x.id === id);
@@ -458,7 +462,7 @@ export const opCoreHandlers: HttpHandler[] = [
     if (!h || !lock) return fail(404, 'not_found', 'مسدودی پیدا نشد.');
     h.locks = h.locks.filter((l) => l.id !== lockId);
     syncPlatformUser(pu, m);
-    addLog(id, `رفع مسدودی قانونی · +${money(lock.amount)} آزاد شد (${h.name})`, 'success');
+    addLog(id, `رفع مسدودی · +${money(lock.amount)} آزاد شد (${h.name})`, 'success');
     return ok({ ok: true });
   }),
 
