@@ -128,9 +128,11 @@ function ConvertScreen() {
       ];
   const lockedAmt = sell ? fundLocked : rial.locked;
   const lockHref = sell ? routes.app.asset(F.kind) : routes.app.asset('rial');
+  // cash first: trades are with Namadno's own stock and free rial, so they are done at once (if the stock or Namadno's
+  // rial is ever short, the trade waits in the queue and the receipt says by when)
   const note = sell
-    ? `مبلغ فروش پس از تسویه (${F.settlement === 'T+0' ? 'امروز' : F.settlement === 'T+2' ? 'دو روز کاری بعد' : 'فردا'}) به کیف پول ریالی واریز می‌شود.`
-    : 'واحدهای خریداری‌شده از ساعت ۱۴ فردا قابل فروش به ریال‌اند.';
+    ? 'مبلغ فروش همان لحظه به کیف پول ریالی شما واریز می‌شود.'
+    : 'واحدها همان لحظه به دارایی شما اضافه می‌شوند.';
   const kycNeeded = (me.data && me.data.kycLevel < 3) || !!kycError;
 
   const pickList = active
@@ -232,7 +234,7 @@ function ConvertScreen() {
         <div className="card" style={{ boxSizing: 'border-box', padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: 8, flex: 'none' }}>
           <div className="row" style={{ height: 22, gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 700 }}>پیش‌نمایش</span>
-            <span className="lbl" style={{ marginRight: 'auto', height: 22, background: 'var(--soft-default)', color: 'var(--default-text)', fontWeight: 600 }}>{sell ? 'واریز ' + F.settlement : 'صدور پایان روز'}</span>
+            <span className="lbl" style={{ marginRight: 'auto', height: 22, background: 'var(--soft-default)', color: 'var(--default-text)', fontWeight: 600 }}>{sell ? 'واریز فوری' : 'تحویل فوری'}</span>
           </div>
           <div style={{ height: 54, display: 'flex', alignItems: 'stretch' }}>
             {preview.map((p, i) => (

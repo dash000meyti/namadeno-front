@@ -11,10 +11,10 @@ import {
 } from '@/api/op-treasury-extra';
 import { useToast } from '@/components/ui/Toast';
 import { rialReportRows } from '@/components/op/funds/rial';
-import { CASH_KIND, RIAL_MOVE, SIDE, STOCK_STATE, amt, cashStatus, orderStatus, unitsText } from '@/components/op/treasury/ui';
+import { CASH_KIND, RIAL_MOVE, SIDE, STOCK_STATE, amt, cashStatus, orderAt, unitsText } from '@/components/op/treasury/ui';
 import { downloadCsv, printReport, raw } from '@/components/op/system/fmt';
 import { depositPurpose } from '@/components/op/cash/ReviewDepositDialog';
-import { enDigits, faDigits, jDate, jDateTime } from '@/lib/format';
+import { enDigits, faDigits, jDate, jDateTime, money } from '@/lib/format';
 import { now } from '@/lib/clock';
 
 type Cell = string | number;
@@ -34,7 +34,6 @@ const ORG_STATUS: Record<OrgTreasuryRow['status'], string> = { active: 'فعال
 /** Number formatter per output: CSV → raw latin integer, print → «۲۵۹ میلیارد». */
 const numFor = (pdf: boolean) => (n: number) => (pdf ? amt(n) : raw(n));
 const unitsFor = (pdf: boolean) => (u: number) => (pdf ? unitsText(u) : String(Math.round(u * 10_000) / 10_000));
-const daysFor = (pdf: boolean) => (d: number | null | undefined) => (d == null ? '—' : pdf ? faDigits(Math.round(d)) : String(Math.round(d)));
 const unitNote = (pdf: boolean) => (pdf ? ' — مبالغ به تومان' : '');
 
 interface Data { s: TreasurySummary; orders?: TreasuryOrder[]; entries?: CashEntry[]; moves?: RialMove[] }
@@ -46,19 +45,18 @@ function rialSec(s: TreasurySummary, pdf: boolean): Sec {
 
 function stockSec(positions: TreasuryPosition[], pdf: boolean): Sec {
   const n = numFor(pdf);
-  const d = daysFor(pdf);
   const sum = (k: keyof TreasuryPosition) => positions.reduce((a, p) => a + (Number(p[k]) || 0), 0);
   return {
     title: 'موجودی صندوق‌ها' + unitNote(pdf),
     rows: [
       // nothing goes negative: what the free stock cannot cover waits in «صف تأمین»; the gap is «نیاز به خرید»
-      ['صندوق', 'نماد', 'وضعیت موجودی', 'ارزش نگهداری', 'تخصیص‌یافته', 'رزروشده', 'تعهد باز', 'موجودی آزاد', 'در صف تأمین', 'نیاز به خرید', 'تحویل صف تا', 'صدور در راه', 'مصرف خالص روزانه', 'پوشش (روز)', 'هدف پوشش (روز)'],
+      ['صندوق', 'نماد', 'وضعیت موجودی', 'ارزش نگهداری', 'تخصیص‌یافته', 'رزروشده', 'تعهد باز', 'موجودی آزاد', 'در صف تأمین', 'نیاز به خرید', 'تحویل صف تا', 'مصرف خالص روزانه', 'حداقل هدف', 'سقف هدف'],
       ...positions.map((p) => [
         p.name, p.symbol, STOCK_STATE[p.state].label, n(p.heldValue), n(p.allocatedValue), n(p.reservedValue), n(p.committedValue),
         n(Math.max(0, p.availableValue)), n(p.queuedValue ?? 0), n(p.needBuyValue ?? 0), p.needBy ? jDateTime(p.needBy) : '',
-        n(p.pendingBuyValue), n(p.demandPerDay), d(p.coverageDays), d(p.target?.targetDays),
+        n(p.demandPerDay), p.target ? n(p.target.minFreeValue) : '', p.target?.maxFreeValue ? n(p.target.maxFreeValue) : '',
       ]),
-      ['جمع', '', '', n(sum('heldValue')), n(sum('allocatedValue')), n(sum('reservedValue')), n(sum('committedValue')), n(sum('availableValue')), n(sum('queuedValue')), n(sum('needBuyValue')), '', n(sum('pendingBuyValue')), n(sum('demandPerDay')), '', ''],
+      ['جمع', '', '', n(sum('heldValue')), n(sum('allocatedValue')), n(sum('reservedValue')), n(sum('committedValue')), n(sum('availableValue')), n(sum('queuedValue')), n(sum('needBuyValue')), '', n(sum('demandPerDay')), '', ''],
     ],
   };
 }
@@ -67,13 +65,15 @@ function ordersSec(orders: TreasuryOrder[], positions: TreasuryPosition[], pdf: 
   const n = numFor(pdf);
   const u = unitsFor(pdf);
   const name = (id: string) => positions.find((p) => p.fundId === id)?.shortName ?? id;
+  // cash-first: every order is recorded when done (paid, units in or out at once) — a ledger, newest first
+  const done = orders.filter((o) => o.status !== 'cancelled').sort((a, b) => orderAt(b).localeCompare(orderAt(a)));
   return {
     title: 'سفارش‌ها به صندوق‌ها' + unitNote(pdf),
     rows: [
-      ['کد', 'صندوق', 'نوع', 'مبلغ', 'تعداد واحد', 'کارمزد', 'وضعیت', 'تاریخ ثبت', 'تاریخ تسویه', 'ثبت‌کننده'],
-      ...orders.map((o) => [
-        o.code, name(o.fundId), SIDE[o.side].label, n(o.amount), u(o.units), n(o.fee), orderStatus(o).label,
-        jDate(o.placedAt), jDate(o.settledAt ?? o.settleAt), o.by,
+      ['کد', 'صندوق', 'نوع', 'مبلغ', 'تعداد واحد', 'NAV', 'کارمزد', 'زمان ثبت', 'ثبت‌کننده', 'یادداشت'],
+      ...done.map((o) => [
+        o.code, name(o.fundId), SIDE[o.side].label, n(o.amount), u(o.units), pdf ? money(o.navAtSettle ?? o.navAtOrder) : raw(o.navAtSettle ?? o.navAtOrder), n(o.fee),
+        jDateTime(orderAt(o)), o.by, o.note ?? '',
       ]),
     ],
   };
@@ -138,7 +138,6 @@ function cashSecs(s: TreasurySummary, entries: CashEntry[], moves: RialMove[], p
         ['کیف پول کاربران', n(-c.userWallets)],
         ['حساب آزاد سازمان‌ها', n(-c.orgFree)],
         ['ریال رزرو', n(-c.reserve)],
-        ['سفارش‌های صدور باز', n(-c.tiedInOrders)],
         ['ریال آزاد نمادنو', n(c.available)],
         ['فیش در انتظار تأیید', n(c.expectedDeposits)],
         ['تعداد فیش در انتظار تأیید', pdf ? faDigits(c.expectedCount) : c.expectedCount],

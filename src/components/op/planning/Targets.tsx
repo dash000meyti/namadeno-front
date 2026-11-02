@@ -2,7 +2,8 @@
 /**
  * /op/planning — «اهداف» tab: treasury targets as kit settings groups with a sticky save bar.
  *   rial     Namadno's free rial («ریال آزاد نمادنو»): minimum and maximum (Toman)
- *   stock    per active fund: minimum free stock (Toman), target coverage days, maximum (above it a redemption is suggested)
+ *   stock    per active fund: minimum and maximum free stock (Toman; below the minimum a buy, above the maximum a
+ *            redemption is suggested). Cover days are not used.
  *   aum      total managed assets (fund units + the rial bank balance) by a date · orgs / users growth by a date
  *   mix      asset mix in percent (rial, gold, fixed, other …); must sum to 100 (the server answers 422 bad_mix otherwise)
  * Only changed sections are sent (TargetsPatch); edits reset when the saved targets come back.
@@ -19,14 +20,14 @@ import {
 import { DateInput } from '@/components/ui/DateInput';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
-import { RIAL_UI, STOCK_STATE, TI, amt, daysText, fundUi } from '@/components/op/treasury/ui';
+import { RIAL_UI, STOCK_STATE, TI, amt, fundUi } from '@/components/op/treasury/ui';
 import { errMsg, pctT } from '@/components/op/system/fmt';
 import { enDigits, faDigits, jDate, jDayMonth, money } from '@/lib/format';
 import { now } from '@/lib/clock';
 import { formatJalali, jalaliToIsoAny, parseJalaliText } from '@/lib/jalali';
 import { neededText, tm } from './shared';
 
-interface StockDraft { min: number; days: number; max: number }
+interface StockDraft { min: number; max: number }
 interface RialDraft { min: number; max: number }
 interface Goal { value: number; by: string }
 interface Edits { stock: Record<string, Partial<StockDraft>>; rial?: Partial<RialDraft>; aum?: Partial<Goal>; orgs?: Partial<Goal>; users?: Partial<Goal>; mix?: Record<string, number> }
@@ -42,7 +43,7 @@ const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
 const stockInit = (t: TreasuryTargets, fundId: string): StockDraft => {
   const s = t.stock.find((x) => x.fundId === fundId);
-  return s ? { min: s.minFreeValue, days: s.targetDays, max: s.maxFreeValue ?? NaN } : { min: NaN, days: NaN, max: NaN };
+  return s ? { min: s.minFreeValue, max: s.maxFreeValue ?? NaN } : { min: NaN, max: NaN };
 };
 const goalInit = (t: TreasuryTargets, k: GoalKey): Goal => ({ value: t[k].value, by: jDate(t[k].by) });
 const rialInit = (t: TreasuryTargets): RialDraft => ({ min: t.rial?.minFreeValue ?? NaN, max: t.rial?.maxFreeValue ?? NaN });
@@ -76,7 +77,7 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
   const setMix = (k: string, n: number) => setEdits((e) => ({ ...e, mix: { ...e.mix, [k]: n } }));
 
   // ── dirty state
-  const stockChanged = funds.filter((p) => { const a = stockOf(p.fundId), b = stockInit(t, p.fundId); return !same(a.min, b.min) || !same(a.days, b.days) || !same(a.max, b.max); });
+  const stockChanged = funds.filter((p) => { const a = stockOf(p.fundId), b = stockInit(t, p.fundId); return !same(a.min, b.min) || !same(a.max, b.max); });
   const goalChanged = (k: GoalKey) => { const a = goalOf(k), b = goalInit(t, k); return !same(a.value, b.value) || normDate(a.by) !== normDate(b.by); };
   const mixChanged = mixKeys.some((k) => !same(mixOf(k), t.mix[k]));
   const rialChanged = (() => { const a = rialOf(), b = rialInit(t); return !same(a.min, b.min) || !same(a.max, b.max); })();
@@ -87,9 +88,8 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
   const stockErr = (fid: string): string | null => {
     const s = stockOf(fid);
     const had = t.stock.some((x) => x.fundId === fid);
-    if (!had && [s.min, s.days, s.max].every(Number.isNaN)) return null;
+    if (!had && [s.min, s.max].every(Number.isNaN)) return null;
     if (!(s.min >= 0)) return 'حداقل موجودی را وارد کنید.';
-    if (!(Number.isInteger(s.days) && s.days >= 1 && s.days <= 365)) return 'روزهای پوشش باید عددی بین ۱ تا ۳۶۵ باشد.';
     if (!Number.isNaN(s.max) && !(s.max > s.min)) return 'سقف موجودی باید از حداقل بیشتر باشد.';
     return null;
   };
@@ -118,7 +118,7 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
     if (stockChanged.length) {
       patch.stock = stockChanged.map((p): StockTarget => {
         const s = stockOf(p.fundId);
-        return { fundId: p.fundId, minFreeValue: s.min, targetDays: s.days, maxFreeValue: Number.isNaN(s.max) ? undefined : s.max };
+        return { fundId: p.fundId, minFreeValue: s.min, maxFreeValue: Number.isNaN(s.max) ? undefined : s.max };
       });
     }
     for (const k of goalsChanged) { const g = goalOf(k); patch[k] = { value: g.value, by: isoOf(g.by)! }; }
@@ -181,7 +181,7 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
     <>
       <SettingsGroup
         title={titleWith(RIAL_UI.rial.d, RIAL_UI.rial.tone, 'ریال')}
-        action={<span className="mute" style={{ fontSize: 12, fontWeight: 500 }}>ریال آزاد نمادنو: باقی حساب بانکی پس از پول کاربران و سازمان‌ها، سفارش‌های باز و ریال رزرو</span>}
+        action={<span className="mute" style={{ fontSize: 12, fontWeight: 500 }}>ریال آزاد نمادنو: باقی حساب بانکی پس از پول کاربران و سازمان‌ها و ریال رزرو</span>}
         footer="ریال آزاد نمادنو سقف سفارش‌های صدور تازه است؛ کمتر از حداقل در صف اقدام هشدار «زیر هدف» می‌آید و بالاتر از سقف «مازاد» نشان داده می‌شود."
       >
         <SettingRow
@@ -198,19 +198,18 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
 
       <SettingsGroup
         title={titleWith(TI.stock, 'success', 'موجودی صندوق‌ها')}
-        action={<span className="mute" style={{ fontSize: 12, fontWeight: 500 }}>حداقل و سقف موجودی آزاد، و روزهای پوششی که باید همیشه آماده باشد</span>}
-        footer="موجودی آزاد هر صندوق باید بالاتر از بیشترِ «حداقل موجودی» و «تقاضای خالص روزانه × روزهای پوشش» بماند؛ کمتر از آن صدور و بالاتر از سقف، ابطال پیشنهاد می‌شود."
+        action={<span className="mute" style={{ fontSize: 12, fontWeight: 500 }}>حداقل و سقف موجودی آزاد هر صندوق</span>}
+        footer="موجودی آزاد هر صندوق (پس از صف تأمین) باید بالاتر از «حداقل» بماند؛ کمتر از آن صدور و بالاتر از «سقف»، ابطال پیشنهاد می‌شود."
       >
         {funds.map((p) => {
           const u = fundUi(p.fundId);
           const s = stockOf(p.fundId);
           const err = stockErr(p.fundId);
           const st = STOCK_STATE[p.state];
-          const eff = Number.isFinite(s.min) && Number.isFinite(s.days) ? Math.max(s.min, Math.max(0, p.demandPerDay) * s.days) : NaN;
           const hint = (
             <>
-              آزاد {amt(p.availableValue)} · پوشش {daysText(p.coverageDays)} · تقاضای روزانه {amt(Math.max(0, p.demandPerDay))}
-              {Number.isFinite(eff) && <> · حداقل مؤثر <b className="num" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{amt(eff)}</b></>}
+              آزاد <b className="num" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{amt(Math.max(0, p.availableValue - p.queuedValue))}</b>
+              {p.queuedValue > 0 && <> · در صف تأمین {amt(p.queuedValue)}</>} · تقاضای روزانه {amt(Math.max(0, p.demandPerDay))}
             </>
           );
           return (
@@ -221,8 +220,6 @@ export function TargetsView({ positions, progress }: { positions: TreasuryPositi
             >
               {label('حداقل')}
               <NumberInput value={toB(s.min)} onChange={(n) => setStock(p.fundId, { min: fromB(n) })} suffix="میلیارد" width={56} decimals label={`حداقل موجودی ${p.name} (میلیارد تومان)`} invalid={!!err && !(s.min >= 0)} />
-              {label('پوشش')}
-              <NumberInput value={s.days} onChange={(n) => setStock(p.fundId, { days: Number.isFinite(n) ? Math.round(n) : NaN })} suffix="روز" width={40} label={`روزهای پوشش هدف ${p.name}`} invalid={!!err && !(s.days >= 1 && s.days <= 365)} />
               {label('سقف')}
               <NumberInput value={toB(s.max)} onChange={(n) => setStock(p.fundId, { max: fromB(n) })} suffix="میلیارد" width={56} decimals label={`سقف موجودی ${p.name} (میلیارد تومان، اختیاری)`} invalid={!!err && !Number.isNaN(s.max) && !(s.max > s.min)} />
             </SettingRow>

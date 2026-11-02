@@ -6,7 +6,7 @@
  */
 import { PanelShell, type NavGroup, type SearchItem } from '@/components/panel/PanelShell';
 import { useOpOrganizations, useOpRequests } from '@/api/op';
-import { useTreasuryActions, useTreasuryPositions } from '@/api/op-treasury-extra';
+import { useOpNotifications, useTreasuryActions, useTreasuryPositions } from '@/api/op-treasury-extra';
 import { setSession } from '@/api/client';
 import { routes } from '@/lib/routes';
 import { FEATURES } from '@/lib/features';
@@ -33,12 +33,14 @@ export default function OpPanelLayout({ children }: { children: React.ReactNode 
   const { data: actions } = useTreasuryActions();
   const { data: orgs } = useOpOrganizations();
   const { data: positions } = useTreasuryPositions();
+  // the bell: unread notifications (needs action + updates), like the organization panel
+  const { data: notes } = useOpNotifications();
+  const unread = (notes?.items ?? []).filter((n) => !n.read).length;
   const acts = actions ?? [];
-  const requests = pending?.length ?? 0;
-  const dueOrders = acts.filter((a) => a.kind === 'order_settle').length;
+  // operator requests are all credit products (loan, installment, credit increase): «به‌زودی» while facilities are off
+  const requests = FEATURES.orgCredit ? pending?.length ?? 0 : 0;
   // organizations' deposit receipts waiting for the operator's review
   const receipts = acts.filter((a) => a.kind === 'deposit_review').length;
-  const urgent = acts.filter((a) => a.severity !== 'info').length;
 
   const groups: NavGroup[] = [
     { title: 'پایش', items: [
@@ -48,14 +50,14 @@ export default function OpPanelLayout({ children }: { children: React.ReactNode 
     ] },
     { title: 'خزانه', items: [
       { label: 'موجودی صندوق‌ها', short: 'موجودی', href: routes.op.funds, tone: 'success', d: I.stock },
-      { label: 'سفارش‌ها', href: routes.op.orders, tone: 'primary', d: I.order, badge: dueOrders },
+      { label: 'سفارش‌ها', href: routes.op.orders, tone: 'primary', d: I.order },
       { label: 'نقدینگی', href: routes.op.cash, tone: 'warning', d: I.cash, badge: receipts },
       { label: 'برنامه‌ریزی و اهداف', short: 'برنامه‌ریزی', href: routes.op.planning, tone: 'secondary', d: I.plan },
     ] },
     { title: 'مشتریان', items: [
       { label: 'سازمان‌ها', href: routes.op.organizations, tone: 'secondary', d: I.building },
       { label: 'کاربران', href: routes.op.users, tone: 'info', d: I.users },
-      { label: 'درخواست‌ها', href: routes.op.requests, tone: 'warning', d: I.inbox, badge: requests },
+      { label: 'درخواست‌ها', href: routes.op.requests, tone: 'warning', d: I.inbox, badge: requests, soon: !FEATURES.orgCredit },
       { label: 'محصولات اعتباری', short: 'محصولات', href: routes.op.products, tone: 'primary', d: I.card, soon: !FEATURES.orgCredit },
     ] },
     { title: 'تنظیمات', items: [
@@ -67,12 +69,13 @@ export default function OpPanelLayout({ children }: { children: React.ReactNode 
   // ⌘K: pages, then funds and organizations from live data
   const search: SearchItem[] = [
     { title: 'موجودی صندوق‌ها', sub: 'خزانه · تخصیص، رزرو و موجودی آزاد', kind: 'صفحه', d: I.stock, href: routes.op.funds },
-    { title: 'سفارش‌ها', sub: dueOrders ? `${faDigits(dueOrders)} سفارش سررسید تسویه` : 'صدور و ابطال واحد', kind: 'صفحه', d: I.order, href: routes.op.orders },
+    { title: 'سفارش‌ها', sub: 'صدور و ابطال واحد نزد صندوق‌ها', kind: 'صفحه', d: I.order, href: routes.op.orders },
     { title: 'نقدینگی', sub: receipts ? `${faDigits(receipts)} فیش در انتظار تأیید` : 'ریال، ریال رزرو و حساب ریالی سازمان‌ها', kind: 'صفحه', d: I.cash, href: routes.op.cash },
     { title: 'خزانه‌ی ریالی', sub: 'ریال · ریال رزرو · کیف پول کاربران', kind: 'صفحه', d: I.cash, href: routes.op.funds },
     { title: 'برنامه‌ریزی و اهداف', sub: 'پیش‌بینی تقاضا و هدف‌ها', kind: 'صفحه', d: I.plan, href: routes.op.planning },
     { title: 'فعالیت‌ها', sub: 'کاربران، سازمان‌ها و تیم نمادنو', kind: 'صفحه', d: I.activity, href: routes.op.activity },
-    { title: 'درخواست‌ها', sub: `${faDigits(requests)} در انتظار بررسی`, kind: 'صفحه', d: I.inbox, href: routes.op.requests },
+    { title: 'اعلان‌ها', sub: unread ? `${faDigits(unread)} اعلان خوانده‌نشده` : 'نیاز به اقدام و به‌روزرسانی‌ها', kind: 'صفحه', d: I.activity, href: routes.op.notifications },
+    ...(FEATURES.orgCredit ? [{ title: 'درخواست‌ها', sub: `${faDigits(requests)} در انتظار بررسی`, kind: 'صفحه', d: I.inbox, href: routes.op.requests } as SearchItem] : []),
     ...(positions ?? []).filter((p) => p.status === 'active').map((p): SearchItem => ({
       title: p.name, sub: `موجودی ${compactMoney(p.heldValue)} · آزاد ${compactMoney(p.availableValue)}`, kind: 'صندوق', d: I.stock, href: routes.op.fund(p.fundId),
       tone: ['var(--soft-warning)', 'var(--warning-text)'],
@@ -94,7 +97,7 @@ export default function OpPanelLayout({ children }: { children: React.ReactNode 
       searchPlaceholder="جستجوی صندوق، سازمان، صفحه…"
       searchItems={search}
       envLabel="Production"
-      bell={{ href: routes.op.overview, count: urgent, label: 'صف اقدام' }}
+      bell={{ href: routes.op.notifications, count: unread, label: 'اعلان‌ها' }}
       settingsHref={routes.op.settings}
     >
       {children}

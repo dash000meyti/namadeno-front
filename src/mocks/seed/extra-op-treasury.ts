@@ -27,7 +27,7 @@ const M = 1e6;
 
 /** Allocated value per fund (Toman billions) — free stock = held − allocated − committed (never negative).
  *  Silver: only 0.4B of its 12B is free and users' purchases of 1B wait in the queue («نیاز به خرید» 0.6B) — its buy
- *  TR-1036 was cancelled and not placed again (SILVER_QUEUE below). */
+ *  no buy for it has been recorded yet (SILVER_QUEUE below). */
 const ALLOC_B: Record<string, number> = { gold: 239.5, fixed: 166, equity: 47, mixed: 35, silver: 11.6, saffron: 6.8, leverage: 8.4, project: 14.2 };
 /** Unrealised gain of the held stock over its cost. */
 const GAIN: Record<string, number> = { gold: 0.18, fixed: 0.09, equity: 0.06, mixed: 0.05, silver: 0.1, saffron: 0.04, leverage: -0.03, project: 0.07 };
@@ -58,10 +58,10 @@ export const TREASURY_ASSUMPTIONS: TreasuryAssumptions = {
 
 const TARGETS = (): TreasuryTargets => ({
   stock: [
-    { fundId: 'gold', minFreeValue: 20 * B, targetDays: 21, maxFreeValue: 45 * B },
-    { fundId: 'fixed', minFreeValue: 12 * B, targetDays: 21, maxFreeValue: 40 * B },
-    { fundId: 'equity', minFreeValue: 3 * B, targetDays: 30, maxFreeValue: 8 * B },
-    { fundId: 'silver', minFreeValue: 1 * B, targetDays: 30, maxFreeValue: 3 * B },
+    { fundId: 'gold', minFreeValue: 20 * B, maxFreeValue: 45 * B },
+    { fundId: 'fixed', minFreeValue: 12 * B, maxFreeValue: 40 * B },
+    { fundId: 'equity', minFreeValue: 3 * B, maxFreeValue: 8 * B },
+    { fundId: 'silver', minFreeValue: 1 * B, maxFreeValue: 3 * B },
   ],
   rial: { minFreeValue: 10 * B, maxFreeValue: 40 * B },
   aum: { value: 860 * B, by: jalaliToIso(1405, 12, 29) },
@@ -72,16 +72,16 @@ const TARGETS = (): TreasuryTargets => ({
   updatedBy: 'علی نادری',
 });
 
-// [code, fund, side, amount (B), placed day, placed time, status, settle/cancel day, by, note]
+// [code, fund, side, amount (B), day, time, status, (unused) day, by, note] — orders are recorded only when done (cash first):
+// every order is settled at the moment it is recorded; there are no open or due orders
 type OrderRow = [string, string, 'buy' | 'redeem', number, number, string, StoredOrder['status'], number, string, string?];
 const ORDERS: OrderRow[] = [
-  ['TR-1042', 'gold', 'buy', 6.0, -1, '11:20', 'placed', 0, 'علی نادری', 'پیشنهاد خزانه برای نزدیک شدن پوشش طلا به هدف'],
-  ['TR-1041', 'fixed', 'buy', 3.0, 0, '09:40', 'placed', 1, 'علی نادری'],
-  ['TR-1040', 'equity', 'redeem', 4.0, -1, '15:10', 'placed', 1, 'مهسا بهرامی', 'موجودی آزاد سهام بیش از سقف هدف'],
+  ['TR-1042', 'gold', 'buy', 6.0, -1, '11:20', 'settled', 0, 'علی نادری', 'پیشنهاد خزانه برای نزدیک شدن پوشش طلا به هدف'],
+  ['TR-1041', 'fixed', 'buy', 3.0, 0, '09:40', 'settled', 1, 'علی نادری'],
+  ['TR-1040', 'equity', 'redeem', 4.0, -1, '15:10', 'settled', 1, 'مهسا بهرامی', 'موجودی آزاد سهام بیش از سقف هدف'],
   ['TR-1039', 'gold', 'buy', 8.0, -6, '10:05', 'settled', -5, 'علی نادری'],
   ['TR-1038', 'fixed', 'buy', 5.0, -9, '11:30', 'settled', -8, 'مهسا بهرامی'],
   ['TR-1037', 'gold', 'buy', 10.0, -15, '09:50', 'settled', -14, 'علی نادری'],
-  ['TR-1036', 'silver', 'buy', 0.8, -12, '13:15', 'cancelled', -11, 'مهسا بهرامی', 'NAV روز بعد اعلام شد؛ با مبلغ تازه ثبت می‌شود'],
   ['TR-1035', 'mixed', 'buy', 2.0, -18, '10:40', 'settled', -16, 'علی نادری'],
   ['TR-1034', 'fixed', 'buy', 6.0, -24, '12:10', 'settled', -23, 'علی نادری'],
   ['TR-1033', 'gold', 'buy', 12.0, -31, '09:35', 'settled', -30, 'علی نادری'],
@@ -238,7 +238,8 @@ export function seed_opTreasury(d: MockDB) {
     const placedAt = daysFromNow(pDay, pAt);
     const navAtOrder = navAt(f, placedAt);
     const fee = Math.round((amount * (side === 'buy' ? f.feePct : (f as Fund & { meta?: FundMeta }).meta?.sellFeePct ?? f.feePct)) / 100);
-    const settleIso = daysFromNow(sDay, status === 'placed' ? '09:00' : '10:30');
+    // recorded = done: the order is settled at the moment it is recorded (no open / due orders)
+    const settleIso = status === 'settled' ? placedAt : daysFromNow(sDay, '10:30');
     const navAtSettle = status === 'settled' ? navAt(f, settleIso) : undefined;
     const units = side === 'buy' ? (amount - fee) / (navAtSettle ?? navAtOrder) : amount / navAtOrder;
     return {
@@ -307,8 +308,8 @@ export function seed_opTreasury(d: MockDB) {
     if (o.status !== 'settled') continue;
     const f = fundOf(o.fundId);
     entries.push(o.side === 'buy'
-      ? { id: cid(), at: o.settledAt!, kind: 'order_buy', amount: -o.amount, status: 'done', title: `تسویه‌ی صدور ${f.shortName} · ${o.code}`, orderId: o.id, by: o.by }
-      : { id: cid(), at: o.settledAt!, kind: 'order_redeem', amount: Math.round(o.units * (o.navAtSettle ?? o.navAtOrder) - o.fee), status: 'done', title: `تسویه‌ی ابطال ${f.shortName} · ${o.code}`, orderId: o.id, by: o.by });
+      ? { id: cid(), at: o.settledAt!, kind: 'order_buy', amount: -o.amount, status: 'done', title: `صدور ${f.shortName} · ${o.code}`, orderId: o.id, by: o.by }
+      : { id: cid(), at: o.settledAt!, kind: 'order_redeem', amount: Math.round(o.units * (o.navAtSettle ?? o.navAtOrder) - o.fee), status: 'done', title: `ابطال ${f.shortName} · ${o.code}`, orderId: o.id, by: o.by });
   }
   for (const [day, amt] of [[-75, 12 * M], [-45, 14 * M], [-15, 11 * M]] as const) {
     entries.push({ id: cid(), at: daysFromNow(day, '08:00'), kind: 'fee', amount: -amt, status: 'done', title: 'کارمزد خدمات بانکی ماهانه' });
@@ -437,8 +438,8 @@ export function seed_opTreasury(d: MockDB) {
   for (const o of orders.filter((x) => x.status === 'settled')) {
     const nav = o.navAtSettle ?? o.navAtOrder;
     moves.push(o.side === 'buy'
-      ? { id: mid(), at: o.settledAt!, fundId: o.fundId, kind: 'buy_settle', units: o.units, value: o.amount - o.fee, title: `تسویه‌ی صدور ${o.code}`, orderId: o.id }
-      : { id: mid(), at: o.settledAt!, fundId: o.fundId, kind: 'redeem_settle', units: -o.units, value: Math.round(o.units * nav), title: `تسویه‌ی ابطال ${o.code}`, orderId: o.id });
+      ? { id: mid(), at: o.settledAt!, fundId: o.fundId, kind: 'buy_settle', units: o.units, value: o.amount - o.fee, title: `صدور ${o.code}`, orderId: o.id }
+      : { id: mid(), at: o.settledAt!, fundId: o.fundId, kind: 'redeem_settle', units: -o.units, value: Math.round(o.units * nav), title: `ابطال ${o.code}`, orderId: o.id });
   }
   moves.push({ id: mid(), at: daysFromNow(-6, '10:40'), fundId: 'fixed', kind: 'reclaim', units: unitsOf('fixed', 0.12 * B), value: 0.12 * B, title: 'بازپس‌گیری مرحله‌ی ۲ «قرارداد پشتیبانی سامانه»', orgId: 'org-novin' });
   const portal = pkgById('pkg-ms-portal');
@@ -461,14 +462,9 @@ export function seed_opTreasury(d: MockDB) {
     const f = fundOf(o.fundId);
     const verb = o.side === 'buy' ? 'صدور' : 'ابطال';
     const day = Math.round((Date.parse(o.placedAt) - Date.parse(daysFromNow(0))) / 86_400_000);
-    if (day >= -45) {
-      act.push({ id: `ev-o${o.code}`, at: o.placedAt, actor: opr(o.by), category: 'treasury', kind: 'order_placed', title: `${verb} ${f.shortName} · ${o.code}`, sub: `${money(o.amount)} تومان · تسویه ${f.settlement}${o.source === 'suggestion' ? ' · پیشنهاد خزانه' : ''}`, amount: o.amount, fundId: f.id, units: o.units, tone: 'primary', href: `${routes.op.orders}?id=${o.code}`, refs: [{ type: 'order', id: o.code }] });
-    }
-    if (o.status === 'settled' && o.settledAt) {
-      act.push({ id: `ev-s${o.code}`, at: o.settledAt, actor: opr(o.by), category: 'treasury', kind: 'order_settled', title: `تسویه‌ی ${verb} ${f.shortName} · ${o.code}`, sub: `${units(o.units)} واحد · NAV ${money(o.navAtSettle ?? o.navAtOrder)}`, amount: o.amount, fundId: f.id, units: o.units, tone: 'success', href: `${routes.op.orders}?id=${o.code}`, refs: [{ type: 'order', id: o.code }] });
-    }
-    if (o.status === 'cancelled' && o.cancelledAt) {
-      act.push({ id: `ev-c${o.code}`, at: o.cancelledAt, actor: opr(o.by), category: 'treasury', kind: 'order_cancelled', title: `لغو ${verb} ${f.shortName} · ${o.code}`, sub: o.cancelReason, amount: o.amount, fundId: f.id, tone: 'neutral', href: `${routes.op.orders}?id=${o.code}`, refs: [{ type: 'order', id: o.code }] });
+    // an order is recorded when it is done (cash first): one event, «صدور / ابطال … ثبت شد»
+    if (day >= -45 && o.status === 'settled' && o.settledAt) {
+      act.push({ id: `ev-s${o.code}`, at: o.settledAt, actor: opr(o.by), category: 'treasury', kind: 'order_settled', title: `${verb} ${f.shortName} · ${o.code}`, sub: `${money(o.amount)} تومان · ${units(o.units)} واحد · NAV ${money(o.navAtSettle ?? o.navAtOrder)}${o.source === 'suggestion' ? ' · پیشنهاد خزانه' : ''}`, amount: o.amount, fundId: f.id, units: o.units, tone: 'success', href: `${routes.op.orders}?id=${o.code}`, refs: [{ type: 'order', id: o.code }] });
     }
   }
   for (const e of entries.filter((x) => x.kind === 'org_deposit' && x.orgId)) {
@@ -496,7 +492,7 @@ export function seed_opTreasury(d: MockDB) {
   add(-2, '12:30', { actor: user('u-5044', 'پویا شریفی'), ...N_('org-kaveh'), category: 'account', kind: 'device_new', title: 'ورود از دستگاه جدید و تغییر شبا', sub: 'هشدار AL-3311', tone: 'warning', href: routes.op.user('u-5044'), refs: [{ type: 'user', id: 'u-5044' }, { type: 'alert', id: 'AL-3311' }] });
   add(-2, '11:00', { actor: org('org-arman', 'لیلا کاظمی'), ...ORG_ARMAN, category: 'account', kind: 'employees_added', title: `افزودن ${faDigits(12)} همکار`, sub: 'از فایل اکسل · واحد فروش', tone: 'info', href: routes.op.organization('org-arman') });
   add(-3, '12:00', { actor: sys, ...ORG_ARMAN, category: 'reserve', kind: 'milestone_due', title: 'سررسید مرحله‌ی ۳ «قرارداد طراحی هویت بصری»', sub: 'در انتظار تأیید سازمان', tone: 'info', href: routes.op.organization('org-arman'), refs: [{ type: 'package', id: 'pkg-ms-brand' }] });
-  add(-3, '10:15', { actor: opr('مهسا بهرامی'), ...N_('org-novin'), category: 'account', kind: 'legal_hold', title: 'ثبت مسدودی قانونی', sub: 'الهام رستمی · دستور مرجع قضایی', tone: 'warning', href: routes.op.user('u-2138'), refs: [{ type: 'user', id: 'u-2138' }, { type: 'alert', id: 'AL-3302' }] });
+  add(-3, '10:15', { actor: opr('مهسا بهرامی'), ...N_('org-novin'), category: 'account', kind: 'legal_hold', title: 'مسدود کردن دارایی', sub: 'الهام رستمی · دستور مرجع قضایی', tone: 'warning', href: routes.op.user('u-2138'), refs: [{ type: 'user', id: 'u-2138' }, { type: 'alert', id: 'AL-3302' }] });
   add(-4, '15:30', { actor: opr('علی نادری'), ...N_('org-ava'), category: 'contract', kind: 'contract_updated', title: 'به‌روزرسانی قرارداد آوا پرداخت', sub: 'سقف هر نفر و مدت پس‌انداز', tone: 'info', href: routes.op.organization('org-ava') });
   add(-5, '13:10', { actor: user('u-3019', 'نرگس طاهری'), ...N_('org-pars'), category: 'trade', kind: 'user_buy', title: 'خرید صندوق طلا', sub: 'از موجودی آزاد خزانه', amount: 25 * M, fundId: 'gold', tone: 'info', href: routes.op.user('u-3019'), refs: [{ type: 'user', id: 'u-3019' }] });
   add(-6, '10:40', { actor: org('org-novin'), ...N_('org-novin'), category: 'reserve', kind: 'milestone_reclaimed', title: 'بازپس‌گیری مرحله‌ی ۲ «قرارداد پشتیبانی سامانه»', sub: '«تحویل ماژول گزارش» · به موجودی آزاد خزانه برگشت', amount: 0.12 * B, fundId: 'fixed', tone: 'warning', href: routes.op.organization('org-novin') });

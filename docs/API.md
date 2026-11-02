@@ -9,7 +9,7 @@
 - **پول:** عدد صحیح به **تومان**. **تاریخ:** رشته ISO-8601 (UTC)؛ نمایش شمسی در فرانت. **واحد صندوق:** عدد اعشاری.
 - **خطا:** وضعیت HTTP مناسب + بدنه `ApiError { code, message, details? }`. `message` فارسی و قابل نمایش به کاربر است. کدهای پرکاربرد: `kyc_required` (۴۰۳، `details.requiredLevel`)، `insufficient_free`، `over_limit`، `active_loan`، `not_found`، `bad_code`، `weak_password`، `over_budget`.
 - **انواع داده:** `src/types/domain.ts` منبع حقیقت شکل پاسخ‌هاست.
-- **نمایش:** در UI بخش قفل‌شده «رزرو» نام دارد و نوع‌ها «پشتوانه / پس‌انداز سازمانی / اقساطی / دریافت مرحله‌ای / مسدودی قانونی» (`docs/WORDING.md`)؛ نام فیلدها و مقدارهای API همان `locks`، `locked`، `lockType` می‌ماند.
+- **نمایش:** در UI بخش قفل‌شده «رزرو» نام دارد و نوع‌ها «پشتوانه / پس‌انداز سازمانی / اقساطی / دریافت مرحله‌ای / مسدود» (`docs/WORDING.md`؛ `legal` یک نوع برای هر مسدودی است و دلیل و مرجع در `title`/`condition` می‌آید)؛ نام فیلدها و مقدارهای API همان `locks`، `locked`، `lockType` می‌ماند.
 - **قاعده آزاد/قفل:** `free = value − Σ locks`. هر مقدار «قابل برداشت/فروش/حداکثر» و هر عملیات خروج پول فقط از بخش آزاد مجاز است. انواع قفل: `collateral`، `vesting`، `installment`، `milestone`، `legal`.
 - **تبدیل:** فقط ریال ⇄ صندوق (`POST /me/trades`). صندوق به صندوق نداریم.
 - **سطح احراز هویت:** سرویس‌های اعتباری سطح ۲؛ خرید و فروش صندوق سطح ۳.
@@ -94,14 +94,14 @@
 |---|---|---|
 | GET | `/op/overview` | KPIهای پلتفرم، تفکیک قفل، صندوق‌ها، درخواست‌ها و هشدارها |
 | GET/POST | `/op/organizations` · GET/PATCH `/op/organizations/:id` | سازمان‌ها و قراردادها |
-| GET | `/op/users?q=&filter=locked\|legal` · `/op/users/:id` | کاربران با تفکیک آزاد/رزرو و سطح احراز هویت (`kycLevel` ۱ شاهکار، ۲ ثبت احوال، ۳ سجام؛ فقط نمایش). فیلتر `kyc` دیگر در UI استفاده نمی‌شود |
+| GET | `/op/users?q=&filter=locked\|blocked\|legal` · `/op/users/:id` | کاربران با تفکیک آزاد/رزرو و سطح احراز هویت (`kycLevel` ۱ شاهکار، ۲ ثبت احوال، ۳ سجام؛ فقط نمایش). فیلتر `blocked` = «مسدود» (حساب مسدود `status: suspended` یا بخشی از دارایی مسدود `flags: legal_hold`؛ یک نوع). فیلتر `kyc` دیگر در UI استفاده نمی‌شود |
 | POST | `/op/users/:id/status` `{ status }` | تعلیق/فعال‌سازی |
-| POST | `/op/users/:id/legal-hold` `{ holdingKind, amount, reference, reason }` | اعمال مسدودی قانونی (فقط از بخش آزاد) |
+| POST | `/op/users/:id/legal-hold` `{ holdingKind, amount, reference, reason }` | مسدود کردن بخشی از دارایی به دستور مرجع (فقط از بخش آزاد؛ نوع `legal` = «مسدود») |
 | DELETE | `/op/users/:id/legal-hold/:lockId` | رفع مسدودی |
 | GET | `/op/funds` · GET/PATCH `/op/funds/:id` | صندوق‌ها |
 | GET | `/op/products` · PATCH `/op/products/:id` | محصولات اعتباری |
 | GET | `/op/rules` · PATCH `/op/rules/:id` | قوانین و محدودیت‌ها |
-| GET | `/op/requests?status=&kind=` · POST `/op/requests/:id/decision` | درخواست‌های همه سازمان‌ها، به‌جز `milestone_release` (تأیید یا بازپس‌گیری مراحل قرارداد با سازمان است؛ تصمیم بهره‌بردار روی آن `409 org_decides`). `RequestKind`های `cash_withdrawal` و `profile_change` دیگر ساخته نمی‌شوند (در نوع برای سابقه مانده‌اند): برداشت در سقف ثابت روزانه/ماهانه بدون تأیید است و احراز هویت فقط سه سطح خودکار اپ است؛ KYC مدرکی (کارت ملی، سلفی، ویدیو) و صف بررسی آن وجود ندارد |
+| GET | `/op/requests?status=&kind=` · POST `/op/requests/:id/decision` | درخواست‌های همه سازمان‌ها، به‌جز `milestone_release` (تأیید یا بازپس‌گیری مراحل قرارداد با سازمان است؛ تصمیم بهره‌بردار روی آن `409 org_decides`). `RequestKind`های `cash_withdrawal` و `profile_change` دیگر ساخته نمی‌شوند (در نوع برای سابقه مانده‌اند): برداشت در سقف ثابت روزانه/ماهانه بدون تأیید است و احراز هویت فقط سه سطح خودکار اپ است؛ KYC مدرکی (کارت ملی، سلفی، ویدیو) و صف بررسی آن وجود ندارد. آنچه می‌ماند (وام، خرید اقساطی، افزایش اعتبار) اعتباری است؛ تا `FEATURES.orgCredit` خاموش است کنسول به‌جای فهرست صفحه‌ی «به‌زودی» نشان می‌دهد و بج و شمارش درخواست‌ها را نمی‌آورد |
 | GET | `/op/risk?status=` · PATCH `/op/risk/:id` | هشدارهای ریسک |
 | GET | `/op/reports` · GET/PATCH `/op/settings` | گزارش‌ها و تنظیمات |
 
@@ -332,7 +332,7 @@ POST   /api/v1/op/core/organizations/:id/hr-users      { name, nationalId, mobil
        `invited` and an activation SMS is sent. The person also becomes an employee of the organization (unit «سایر»).
        · 422 missing_fields | bad_national_id | bad_mobile · 409 already_member | other_org (one organization per account)
 GET    /api/v1/op/core/overview?range=7|30|90          → OverviewExt                      (daily flow series, KPI deltas, lock counts, service health, feed)
-GET    /api/v1/op/core/users-meta                      → UsersMeta                        (facility kinds / lock types per user + platform totals; `kyc`, `kycPending`, `kycAvgDays` deprecated — always ok / 0)
+GET    /api/v1/op/core/users-meta                      → UsersMeta                        (facility kinds / lock types per user + platform totals; `totals.blocked` = people shown as «مسدود» — account blocked or part of the assets blocked, each once; `legal` and `suspended` are its parts; `kyc`, `kycPending`, `kycAvgDays` deprecated — always ok / 0)
 GET    /api/v1/op/core/users/:id/extra                 → OpUserExtra                      (facilities, operator notes, audit log, devices)
 POST   /api/v1/op/core/users/:id/notes                 { text, tag } → UserNote           · 422 missing_text
 POST   /api/v1/op/core/users/:id/reset-password        {} → { sent: true }
@@ -395,8 +395,11 @@ New endpoints
   POST  /api/v1/op/system-status/refresh     → SystemStatus
   POST  /api/v1/op/settings/team             body { name, email, roleKey } → OpSettingsX (422 invalid name/email, 409 duplicate email)
   PATCH /api/v1/op/settings/team/:id         body { status: 'active'|'inactive' } → OpSettingsX (422 for the panel owner)
-  POST  /api/v1/op/settings/api-key/rotate   → OpSettingsX (new masked key)
-  POST  /api/v1/op/settings/sessions/revoke  → OpSettingsX (ends every session except the current one)
+  POST  /api/v1/op/settings/api-key/rotate   → OpSettingsX (new masked key)                         ┐ no longer used by the console:
+  POST  /api/v1/op/settings/sessions/revoke  → OpSettingsX (ends every session except the current one) ┘ security and integrations
+        (sign-in policy, sessions, API keys, webhooks) are set by the development team in code. The panel language (always
+        Persian) and time zone (always Asia/Tehran) are fixed: OpSettingsX.lang / timezone / twoFactorRequired / apiKey* /
+        webhook* / sessionMinutes … are not edited in /op/settings (only platformName, navTime, maintenance, notify, dailyEmail, team).
 ```
 
 ### بهره‌بردار — خزانه، سفارش‌ها، نقدینگی، برنامه‌ریزی، فعالیت‌ها (`op-treasury-extra.ts`)
@@ -419,8 +422,10 @@ Identities (per fund, in units; value = units × current NAV)
              Promise (eta) = fund settlement + one working day (T+2 → 72h). GET /api/v1/op/treasury/queue?fundId → QueueItem[]
   queuedValue / queuedCount / needBy = the queue on this fund · needBuyValue = max(0, queued − available) («نیاز به خرید»)
   demandPerDay (NET, Toman) = assumptions.demandPerDay + newPackagesPerMonth × split / 30 − assumptions.returnsPerDay
-  coverageDays = (availableValue − queuedValue + pendingBuyValue) / demandPerDay   (null when demandPerDay ≤ 0)
-  minTarget  = max(target.minFreeValue, demandPerDay × target.targetDays)       (TreasuryPosition.minTargetValue; reservedByType is in units)
+  minTarget  = target.minFreeValue                                               (TreasuryPosition.minTargetValue; reservedByType is in units)
+  cover days are not used: StockTarget.targetDays is deprecated (optional, ignored), TreasuryPosition.coverageDays /
+  OrderQuote.coverageDaysAfter / TreasurySummary.coverageDays are still computed but not shown; PATCH targets no longer
+  needs targetDays. Target progress for a fund = its free stock (after the queue) against minFreeValue (unit toman).
   state      inactive (fund not active) · need_buy (queue > available: items wait — buy now) · below (< minTarget) ·
              surplus (> target.maxFreeValue) · ok — measured on available − queued. `shortfall` is deprecated (never produced)
   suggestion buy  = minTarget − (available − queued + pending buy)   (rounded up to 0.1B; ≥ 10M)
@@ -465,17 +470,22 @@ Stock
   GET   /api/v1/op/treasury/positions/:fundId           → TreasuryPositionDetail (+ history[90]{t, available, held}, movements[30], orders[], forecast (30 days; missing for inactive funds))  · 404 not_found
   GET   /api/v1/op/treasury/movements?fundId&kind&limit → StockMovement[] newest first (limit default 50). units: + into free stock, − out of it
 Orders («صدور» = buy units, «ابطال» = redeem)
-  GET   /api/v1/op/treasury/orders?status&fundId&side   → TreasuryOrder[] (open first). status: placed | due (placed and settleAt ≤ now) | settled | cancelled
+  cash first: an order is recorded only when it is done — POST below settles it at once (held ±units, cash entry, stock movement,
+  one «صدور / ابطال … » activity) and the queue («صف تأمین») is served right after. There are no open / due / cancellable orders:
+  status is always settled (placed / due / cancelled and dueNow, settleAt as a future date, pendingBuy*, pendingRedeem*,
+  tiedInOrders, order_settle actions and forecast events are no longer produced).
+  GET   /api/v1/op/treasury/orders?status&fundId&side   → TreasuryOrder[] newest first (status filter kept for old data)
   POST  /api/v1/op/treasury/orders/quote  body { fundId, side, amount }
         → OrderQuote { units, fee, nav, settleAt, cashAvailableAfter, availableUnitsAfter, availableValueAfter, coverageDaysAfter, warnings[] }
         → 422 bad_amount (< 10,000,000) | fund_unavailable (not active / no NAV) | bad_side. Conditions that would block the order appear in warnings[].
   POST  /api/v1/op/treasury/orders        body { fundId, side, amount, note?, source?: 'manual'|'suggestion', recommendationId? }
-        → 201 TreasuryOrder (status placed; a buy ties its amount in cash; a redeem leaves the free stock at once)
+        → 201 TreasuryOrder (status settled at once: a buy pays its amount and adds the units to the stock; a redeem removes the
+          units and adds the proceeds to Namadno's free rial; then the queue is served)
         → 422 bad_amount | fund_unavailable | insufficient_cash {available} (free rial after the sales queue) | insufficient_stock {availableUnits, availableValue}
           (free stock after the queue) | below_target {minFree, availableValue}
         buy fee = amount × fund.feePct; units = (amount − fee) / NAV at settlement · redeem units = amount / NAV; proceeds = units × NAV − amount × meta.sellFeePct
-  POST  /api/v1/op/treasury/orders/:id/settle           → TreasuryOrder (held ±units, cash entry, stock movement, activity)  · 404 · 409 not_open
-  POST  /api/v1/op/treasury/orders/:id/cancel  body { reason? } → TreasuryOrder                                                 · 404 · 409 not_open
+  POST  /api/v1/op/treasury/orders/:id/settle           → deprecated (orders are settled when recorded): 409 not_open for every order
+  POST  /api/v1/op/treasury/orders/:id/cancel  body { reason? } → deprecated (a recorded order is done): 409 not_open
 Cash
   GET   /api/v1/op/treasury/cash?range=30|90            → CashSummary { balance, tiedInOrders, userWallets, committedRial (deprecated), orgFree, orgSetAside, reserve, unfunded (deprecated, 0),
                                                           available (Namadno free rial), expectedDeposits / expectedCount (receipts waiting for review),
@@ -516,9 +526,15 @@ Targets + planning
         events: planned packages and baseline releases (seed schedule) + live drafts, package expiries, open milestone steps, savings releases of
                 modelled people and open orders (settleAt). (Deposits have no due date; 'deposit_due' / 'collect_deposit' are no longer produced.)
 Action queue + activity
+  GET   /api/v1/op/notifications → { items: OpNotification[] } — «اعلان‌ها» of the console (the bell; same idea as /org/notifications):
+        kind action = the action queue below as it is now (severity, actionKind; most severe first) · kind update = treasury and
+        customer events of the last 7 days (orders settled / placed / cancelled, receipts approved / rejected / recorded, queue
+        delivered, packages waiting for stock, contracts, onboarding, legal holds, milestone reclaims, targets; category) + news of
+        the console (category 'console'), newest first. `read` is kept per operator.
+  POST  /api/v1/op/notifications/read  body { ids? } (omitted = all) → { ok: true }
   GET   /api/v1/op/actions → ActionItem[] most severe first (critical → warning → info), then oldest. kinds:
         stock_need_buy («نیاز به خرید», critical; cta order buy, or «سفارش‌ها» when an open buy covers it) | stock_below | stock_surplus (cta order) ·
-        order_settle (cta settle_order) · deposit_review (a receipt waiting for review; cta review_deposit) ·
+        deposit_review (a receipt waiting for review; cta review_deposit) ·
         request_sla (pending operator requests whose SLA ends within 4h; credit kinds hidden while FEATURES.orgCredit is off) · risk_alert (open high/critical) ·
         milestone_due (approval steps due within 3 days) · org_onboarding · service_incident (open incidents) ·
         rial_need («نیاز به تأمین ریال»: users' sales wait for free rial, critical) | rial_below (< targets.rial.minFreeValue).

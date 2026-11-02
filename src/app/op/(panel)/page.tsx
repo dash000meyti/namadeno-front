@@ -17,7 +17,7 @@ import {
 import { ActionQueue } from '@/components/op/overview/ActionQueue';
 import { useOverviewExports } from '@/components/op/overview/exports';
 import { BankWaterfall, RialTile, mainStatus, queueOf, reserveStatus } from '@/components/op/funds/rial';
-import { ACTOR, RIAL_UI, STOCK_STATE, TI, amt, daysText, fundUi, isNeed } from '@/components/op/treasury/ui';
+import { ACTOR, RIAL_UI, STOCK_STATE, TI, amt, fundUi, isNeed } from '@/components/op/treasury/ui';
 import { dec, errMsg, pctT } from '@/components/op/system/fmt';
 import { faDigits, jDate, jDateTime, jDayMonth, money, relTime } from '@/lib/format';
 import { now } from '@/lib/clock';
@@ -126,7 +126,7 @@ function Stats({ s }: { s: TreasurySummary }) {
       },
       {
         label: 'موجودی آزاد صندوق‌ها', value: freeV, unit: freeU, href: need.length ? `${routes.op.funds}?state=need_buy` : routes.op.funds,
-        note: need.length ? `${faDigits(need.length)} صندوق نیاز به خرید · ${amt(need.reduce((a, p) => a + p.needBuyValue, 0))}` : `پوشش ${daysText(s.coverageDays)}`,
+        note: need.length ? `${faDigits(need.length)} صندوق نیاز به خرید · ${amt(need.reduce((a, p) => a + p.needBuyValue, 0))}` : weak.length ? `${faDigits(weak.length)} صندوق زیر حداقل هدف` : 'همه بالای حداقل هدف',
         trend: need.length ? 'down' : weak.length ? 'warn' : undefined,
       },
       { label: 'رزروشده', value: resV, unit: resU, href: routes.op.funds, note: `${pctT(resPct, 0)} از دارایی کاربران` },
@@ -207,13 +207,14 @@ function ReserveRow({ r }: { r: RialTreasury }) {
 function StockRow({ p }: { p: TreasuryPosition }) {
   const u = fundUi(p.fundId);
   const st = STOCK_STATE[p.state];
-  const target = p.target?.targetDays;
-  const cov = p.coverageDays;
+  // free stock (after the queue) against the minimum target — no cover days
+  const min = p.target?.minFreeValue ?? 0;
+  const free = Math.max(0, p.availableValue - (p.queuedValue ?? 0));
   const need = p.needBuyValue ?? 0;
-  const covText = cov == null ? 'بدون مصرف' : target ? `${faDigits(Math.min(999, Math.round(cov)))} از ${faDigits(target)} روز` : daysText(cov);
+  const minText = min > 0 ? `حداقل ${amt(min)}` : 'بدون هدف';
   return (
     <ListRow href={routes.op.fund(p.fundId)}
-      label={`${p.name}: ${st.label}، ${need > 0 ? `نیاز به خرید ${amt(need)} تومان${p.needBy ? ` تا ${jDateTime(p.needBy)}` : ''}` : `موجودی آزاد ${amt(p.availableValue)} تومان`}، پوشش ${covText}`}
+      label={`${p.name}: ${st.label}، ${need > 0 ? `نیاز به خرید ${amt(need)} تومان${p.needBy ? ` تا ${jDateTime(p.needBy)}` : ''}` : `موجودی آزاد ${amt(p.availableValue)} تومان`}، ${minText}`}
       lead={<Tile d={u.d} tone={u.tone} />}
       title={p.shortName}
       sub={need > 0
@@ -221,8 +222,8 @@ function StockRow({ p }: { p: TreasuryPosition }) {
         : `آزاد ${amt(p.availableValue)} تومان`}
       trail={(
         <>
-          {target && cov != null && <Meter value={cov / target} tone={st.tone} width={56} label={`پوشش ${covText}`} />}
-          <span className="num mute" style={{ fontSize: 12.5, minWidth: 64, textAlign: 'left' }}>{covText}</span>
+          {min > 0 && <Meter value={free / min} tone={st.tone} width={56} label={`موجودی آزاد ${amt(free)} از حداقل ${amt(min)} تومان`} />}
+          <span className="num mute" style={{ fontSize: 12.5, minWidth: 64, textAlign: 'left' }}>{minText}</span>
           <Pill tone={st.tone} title={st.hint}>{st.label}</Pill>
         </>
       )}
@@ -268,7 +269,7 @@ function FlowCard({ s }: { s: TreasurySummary }) {
   );
 }
 
-/** «خزانه‌ی ریالی»: Namadno's free rial = bank − users' wallets − organizations' free − open buy orders − «ریال رزرو». */
+/** «خزانه‌ی ریالی»: Namadno's free rial = bank − users' wallets − organizations' free − «ریال رزرو». */
 function RialCard({ s }: { s: TreasurySummary }) {
   const r = s.rial;
   const c = s.cash;

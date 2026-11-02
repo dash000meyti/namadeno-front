@@ -44,13 +44,13 @@ const NEW_RULES: PlatformRule[] = [
   { id: 'r-credit-auto-lock', group: 'credit', title: 'رزرو خودکار پشتوانه', description: 'هم‌زمان با تأیید وام یا خرید اقساطی', enabled: true },
   { id: 'r-lock-collateral-ltv', group: 'locks', title: 'حداکثر نسبت پشتوانه', description: 'پشتوانه‌ی وام و اعتبار', enabled: true, value: 70, unit: '٪ آزاد' },
   { id: 'r-lock-installment-share', group: 'locks', title: 'حداکثر سهم از آزاد', description: 'پشتوانه‌ی خرید اقساطی', enabled: true, value: 50, unit: '٪' },
-  { id: 'r-lock-legal-ref', group: 'locks', title: 'شماره مرجع الزامی', description: 'مسدودی قانونی', enabled: true },
-  { id: 'r-lock-legal-2nd', group: 'locks', title: 'رفع با تأیید نفر دوم', description: 'مسدودی قانونی', enabled: true },
+  { id: 'r-lock-legal-ref', group: 'locks', title: 'شماره مرجع الزامی', description: 'مسدود', enabled: true },
+  { id: 'r-lock-legal-2nd', group: 'locks', title: 'رفع با تأیید نفر دوم', description: 'مسدود', enabled: true },
   { id: 'r-lock-collateral-by', group: 'locks', title: 'ایجادکننده رزرو پشتوانه', description: 'system,org,operator', enabled: true, value: 'system' },
   { id: 'r-lock-vesting-by', group: 'locks', title: 'ایجادکننده پس‌انداز سازمانی', description: 'system,org,operator', enabled: true, value: 'org' },
   { id: 'r-lock-installment-by', group: 'locks', title: 'ایجادکننده رزرو اقساطی', description: 'system,org,operator', enabled: true, value: 'system' },
   { id: 'r-lock-milestone-by', group: 'locks', title: 'ایجادکننده دریافت مرحله‌ای', description: 'system,org,operator', enabled: true, value: 'org' },
-  { id: 'r-lock-legal-by', group: 'locks', title: 'ایجادکننده مسدودی قانونی', description: 'system,org,operator', enabled: true, value: 'operator' },
+  { id: 'r-lock-legal-by', group: 'locks', title: 'ایجادکننده مسدودی', description: 'system,org,operator', enabled: true, value: 'operator' },
   { id: 'r-lock-total-cap', group: 'locks', title: 'سقف مجموع رزرو هر کاربر', description: 'درصد از کل دارایی', enabled: true, value: 80, unit: '٪ کل دارایی' },
   { id: 'r-lock-notify-release', group: 'locks', title: 'اعلان آزاد شدن رزرو به کاربر', description: 'پوش و اعلان درون‌برنامه', enabled: true },
   { id: 'r-risk-newdevice', group: 'risk', title: 'برداشت پس از دستگاه جدید', description: 'برداشت کلان تا ۲۴ ساعت پس از ورود جدید', enabled: true, value: 24, unit: 'ساعت' },
@@ -78,6 +78,15 @@ const EXTRA_ALERTS: (RiskAlert & { signals: string[] })[] = [
   { id: 'AL-3321', title: 'خرید با کارت · خارج از شبکه', userId: 'u-1002', userName: 'علی کریمی', orgName: 'هلدینگ آرمان', score: 78, severity: 'high', status: 'investigating', createdAt: minutesAgo(25), ruleId: 'r-risk-night', amount: 24_900_000, signals: ['big', 'night'] },
   { id: 'AL-3320', title: 'خرید اقساطی · مبلغ بالا', userId: 'u-1004', userName: 'رضا حسینی', orgName: 'هلدینگ آرمان', score: 46, severity: 'medium', status: 'resolved', createdAt: minutesAgo(130), amount: 48_000_000, signals: ['big'] },
   { id: 'AL-3319', title: 'شارژ کارت از اعتبار · شب', userId: 'u-1001', userName: 'سارا محمدی', orgName: 'هلدینگ آرمان', score: 31, severity: 'low', status: 'dismissed', createdAt: daysFromNow(-1, '02:40'), ruleId: 'r-risk-night', amount: 2_400_000, signals: ['night'] },
+];
+
+/** News of the operator console, shown under «به‌روزرسانی‌ها» in its notifications (like ORG_UPDATES in the org panel). */
+export const OP_UPDATES: { id: string; title: string; body: string; createdAt: string; href?: string }[] = [
+  { id: 'upd-op-queue', title: 'صف تأمین و نیاز به خرید', body: 'هیچ موجودی‌ای منفی نمی‌شود؛ بسته‌ها و خریدهایی که موجودی ندارند در صف می‌مانند و با تسویه‌ی صدور خودکار تحویل می‌شوند.', createdAt: jalaliToIso(1405, 8, 15), href: '/op/funds?state=need_buy' },
+  { id: 'upd-op-receipts', title: 'فیش واریز سازمان‌ها', body: 'سازمان‌ها فیش واریز را بارگذاری می‌کنند؛ در «نقدینگی» تأیید یا با دلیل رد کنید.', createdAt: jalaliToIso(1405, 8, 14), href: '/op/cash?status=expected' },
+  { id: 'upd-op-withdraw', title: 'سقف ثابت برداشت', body: 'برداشت کاربران در سقف روزانه و ماهانه بدون تأیید انجام می‌شود؛ سقف‌ها را در «قوانین و محدودیت‌ها» تنظیم کنید.', createdAt: jalaliToIso(1405, 8, 13), href: '/op/rules' },
+  { id: 'upd-op-identity', title: 'احراز هویت خودکار', body: 'احراز هویت فقط سه سطح خودکار اپ است (شاهکار، ثبت احوال، سجام)؛ صف بررسی مدارک حذف شد.', createdAt: jalaliToIso(1405, 8, 12), href: '/op/users' },
+  { id: 'upd-op-rial', title: 'خزانه‌ی ریالی', body: '«ریال» و «ریال رزرو» کنار صندوق‌ها در «موجودی صندوق‌ها» و حساب ریالی هر سازمان در «نقدینگی».', createdAt: jalaliToIso(1405, 8, 11), href: '/op/funds' },
 ];
 
 export function seed_opSystem(db: MockDB) {
@@ -150,7 +159,7 @@ export function seed_opSystem(db: MockDB) {
   db.extra.opReportSchedules = [
     { id: 'sch-1', name: 'گزارش روزانهٔ AUM و NAV', period: 'روزانه · ۱۵:۰۰', recipients: 'مدیریت، مالی', format: 'PDF', nextAt: daysFromNow(1, '15:00'), enabled: true },
     { id: 'sch-2', name: 'گزارش ماهانهٔ تسهیلات و رزروهای پشتوانه', period: 'ماهانه · اول ماه', recipients: 'مالی، ریسک', format: 'XLSX', nextAt: jalaliToIso(1405, 9, 1), enabled: true },
-    { id: 'sch-3', name: 'دارایی رزروشده به تفکیک نوع و مسدودی‌های قانونی', period: 'هفتگی · شنبه', recipients: 'ریسک، حقوقی', format: 'XLSX', nextAt: jalaliToIso(1405, 8, 17), enabled: true },
+    { id: 'sch-3', name: 'دارایی رزروشده به تفکیک نوع و مسدودی‌ها', period: 'هفتگی · شنبه', recipients: 'ریسک، حقوقی', format: 'XLSX', nextAt: jalaliToIso(1405, 8, 17), enabled: true },
     { id: 'sch-4', name: 'گزارش سازمان‌ها برای هیئت‌مدیره', period: 'فصلی', recipients: 'هیئت‌مدیره', format: 'PDF', nextAt: jalaliToIso(1405, 10, 1), enabled: true },
     { id: 'sch-5', name: 'گزارش SLA و رخدادها', period: 'هفتگی · شنبه', recipients: 'فنی، پشتیبانی', format: 'PDF', nextAt: jalaliToIso(1405, 8, 17), enabled: true },
     { id: 'sch-6', name: 'گزارش مالیاتی سازمان‌ها', period: 'ماهانه · ۲۰ ماه', recipients: 'مالی', format: 'XLSX', nextAt: jalaliToIso(1405, 8, 20), enabled: false },

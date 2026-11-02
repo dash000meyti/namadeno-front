@@ -15,6 +15,8 @@
  *   new demand is served only from what is left after the queue. queued − available = «نیاز به خرید» (state need_buy).
  * Rial (everything users and organizations do is in rial; funds are back-office policy):
  *   bank       = opening + Σ done cash entries
+ *   orders     cash first: «صدور / ابطال» is recorded only when done — settled at once (held units, cash, movement), then
+ *              the queue is served; there are no open or due orders («سررسید تسویه»), so pending buy / redeem / tied are 0
  *   org rial   balance = approved deposits − paid to recipients + reclaimed shares; blocked = pending recipients of its
  *              sent packages (whole amounts, plus the unmodelled baseline) — always ≤ balance: a package is sent only when paid;
  *              setAside = the part of «آزاد» kept for its packages waiting for receipt approval; free = (balance − blocked − setAside)⁺
@@ -553,8 +555,8 @@ export const settlementDays = (f: Fund) => (f.settlement === 'T+0' ? 0 : f.settl
 export const settleAtFor = (f: Fund) => (settlementDays(f) === 0 ? daysFromNow(0, '15:00') : daysFromNow(settlementDays(f), '09:00'));
 const sellFeePct = (f: Fund) => (f as Fund & { meta?: FundMeta }).meta?.sellFeePct ?? f.feePct;
 
-const minTargetOf = (net: number, target?: { minFreeValue: number; targetDays: number }) =>
-  target ? Math.max(target.minFreeValue, Math.max(0, net) * target.targetDays) : 0;
+/** The lower edge of a fund's target band: its minimum free stock (cover days are not used any more). */
+const minTargetOf = (_net: number, target?: { minFreeValue: number }) => { void _net; return target ? target.minFreeValue : 0; };
 
 /** `freeValue` = free stock after the queue; below zero = items wait for this fund → «نیاز به خرید». */
 function stateOf(active: boolean, freeValue: number, minTarget: number, max?: number): StockState {
@@ -575,9 +577,8 @@ function suggestionOf(state: StockState, freeValue: number, minTarget: number, m
       ? (horizon
         ? `${when} تقاضا از موجودی آزاد بیشتر می‌شود؛ این مبلغ را از پیش بخرید تا چیزی در صف تأمین نماند و موجودی به حداقل هدف برسد.`
         : `${faDigits(queue?.count ?? 0)} مورد در صف تأمین این صندوق است${queue?.needBy ? ` (تحویل تا ${faDigits(jDateTime(queue.needBy))})` : ''}؛ این مبلغ صف را تأمین می‌کند و موجودی را به حداقل هدف برمی‌گرداند.`)
-      : coverage !== null && targetDays
-        ? `موجودی آزاد ${when} حدود ${faDigits(Math.floor(coverage))} روز نیاز را پوشش می‌دهد؛ هدف ${faDigits(targetDays)} روز است.`
-        : `موجودی آزاد ${when} از حداقل هدف (${bn(minTarget)} تومان) کمتر است.`;
+      : `موجودی آزاد ${when} از حداقل هدف (${bn(minTarget)} تومان) کمتر است؛ این مبلغ آن را به حداقل برمی‌گرداند.`;
+    void coverage; void targetDays;
     return { side: 'buy', amount, reason };
   }
   if (state === 'surplus' && max) {
@@ -1071,18 +1072,18 @@ export function evaluateOrder(s: Snapshot, b: { fundId?: string; side?: string; 
   if (side === 'buy' && rialMin && cashAvailableAfter < rialMin && amount <= cashRoom) {
     warnings.push(`پس از این سفارش، ریال آزاد نمادنو ${bn(Math.max(0, cashAvailableAfter))} تومان می‌شود؛ کمتر از حداقل هدف ${bn(rialMin)} تومان.`);
   }
-  if (side === 'buy' && p.target && coverageDaysAfter !== null && coverageDaysAfter < p.target.targetDays) {
-    warnings.push(`پس از تسویه، پوشش موجودی ${faDigits(Math.floor(coverageDaysAfter))} روز است؛ هدف ${faDigits(p.target.targetDays)} روز است.`);
+  if (side === 'buy' && p.target && availableValueAfter - p.queuedValue < minTarget) {
+    warnings.push(`پس از ثبت، موجودی آزاد هنوز از حداقل هدف (${bn(minTarget)} تومان) کمتر است.`);
   }
   if (side === 'buy' && p.target?.maxFreeValue && availableValueAfter > p.target.maxFreeValue) {
-    warnings.push(`پس از تسویه، موجودی آزاد از سقف هدف (${bn(p.target.maxFreeValue)} تومان) بیشتر می‌شود.`);
+    warnings.push(`پس از ثبت، موجودی آزاد از سقف هدف (${bn(p.target.maxFreeValue)} تومان) بیشتر می‌شود.`);
   }
   if (side === 'redeem' && p.state === 'below') warnings.push('موجودی این صندوق همین حالا زیر هدف است.');
-  if (side === 'buy' && p.needBuyValue > 0) warnings.push(`پس از تسویه، صف تأمین این صندوق (نیاز به خرید ${bn(p.needBuyValue)} تومان) خودکار تحویل می‌شود.`);
+  if (side === 'buy' && p.needBuyValue > 0) warnings.push(`پس از ثبت، صف تأمین این صندوق (نیاز به خرید ${bn(p.needBuyValue)} تومان) خودکار تحویل می‌شود.`);
   return {
     blocking,
     quote: {
-      fundId: f.id, side, amount, units: ru(units), fee, nav, settleAt: settleAtFor(f),
+      fundId: f.id, side, amount, units: ru(units), fee, nav, settleAt: nowIso(), // recorded = done at once
       cashAvailableAfter, availableUnitsAfter: ru(availableUnitsAfter), availableValueAfter, coverageDaysAfter, warnings,
     },
   };
@@ -1098,25 +1099,21 @@ export function placeOrder(d: MockDB, b: { fundId?: string; side?: string; amoun
   const q = ev.quote!;
   const f = d.funds.find((x) => x.id === q.fundId)!;
   const code = nextCode(s.t);
+  const at = nowIso();
+  // cash first: an order is recorded only when it is done — paid and settled at once (no open / due orders)
   const o: StoredOrder = {
     id: code, code, fundId: f.id, side: q.side, amount: q.amount, units: q.units, navAtOrder: f.nav, fee: q.fee, status: 'placed',
-    placedAt: nowIso(), settleAt: q.settleAt, source: b.source === 'suggestion' ? 'suggestion' : 'manual', note: b.note?.trim() || undefined, by,
+    placedAt: at, settleAt: at, source: b.source === 'suggestion' ? 'suggestion' : 'manual', note: b.note?.trim() || undefined, by,
   };
   s.t.orders.unshift(o);
-  logActivity({
-    actor: { kind: 'operator', name: by }, category: 'treasury', kind: 'order_placed',
-    title: `${q.side === 'buy' ? 'صدور' : 'ابطال'} ${f.shortName} · ${code}`,
-    sub: `${bn(q.amount)} تومان · تسویه ${f.settlement}`, amount: q.amount, fundId: f.id, units: q.units, tone: 'primary',
-    href: `${routes.op.orders}?id=${code}`, refs: [{ type: 'order', id: code }],
-  });
+  const failed = applySettle(d, s.t, o, by);
+  if (failed) { s.t.orders.shift(); return failed; }
+  fillQueues(d); // the queue («صف تأمین») is served right away from the new stock / rial
   return withDue(o);
 }
 
-export function settleOrder(d: MockDB, id: string, by: string): TreasuryOrder | TreasuryError {
-  const t = T(d);
-  const o = t.orders.find((x) => x.id === id || x.code === id);
-  if (!o) return err(404, 'not_found', 'سفارش پیدا نشد.');
-  if (o.status !== 'placed') return err(409, 'not_open', 'این سفارش باز نیست.');
+/** Settles an order at once: held units, cash entry, stock movement and one «… ثبت شد» activity. Returns an error or null. */
+function applySettle(d: MockDB, t: TreasuryStore, o: StoredOrder, by: string): TreasuryError | null {
   const f = d.funds.find((x) => x.id === o.fundId);
   if (!f || !(f.nav > 0)) return err(409, 'fund_unavailable', 'NAV این صندوق در دسترس نیست.');
   const h = (t.held[f.id] ??= { units: 0, cost: 0 });
@@ -1126,28 +1123,41 @@ export function settleOrder(d: MockDB, id: string, by: string): TreasuryOrder | 
     o.units = ru((o.amount - o.fee) / f.nav);
     h.units += o.units;
     h.cost += o.amount - o.fee;
-    pushCash(t, { kind: 'order_buy', amount: -o.amount, status: 'done', title: `تسویه‌ی صدور ${f.shortName} · ${o.code}`, orderId: o.id, by });
-    pushMovement(t, { fundId: f.id, kind: 'buy_settle', units: o.units, value: o.amount - o.fee, title: `تسویه‌ی صدور ${o.code}`, orderId: o.id });
+    pushCash(t, { kind: 'order_buy', amount: -o.amount, status: 'done', title: `صدور ${f.shortName} · ${o.code}`, orderId: o.id, by });
+    pushMovement(t, { fundId: f.id, kind: 'buy_settle', units: o.units, value: o.amount - o.fee, title: `صدور ${o.code}`, orderId: o.id });
   } else {
     if (h.units + 1e-9 < o.units) return err(409, 'insufficient_stock', 'واحد کافی برای ابطال در خزانه نیست.');
     const avg = h.units > 0 ? h.cost / h.units : 0;
     const proceeds = r0(o.units * f.nav - o.fee);
     h.units -= o.units;
     h.cost = Math.max(0, h.cost - avg * o.units);
-    pushCash(t, { kind: 'order_redeem', amount: proceeds, status: 'done', title: `تسویه‌ی ابطال ${f.shortName} · ${o.code}`, orderId: o.id, by });
-    pushMovement(t, { fundId: f.id, kind: 'redeem_settle', units: -o.units, value: r0(o.units * f.nav), title: `تسویه‌ی ابطال ${o.code}`, orderId: o.id });
+    pushCash(t, { kind: 'order_redeem', amount: proceeds, status: 'done', title: `ابطال ${f.shortName} · ${o.code}`, orderId: o.id, by });
+    pushMovement(t, { fundId: f.id, kind: 'redeem_settle', units: -o.units, value: r0(o.units * f.nav), title: `ابطال ${o.code}`, orderId: o.id });
   }
   o.status = 'settled';
   o.settledAt = at;
   logActivity({
     actor: { kind: 'operator', name: by }, category: 'treasury', kind: 'order_settled',
-    title: `تسویه‌ی ${o.side === 'buy' ? 'صدور' : 'ابطال'} ${f.shortName} · ${o.code}`,
-    sub: `${units(o.units)} واحد · NAV ${bn(f.nav)}`, amount: o.amount, fundId: f.id, units: o.units, tone: 'success',
+    title: `${o.side === 'buy' ? 'صدور' : 'ابطال'} ${f.shortName} · ${o.code}`,
+    sub: `${bn(o.amount)} تومان · ${units(o.units)} واحد · NAV ${bn(f.nav)}`, amount: o.amount, fundId: f.id, units: o.units, tone: 'success',
     href: `${routes.op.orders}?id=${o.code}`, refs: [{ type: 'order', id: o.code }],
   });
+  return null;
+}
+
+/** @deprecated Orders are settled when they are recorded (placeOrder); kept for an old open order only. */
+export function settleOrder(d: MockDB, id: string, by: string): TreasuryOrder | TreasuryError {
+  const t = T(d);
+  const o = t.orders.find((x) => x.id === id || x.code === id);
+  if (!o) return err(404, 'not_found', 'سفارش پیدا نشد.');
+  if (o.status !== 'placed') return err(409, 'not_open', 'این سفارش باز نیست.');
+  const failed = applySettle(d, t, o, by);
+  if (failed) return failed;
+  fillQueues(d);
   return withDue(o);
 }
 
+/** @deprecated A recorded order is already done and cannot be cancelled; only an old open order can be. */
 export function cancelOrder(d: MockDB, id: string, reason: string | undefined, by: string): TreasuryOrder | TreasuryError {
   const t = T(d);
   const o = t.orders.find((x) => x.id === id || x.code === id);
@@ -1272,7 +1282,7 @@ export function patchTargets(d: MockDB, b: TargetsPatch, by: string): TreasuryTa
   if (b.stock) {
     for (const s of b.stock) {
       if (!d.funds.some((f) => f.id === s.fundId)) return err(422, 'bad_target', 'صندوق هدف معتبر نیست.', { fundId: s.fundId });
-      if (!(s.minFreeValue >= 0) || !(s.targetDays >= 1 && s.targetDays <= 365)) return err(422, 'bad_target', 'حداقل موجودی و روزهای پوشش معتبر نیست.', { fundId: s.fundId });
+      if (!(s.minFreeValue >= 0)) return err(422, 'bad_target', 'حداقل موجودی معتبر نیست.', { fundId: s.fundId });
       if (s.maxFreeValue !== undefined && s.maxFreeValue !== null && !(s.maxFreeValue > s.minFreeValue)) return err(422, 'bad_target', 'سقف موجودی باید از حداقل بیشتر باشد.', { fundId: s.fundId });
     }
   }
@@ -1285,7 +1295,7 @@ export function patchTargets(d: MockDB, b: TargetsPatch, by: string): TreasuryTa
   if (b.stock) {
     const next = [...t.targets.stock];
     for (const s of b.stock) {
-      const clean = { fundId: s.fundId, minFreeValue: r0(s.minFreeValue), targetDays: r0(s.targetDays), maxFreeValue: s.maxFreeValue ? r0(s.maxFreeValue) : undefined };
+      const clean = { fundId: s.fundId, minFreeValue: r0(s.minFreeValue), maxFreeValue: s.maxFreeValue ? r0(s.maxFreeValue) : undefined };
       const i = next.findIndex((x) => x.fundId === s.fundId);
       if (i >= 0) next[i] = clean; else next.push(clean);
     }
@@ -1435,8 +1445,9 @@ export function targetProgress(s: Snapshot): TargetProgress[] {
   for (const tg of t.targets.stock) {
     const p = positions.find((x) => x.fundId === tg.fundId);
     if (!p || p.state === 'inactive') continue;
-    const cov = p.coverageDays ?? tg.targetDays * 3;
-    out.push({ key: `stock:${p.fundId}`, label: `پوشش موجودی ${p.shortName}`, current: r1(cov), target: tg.targetDays, pct: pct(cov, tg.targetDays), onTrack: p.state === 'ok' || p.state === 'surplus', unit: 'days' });
+    // free stock (after the queue) against the minimum target
+    const free = Math.max(0, r0(p.availableValue - p.queuedValue));
+    out.push({ key: `stock:${p.fundId}`, label: `موجودی آزاد ${p.shortName}`, current: free, target: tg.minFreeValue, pct: tg.minFreeValue > 0 ? pct(free, tg.minFreeValue) : 100, onTrack: p.state === 'ok' || p.state === 'surplus', unit: 'toman' });
   }
   return out;
 }
@@ -1541,7 +1552,7 @@ export function actions(s: Snapshot): ActionItem[] {
         cta: covered || !order ? { label: 'سفارش‌ها' } : { label: 'ثبت صدور', action: order },
       });
     }
-    if (p.state === 'below') out.push({ id: `act-below-${p.fundId}`, kind: 'stock_below', severity: 'warning', title: `موجودی ${p.shortName} زیر هدف`, sub: p.coverageDays !== null && p.target ? `پوشش ${faDigits(Math.floor(p.coverageDays))} روز از هدف ${faDigits(p.target.targetDays)} روز` : `موجودی آزاد ${bn(p.availableValue)} تومان`, amount: p.suggestion?.amount, fundId: p.fundId, href, cta: { label: 'ثبت صدور', action: order } });
+    if (p.state === 'below') out.push({ id: `act-below-${p.fundId}`, kind: 'stock_below', severity: 'warning', title: `موجودی ${p.shortName} زیر هدف`, sub: p.target ? `موجودی آزاد ${bn(Math.max(0, p.availableValue - p.queuedValue))} تومان؛ حداقل هدف ${bn(p.target.minFreeValue)} تومان` : `موجودی آزاد ${bn(p.availableValue)} تومان`, amount: p.suggestion?.amount, fundId: p.fundId, href, cta: { label: 'ثبت صدور', action: order } });
     if (p.state === 'surplus') out.push({ id: `act-surplus-${p.fundId}`, kind: 'stock_surplus', severity: 'info', title: `مازاد موجودی ${p.shortName}`, sub: `موجودی آزاد ${bn(p.availableValue)} تومان، بیش از سقف هدف`, amount: p.suggestion?.amount, fundId: p.fundId, href, cta: { label: 'ثبت ابطال', action: order } });
   }
   for (const o of t.orders.filter((x) => x.status === 'placed' && x.settleAt <= at)) {

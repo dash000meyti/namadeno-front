@@ -34,7 +34,7 @@ export function addDays(iso: string | Date, days: number) {
   return new Date(new Date(iso).getTime() + days * DAY).toISOString();
 }
 
-const LOCK_WORD: Record<LockType, string> = { collateral: 'رزرو پشتوانه', vesting: 'پس‌انداز', installment: 'رزرو اقساطی', milestone: 'رزرو مرحله‌ای', legal: 'مسدودی' };
+const LOCK_WORD: Record<LockType, string> = { collateral: 'رزرو پشتوانه', vesting: 'پس‌انداز', installment: 'رزرو اقساطی', milestone: 'رزرو مرحله‌ای', legal: 'مسدود' };
 
 /** What is already reserved on a holding («۲۰٬۰۰۰٬۰۰۰ پس‌انداز», «رزرو فعلی ۴۲٬۰۰۰٬۰۰۰», «همه آزاد»). */
 export function lockedNote(h: Holding) {

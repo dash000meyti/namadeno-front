@@ -81,7 +81,8 @@ export function eventEffect(e: ForecastEvent, a: TreasuryAssumptions): { text: s
     case 'planned_package':
       return { text: 'با ارسال این بسته، سهم صندوق‌ها از موجودی آزاد برای گیرندگان کنار گذاشته می‌شود.', estimate: e.value, sign: -1 };
     case 'order_settle':
-      return { text: 'با تسویه، واحدهای صدور به موجودی خزانه اضافه می‌شوند و مبلغ ابطال به «ریال» برمی‌گردد.' };
+      // no longer produced: orders to funds are recorded only when done
+      return { text: 'سفارش همان لحظه‌ی ثبت انجام می‌شود: واحدهای صدور به موجودی خزانه اضافه می‌شوند و مبلغ ابطال به «ریال» برمی‌گردد.' };
     default:
       // receipt events are no longer produced (deposits are reviewed, they have no due date)
       return { text: 'با تأیید فیش واریز سازمان، مبلغ به حساب آن می‌آید و اگر فیش برای بسته‌ای در صف بود، همان بسته ارسال و مبلغش در «ریال رزرو» بلاک می‌شود.' };

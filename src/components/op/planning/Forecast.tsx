@@ -14,7 +14,7 @@ import {
 } from '@/components/panel/kit';
 import { Icon } from '@/components/ui/Icon';
 import { OrderDialog } from '@/components/op/treasury/OrderDialog';
-import { EVENT_KIND, RIAL_UI, SEVERITY, SIDE, STOCK_STATE, TI, amt, buyNowCap, daysText, fundUi, isNeed } from '@/components/op/treasury/ui';
+import { EVENT_KIND, RIAL_UI, SEVERITY, SIDE, STOCK_STATE, TI, amt, buyNowCap, fundUi, isNeed } from '@/components/op/treasury/ui';
 import { pctT } from '@/components/op/system/fmt';
 import { faDigits, jDate, jDayMonth, time } from '@/lib/format';
 import { routes } from '@/lib/routes';
@@ -26,10 +26,9 @@ const EVENT_ICONS: Partial<Record<ForecastEvent['kind'], string>> = {
   milestone_due: 'M5 21V4M5 4h11l-2 4 2 4H5',
   package_expiry: TI.clock,
   planned_package: 'M3 13l2.5-7h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 13h5l1.5 2.5h5L16 13h5',
-  order_settle: TI.order,
 };
 const eventIcon = (k: ForecastEvent['kind']) => EVENT_ICONS[k] ?? TI.deposit;
-const REC_ICONS: Partial<Record<Recommendation['kind'], string>> = { buy: TI.buy, redeem: TI.redeem, settle: TI.order, rebalance: TI.target };
+const REC_ICONS: Partial<Record<Recommendation['kind'], string>> = { buy: TI.buy, redeem: TI.redeem, rebalance: TI.target };
 const recIcon = (k: Recommendation['kind']) => REC_ICONS[k] ?? TI.cash;
 /** A projected «نیاز به خرید»: nothing goes negative — the gap must be bought in advance. */
 const NEED_AHEAD = 'تا پایان افق تقاضا از موجودی بیشتر می‌شود؛ از پیش بخرید تا چیزی در صف تأمین نماند';
@@ -63,7 +62,7 @@ export function ForecastView({ plan, positions, onTargets }: { plan: TreasuryPla
     {
       key: 'fund', label: 'صندوق', width: 'minmax(0, 1.3fr)', render: (f) => {
         const u = fundUi(f.fundId);
-        return <Ident lead={<Tile d={u.d} tone={u.tone} />} title={posOf(f.fundId)?.name ?? nameOf(f.fundId)} sub={`پوشش اکنون ${daysText(f.coverageDays)}`} />;
+        return <Ident lead={<Tile d={u.d} tone={u.tone} />} title={posOf(f.fundId)?.name ?? nameOf(f.fundId)} sub={posOf(f.fundId)?.target ? `حداقل هدف ${amt(posOf(f.fundId)!.target!.minFreeValue)}` : 'بدون هدف'} />;
       },
     },
     {
@@ -73,7 +72,6 @@ export function ForecastView({ plan, positions, onTargets }: { plan: TreasuryPla
           <>
             <span className="num">{amt(f.availableNow)}</span>
             {queued > 0 && <span className="sm num">−{amt(queued)} صف</span>}
-            {f.pendingBuy > 0 && <span className="sm num">+{amt(f.pendingBuy)} در راه</span>}
           </>
         );
       },
@@ -120,7 +118,7 @@ export function ForecastView({ plan, positions, onTargets }: { plan: TreasuryPla
           onRowClick={(f) => toggle('fund', f.fundId)} selectedKey={sel?.type === 'fund' ? sel.id : null}
           empty={<Empty icon={TI.stock} title="صندوق فعالی برای پیش‌بینی نیست" />} minWidth={880}
         />
-        <div className="nm-tfoot"><span>پایان افق = آزاد اکنون − صف تأمین + صدور در راه − تقاضا + برگشت؛ کمتر از صفر یعنی «نیاز به خرید» · حداقل هدف = بیشترِ «حداقل موجودی» و «تقاضای روزانه × روزهای پوشش»</span></div>
+        <div className="nm-tfoot"><span>پایان افق = آزاد اکنون − صف تأمین − تقاضا + برگشت؛ کمتر از صفر یعنی «نیاز به خرید» · حداقل هدف = «حداقل موجودی» هر صندوق</span></div>
       </Card>
 
       <div className="nm-grid side">
@@ -411,12 +409,11 @@ function FundInspector({ f, pos, horizon, events, onClose, onOrder, onTargets, o
         sub={pos ? <>{pos.symbol} · تسویه <span className="num ltr">{pos.settlement}</span></> : undefined}
         pills={<>{nowSt && <Pill tone={nowSt.tone} dot>اکنون: {nowSt.label}</Pill>}<Pill tone={st.tone} dot>پایان افق: {st.label}</Pill></>}
       />
-      <KeyStats items={[['آزاد اکنون', amt(f.availableNow)], [f.projectedEnd < 0 ? 'نیاز به خرید' : `پایان ${faDigits(horizon)} روز`, amt(Math.abs(f.projectedEnd))], ['پوشش اکنون', daysText(f.coverageDays)]]} />
+      <KeyStats items={[['آزاد اکنون', amt(f.availableNow)], [f.projectedEnd < 0 ? 'نیاز به خرید' : `پایان ${faDigits(horizon)} روز`, amt(Math.abs(f.projectedEnd))], ['حداقل هدف', f.minTarget > 0 ? amt(f.minTarget) : '—']]} />
       <Section title={`جریان موجودی آزاد در ${faDigits(horizon)} روز`}>
         <KV rows={[
           ['موجودی آزاد اکنون', <span key="a" className="num">{tm(f.availableNow)}</span>],
           ...((pos?.queuedValue ?? 0) > 0 ? [['در صف تأمین', <span key="q" className="num">{sAmt(-(pos?.queuedValue ?? 0))}</span>] as [string, React.ReactNode]] : []),
-          ['صدور در راه', <span key="p" className="num">{sAmt(f.pendingBuy)}</span>],
           ['تقاضا (بسته‌ها و خرید کاربران)', <span key="d" className="num">{sAmt(-f.demand)}</span>],
           ['برگشت به موجودی', <span key="r" className="num">{sAmt(f.returns)}</span>],
           [f.projectedEnd < 0 ? 'نیاز به خرید تا پایان افق' : 'موجودی پایان افق', <b key="e" className="num" style={{ fontWeight: 600, color: f.projectedEnd < 0 ? 'var(--error-text)' : undefined }}>{tm(Math.abs(f.projectedEnd))}</b>],
@@ -427,9 +424,7 @@ function FundInspector({ f, pos, horizon, events, onClose, onOrder, onTargets, o
           <>
             <KV rows={[
               ['حداقل موجودی', <span key="m" className="num">{tm(pos.target.minFreeValue)}</span>],
-              ['روزهای پوشش هدف', <span key="d" className="num">{faDigits(pos.target.targetDays)} روز</span>],
               ['سقف موجودی', <span key="x" className="num">{pos.target.maxFreeValue ? tm(pos.target.maxFreeValue) : '—'}</span>],
-              ['حداقل مؤثر', <span key="e" className="num">{tm(f.minTarget)}</span>],
             ]} />
             {f.minTarget > 0 && <Meter value={Math.max(0, f.projectedEnd) / f.minTarget} tone={st.tone} label={`پایان افق نسبت به حداقل هدف`} />}
           </>

@@ -2,20 +2,21 @@
 /**
  * /op/funds — «موجودی صندوق‌ها»: the treasury stock. Kit list page: heading («ثبت سفارش», NAV refresh, CSV) → stock stats
  * (the rial treasury first) → «نیاز به خرید» (only when something waits in the queue «صف تأمین»: one row per fund — and
- * «ریال» for users' sales waiting for free rial — with the need, the queue, the promise, open-order cover and «ثبت صدور»;
+ * «ریال» for users' sales waiting for free rial — with the need, the queue, the promise and «ثبت صدور» / «ثبت ابطال»;
  * row → inspector with the waiting items) → stock table: «ریال» and «ریال رزرو» first (everything users and organizations do is in
- * rial), then the funds (state tabs, search; gold and fixed income first) → inspector (fund: stock breakdown, coverage vs
+ * rial), then the funds (state tabs, search; gold and fixed income first) → inspector (fund: stock breakdown, free stock vs
  * the target band, the suggestion with a prefilled order, recent movements · rial: «خزانه‌ی ریالی», bank waterfall,
  * «ریال رزرو», organizations' rial accounts, recent rial moves) → recent stock movements (row → movement inspector).
  * Nothing goes negative: what the stock cannot cover waits in the queue and is delivered automatically (oldest first)
- * once Namadno buys — nothing is ever short or negative. Deep link: ?state=need_buy|below|ok|surplus selects that tab.
+ * once Namadno buys — an order is recorded only when it is done, so the queue is served right after «ثبت». Nothing is ever
+ * short or negative. Deep link: ?state=need_buy|below|ok|surplus selects that tab.
  */
 import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRefreshNav } from '@/api/op-system-extra';
 import {
-  useRialTreasury, useStockMovements, useStockQueue, useTreasuryPositions, useTreasurySummary,
+  useRialTreasury, useStockMovements, useStockQueue, useTreasuryOrders, useTreasuryPositions, useTreasurySummary,
   type OrderSide, type RialTreasury, type RialTreasuryId, type StockMovement, type StockState, type TreasuryPosition,
 } from '@/api/op-treasury-extra';
 import {
@@ -25,7 +26,7 @@ import {
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { OrderDialog } from '@/components/op/treasury/OrderDialog';
-import { MOVE_KIND, RIAL_UI, SIDE, STOCK_STATE, TI, amt, daysText, isNeed } from '@/components/op/treasury/ui';
+import { MOVE_KIND, RIAL_UI, SIDE, STOCK_STATE, TI, amt, isNeed, orderAt, thisMonth } from '@/components/op/treasury/ui';
 import { dayTime, downloadCsv, errMsg, raw } from '@/components/op/system/fmt';
 import {
   CORE_FUNDS, CoverageBlock, FundTile, MovementInspector, PositionBreakdown, StatePill, SuggestionNote, bnOr, minTargetOf,
@@ -34,7 +35,7 @@ import {
 import {
   RIAL_IDS, RIAL_SHORT_SUB, RialCell, RialInspector, RialStatePill, RialTile, rialReportRows, rialStatus, type StockCol,
 } from '@/components/op/funds/rial';
-import { NeedNote, QueueEta, QueueList, buyAsk, earliestEta, needCovered, type OrderAsk } from '@/components/op/funds/queue';
+import { NeedNote, QueueEta, QueueList, buyAsk, earliestEta, type OrderAsk } from '@/components/op/funds/queue';
 import { faDigits, jDateTime, money } from '@/lib/format';
 import { routes } from '@/lib/routes';
 
@@ -77,6 +78,7 @@ function FundsInner() {
   const positions = useTreasuryPositions();
   const summary = useTreasurySummary(30);
   const rial = useRialTreasury();
+  const orders = useTreasuryOrders();
   const refresh = useRefreshNav();
   const orgName = useOrgNames();
   const [filt, setFilt] = useState<Filt>(() => filtOf(stateParam));
@@ -118,7 +120,11 @@ function FundsInner() {
   const rt = summary.data?.rial ?? rial.data;
   const needN = fundCount('need_buy');
   const belowN = fundCount('below');
-  const open = t ? t.pendingBuyValue + t.pendingRedeemValue : 0;
+  // cash-first: orders are recorded when done — the stat shows what this month's buys and redemptions moved
+  const month = useMemo(() => thisMonth(), []);
+  const monthOrders = useMemo(() => (orders.data ?? []).filter((o) => o.status !== 'cancelled' && orderAt(o) >= month.from), [orders.data, month]);
+  const monthBuy = monthOrders.filter((o) => o.side === 'buy').reduce((a, o) => a + o.amount, 0);
+  const monthRedeem = monthOrders.filter((o) => o.side === 'redeem').reduce((a, o) => a + o.amount, 0);
   // «نیاز به خرید»: «ریال» first (users' sales waiting for free rial), then the funds whose queue is larger than their free stock
   const needs: NeedRow[] = useMemo(() => [
     ...(rial.data && (rial.data.main.needValue ?? 0) > 0 ? [{ kind: 'rial' as const, key: 'rial' as const, r: rial.data }] : []),
@@ -135,8 +141,8 @@ function FundsInner() {
     downloadCsv('namadno-treasury-stock', [
       // the rial treasuries first, in their own block (their columns differ from the funds')
       ...(rial.data ? [['خزانه‌ی ریالی — تومان'], ...rialReportRows(rial.data, raw), []] : []),
-      ['صندوق', 'نماد', 'NAV (تومان)', 'واحد موجودی', 'ارزش موجودی', 'تخصیص به کاربران', 'رزرو', 'تعهد بسته‌ها', 'در انتظار ابطال', 'موجودی آزاد', 'در صف تأمین', 'نیاز به خرید', 'تحویل صف تا', 'صدور در راه', 'پوشش (روز)', 'هدف (روز)', 'وضعیت'],
-      ...list.map((p) => [p.name, p.symbol, raw(p.nav), p.heldUnits.toFixed(2), raw(p.heldValue), raw(p.allocatedValue), raw(p.reservedValue), raw(p.committedValue), raw(p.pendingRedeemValue), raw(Math.max(0, p.availableValue)), raw(p.queuedValue ?? 0), raw(p.needBuyValue ?? 0), p.needBy ? jDateTime(p.needBy) : '', raw(p.pendingBuyValue), p.coverageDays ?? '', p.target?.targetDays ?? '', STOCK_STATE[p.state].label]),
+      ['صندوق', 'نماد', 'NAV (تومان)', 'واحد موجودی', 'ارزش موجودی', 'تخصیص به کاربران', 'رزرو', 'تعهد بسته‌ها', 'موجودی آزاد', 'در صف تأمین', 'نیاز به خرید', 'تحویل صف تا', 'حداقل هدف', 'سقف هدف', 'وضعیت'],
+      ...list.map((p) => [p.name, p.symbol, raw(p.nav), p.heldUnits.toFixed(2), raw(p.heldValue), raw(p.allocatedValue), raw(p.reservedValue), raw(p.committedValue), raw(Math.max(0, p.availableValue)), raw(p.queuedValue ?? 0), raw(p.needBuyValue ?? 0), p.needBy ? jDateTime(p.needBy) : '', p.target ? raw(p.target.minFreeValue) : '', p.target?.maxFreeValue ? raw(p.target.maxFreeValue) : '', STOCK_STATE[p.state].label]),
     ]);
     toast('خروجی موجودی ریال و صندوق‌ها (CSV) آماده شد');
   };
@@ -163,18 +169,19 @@ function FundsInner() {
           {p.needBuyValue > 0
             ? <span className="sm" style={{ color: 'var(--error-text)' }} title="صف تأمین بیش از موجودی آزاد است">نیاز <span className="num">{sbn(p.needBuyValue)}</span></span>
             : p.queuedValue > 0 && <span className="sm" title="در صف تأمین">در صف <span className="num">{sbn(p.queuedValue)}</span></span>}
-          {p.pendingBuyValue > 0 && <span className="sm">در راه <span className="num">{sbn(p.pendingBuyValue)}</span></span>}
         </>
       )),
     },
     {
-      key: 'cov', label: 'پوشش', width: '96px', col: true, render: cell('cov', (p) => {
-        if (p.state === 'inactive') return bnOr(0);
-        const tg = p.target;
+      // the target band: free stock (after the queue) against the minimum the operator set (no cover days)
+      key: 'cov', label: 'حداقل هدف', width: '104px', col: true, render: cell('cov', (p) => {
+        if (p.state === 'inactive' || !p.target) return bnOr(0);
+        const min = p.target.minFreeValue;
+        const free = Math.max(0, p.availableValue - p.queuedValue);
         return (
           <>
-            <span className="num">{daysText(p.coverageDays)}{tg && <span className="sm"> / {faDigits(tg.targetDays)}</span>}</span>
-            {tg && p.coverageDays != null && <Meter value={p.coverageDays / tg.targetDays} tone={STOCK_STATE[p.state].tone} width={72} thin label={`پوشش ${daysText(p.coverageDays)} از هدف ${faDigits(tg.targetDays)} روز`} />}
+            <span className="num">{sbn(min)}</span>
+            {min > 0 && <Meter value={free / min} tone={STOCK_STATE[p.state].tone} width={72} thin label={`موجودی آزاد ${amt(free)} از حداقل ${amt(min)} تومان`} />}
           </>
         );
       }),
@@ -209,18 +216,20 @@ function FundsInner() {
           { label: 'تخصیص به کاربران', value: sbn(t.allocatedValue), unit: 'میلیارد تومان', note: `رزرو ${amt(t.reservedValue)} · تعهد ${amt(t.committedValue)}` },
           {
             label: 'موجودی آزاد صندوق‌ها', value: sbn(t.availableValue), unit: 'میلیارد تومان',
-            note: `پوشش ${daysText(summary.data?.coverageDays)}${needN ? ` · ${faDigits(needN)} نیاز به خرید` : belowN ? ` · ${faDigits(belowN)} زیر هدف` : ''}`,
+            note: needN ? `${faDigits(needN)} صندوق نیاز به خرید` : belowN ? `${faDigits(belowN)} صندوق زیر حداقل هدف` : 'همه بالای حداقل هدف',
             trend: needN ? 'down' : belowN ? 'warn' : undefined,
           },
           {
-            label: 'سفارش‌های باز', value: faDigits(t.openOrders), unit: 'سفارش', href: routes.op.orders,
-            note: t.dueOrders ? `${faDigits(t.dueOrders)} سررسید تسویه · ${amt(open)}` : open ? `${amt(open)} تومان` : 'سفارش بازی نیست', trend: t.dueOrders ? 'warn' : undefined,
+            label: `سفارش‌های ${month.name}`, value: faDigits(monthOrders.length), unit: 'سفارش', href: routes.op.orders,
+            note: monthOrders.length
+              ? [monthBuy > 0 && `صدور ${amt(monthBuy)}`, monthRedeem > 0 && `ابطال ${amt(monthRedeem)}`].filter(Boolean).join(' · ')
+              : 'سفارشی در این ماه ثبت نشده',
           },
         ] : []} />
       )}
 
       {needs.length > 0 && (
-        <NeedCard rows={needs} pendingRedeem={t?.pendingRedeemValue ?? 0} etaOf={(id) => earliestEta(queue.data, id)}
+        <NeedCard rows={needs} etaOf={(id) => earliestEta(queue.data, id)}
           selectedKey={sel?.kind === 'need' ? sel.id : null} onSelect={(k) => toggle('need', k)}
           onOrder={(o) => openOrder(o)} onRedeem={(r) => openOrder(redeemAsk(r, list))} />
       )}
@@ -308,7 +317,7 @@ function FundStockInspector({ p, orgName, onClose, onOrder }: {
             p.needBuyValue > 0
               ? ['نیاز به خرید', <span key="a" className="num" style={{ color: 'var(--error-text)' }}>{amt(p.needBuyValue)}</span>]
               : ['آزاد', <span key="a" className="num">{amt(Math.max(0, p.availableValue))}</span>],
-            ['پوشش', <span key="c" className="num">{daysText(p.coverageDays)}</span>],
+            ['حداقل هدف', <span key="c" className="num">{p.target ? amt(p.target.minFreeValue) : '—'}</span>],
           ]} />
           {queued
             ? <NeedNote stack p={p} onOrder={(o) => onOrder(o)} />
@@ -319,7 +328,7 @@ function FundStockInspector({ p, orgName, onClose, onOrder }: {
               <QueueList items={queue.data} loading={queue.isLoading} />
             </Section>
           )}
-          <Section title="پوشش در برابر هدف"><CoverageBlock p={p} minTarget={minTargetOf(p)} /></Section>
+          <Section title="موجودی آزاد در برابر هدف"><CoverageBlock p={p} minTarget={minTargetOf(p)} /></Section>
           <Section title="جابه‌جایی‌های اخیر" action={<Link className="nm-more" href={routes.op.fund(p.fundId)}>همه</Link>}>
             {moves.isLoading ? <span className="mute" style={{ fontSize: 12.5 }}>در حال بارگذاری…</span>
               : (moves.data ?? []).length ? (
@@ -349,18 +358,16 @@ function redeemAsk(r: RialTreasury, list: TreasuryPosition[]): OrderAsk {
   const from = list.filter((p) => p.status === 'active' && !isNeed(p.state) && room(p) > amount).sort((a, b) => room(b) - room(a))[0];
   return {
     fundId: from?.fundId, side: 'redeem', amount, source: 'manual',
-    reason: `${faDigits(r.main.queuedCount)} فروش کاربر در صف واریز است؛ با تسویه‌ی این ابطال ریال آزاد نمادنو تأمین می‌شود و فروش‌ها خودکار پرداخت می‌شوند.`,
+    reason: `${faDigits(r.main.queuedCount)} فروش کاربر در صف واریز است؛ با ثبت این ابطال ریال آزاد نمادنو همان لحظه تأمین می‌شود و فروش‌ها خودکار پرداخت می‌شوند.`,
   };
 }
 
 /** Funds (and «ریال») whose queue is larger than what they can cover now — one row each; row → NeedInspector. */
-function NeedCard({ rows, pendingRedeem, etaOf, selectedKey, onSelect, onOrder, onRedeem }: {
-  rows: NeedRow[]; pendingRedeem: number; etaOf: (id: string) => string | undefined; selectedKey: string | null;
+function NeedCard({ rows, etaOf, selectedKey, onSelect, onOrder, onRedeem }: {
+  rows: NeedRow[]; etaOf: (id: string) => string | undefined; selectedKey: string | null;
   onSelect: (key: string) => void; onOrder: (o: OrderAsk) => void; onRedeem: (r: RialTreasury) => void;
 }) {
   const need = (x: NeedRow) => (x.kind === 'rial' ? x.r.main.needValue ?? 0 : x.p.needBuyValue);
-  const covered = (x: NeedRow) => (x.kind === 'rial' ? pendingRedeem >= need(x) : needCovered(x.p));
-  const open = rows.filter((x) => !covered(x)).length;
   const columns: Column<NeedRow>[] = [
     {
       key: 'what', label: 'صندوق', width: 'minmax(0, 1.4fr)',
@@ -387,23 +394,13 @@ function NeedCard({ rows, pendingRedeem, etaOf, selectedKey, onSelect, onOrder, 
     },
     { key: 'by', label: 'تحویل تا', width: '124px', render: (x) => <QueueEta at={x.kind === 'rial' ? etaOf('rial') : x.p.needBy ?? etaOf(x.p.fundId)} /> },
     {
-      key: 'cover', label: 'سفارش باز', width: '150px', col: true,
-      render: (x) => {
-        if (covered(x)) return <Pill tone="success" dot>{x.kind === 'rial' ? 'ابطال باز پوشش می‌دهد' : 'سفارش باز پوشش می‌دهد'}</Pill>;
-        const inWay = x.kind === 'rial' ? pendingRedeem : x.p.pendingBuyValue;
-        return inWay > 0
-          ? <span className="sm">{x.kind === 'rial' ? 'ابطال' : 'صدور'} در راه <span className="num">{amt(inWay)}</span></span>
-          : <span style={{ color: 'var(--text-disabled)' }}>—</span>;
-      },
-    },
-    {
       key: 'act', label: '', width: '112px', align: 'end',
       render: (x) => {
         const label = x.kind === 'rial' ? SIDE.redeem : SIDE.buy;
         const go = () => (x.kind === 'rial' ? onRedeem(x.r) : onOrder(buyAsk(x.p)));
         return (
           // not the `sm` class: `.nm-td .sm` (table secondary text) would grey the label; same size inline
-          <button type="button" className={covered(x) ? 'nm-btn ghost' : 'nm-btn'} style={{ height: 34, padding: '0 14px', fontSize: 13 }}
+          <button type="button" className="nm-btn" style={{ height: 34, padding: '0 14px', fontSize: 13 }}
             aria-label={`ثبت ${label.label} — ${x.kind === 'rial' ? RIAL_UI.rial.name : x.p.name}`}
             onClick={(e) => { e.stopPropagation(); go(); }}>
             <Icon d={label.d} size={14} />ثبت {label.label}
@@ -414,11 +411,11 @@ function NeedCard({ rows, pendingRedeem, etaOf, selectedKey, onSelect, onOrder, 
   ];
   return (
     <Card flush title="نیاز به خرید" count={rows.length}
-      sub={open ? 'موارد در صف تأمین منتظر موجودی‌اند؛ با تسویه‌ی سفارش، به ترتیب و خودکار تحویل می‌شوند' : 'سفارش‌های باز نیاز صف را پوشش می‌دهند؛ پس از تسویه، صف خودکار تحویل می‌شود'}
-      actions={open ? <Pill tone="error" dot>{faDigits(open)} مورد فوری</Pill> : undefined}>
+      sub="موارد در صف تأمین منتظر موجودی‌اند؛ با ثبت صدور یا ابطال، همان لحظه به ترتیب و خودکار تحویل می‌شوند"
+      actions={<Pill tone="error" dot>{faDigits(rows.length)} مورد فوری</Pill>}>
       <Table
         columns={columns} rows={rows} rowKey={(x) => x.key} rowLabel={(x) => `نیاز به خرید ${x.kind === 'rial' ? RIAL_UI.rial.name : x.p.name}`}
-        onRowClick={(x) => onSelect(x.key)} selectedKey={selectedKey} minWidth={820}
+        onRowClick={(x) => onSelect(x.key)} selectedKey={selectedKey} minWidth={680}
       />
       <TableFoot shown={rows.length} total={rows.length} unit="مورد">
         <span className="mute">موعد هر مورد = تسویه‌ی صندوق + یک روز کاری · مبالغ به تومان</span>
@@ -451,7 +448,7 @@ function NeedInspector({ row, onClose, onOrder, onRedeem }: {
         ]} />
         <Note tone="err" icon={TI.wallet}>
           <b style={{ fontWeight: 600 }}>ریال آزاد نمادنو فروش‌های در صف را پوشش نمی‌دهد{eta ? <> · پرداخت تا <QueueEta at={eta} /></> : null}</b>
-          <span style={{ display: 'block' }}>با ابطال از صندوقی که بیش از هدف موجودی دارد ریال آزاد تأمین کنید؛ با تسویه‌ی ابطال، فروش‌ها به ترتیب و خودکار پرداخت می‌شوند.</span>
+          <span style={{ display: 'block' }}>با ابطال از صندوقی که بیش از هدف موجودی دارد ریال آزاد تأمین کنید؛ با ثبت ابطال، فروش‌ها به ترتیب و خودکار پرداخت می‌شوند.</span>
         </Note>
         <Section title="فروش‌های در صف واریز" action={<span className="num mute">{amt(m.queuedValue)} تومان</span>}>
           <QueueList items={q.data} loading={q.isLoading} />
@@ -462,10 +459,10 @@ function NeedInspector({ row, onClose, onOrder, onRedeem }: {
   const p = row.p;
   return (
     <Inspector open onClose={onClose} title="صف تأمین" label={`صف تأمین ${p.name}`} href={routes.op.fund(p.fundId)} hrefLabel="صفحه‌ی صندوق"
-      footer={<button type="button" className={needCovered(p) ? 'nm-btn ghost' : 'nm-btn'} onClick={() => onOrder(buyAsk(p))}><Icon d={SIDE.buy.d} size={16} />ثبت صدور</button>}>
+      footer={<button type="button" className="nm-btn" onClick={() => onOrder(buyAsk(p))}><Icon d={SIDE.buy.d} size={16} />ثبت صدور</button>}>
       <Who lead={<FundTile fundId={p.fundId} size="xl" />} title={`${p.name} — ${p.symbol}`}
         sub={<>تسویه <span className="ltr">{p.settlement}</span> · موعد هر مورد: تسویه + یک روز کاری</>}
-        pills={<><StatePill p={p} />{needCovered(p) && <Pill tone="success">سفارش باز پوشش می‌دهد</Pill>}</>} />
+        pills={<StatePill p={p} />} />
       <KeyStats items={[
         ['نیاز به خرید', <span key="n" className="num" style={{ color: 'var(--error-text)' }}>{amt(p.needBuyValue)}</span>],
         ['در صف', <span key="q" className="num">{faDigits(p.queuedCount)} مورد</span>],

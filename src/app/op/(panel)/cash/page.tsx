@@ -2,7 +2,7 @@
 /**
  * Operator console — cash («نقدینگی»): Namadno's bank account split into the two rial treasuries.
  *   «ریال»      users' rial wallets, organizations' free balances (and what they set aside for packages in the queue),
- *               cash tied in open buy orders, Namadno's free rial
+ *               Namadno's free rial (orders to funds are paid when recorded, so no cash waits in orders)
  *   «ریال رزرو» money of sent packages waiting for recipients — always paid: a package «آزاد» does not cover waits in the
  *               queue («بسته در صف») until its receipt is approved; nothing is unfunded
  * Kit page: heading («ثبت واریز») → stats (bank, Namadno free rial, reserve, user wallets, organizations' free with
@@ -378,7 +378,6 @@ function CashInner() {
                 { label: 'کیف پول کاربران', value: s.userWallets, color: 'var(--grey-500)' },
                 { label: 'حساب آزاد سازمان‌ها', value: s.orgFree, color: 'var(--success-main)' },
                 ...(s.orgSetAside > 0 ? [{ label: 'کنار گذاشته برای بسته‌های در صف', value: s.orgSetAside, color: 'var(--info-main)' }] : []),
-                { label: 'سفارش‌های باز', value: s.tiedInOrders, color: 'var(--primary-main)' },
                 { label: 'ریال رزرو', value: s.reserve, color: 'var(--secondary-main)' },
                 { label: 'ریال آزاد نمادنو', value: Math.max(0, s.available), color: 'var(--chart-3)' },
               ]} />
@@ -386,7 +385,6 @@ function CashInner() {
                 ['کیف پول کاربران', <span key="w" className="num">{money(s.userWallets)}</span>],
                 ['حساب آزاد سازمان‌ها', <span key="o" className="num">{money(s.orgFree)}</span>],
                 ...(s.orgSetAside > 0 ? [['کنار گذاشته برای بسته‌های در صف', <span key="q" className="num">{money(s.orgSetAside)}</span>] as [ReactNode, ReactNode]] : []),
-                ['در سفارش‌های باز', <span key="t" className="num">{money(s.tiedInOrders)}</span>],
                 ['ریال رزرو', <span key="r" className="num">{money(s.reserve)}</span>],
                 ['ریال آزاد نمادنو', <span key="a" className="num">{money(Math.max(0, s.available))}</span>],
                 [<b key="k">موجودی حساب بانکی</b>, <b key="b" className="num">{money(s.balance)}</b>],
@@ -394,7 +392,7 @@ function CashInner() {
               {need > 0 && rt
                 ? (
                   <Note tone="err" icon={TI.wallet} action={<Link href={`${routes.op.funds}?state=need_buy`} className="nm-btn sm text">صف تأمین</Link>}>
-                    {faDigits(rt.main.queuedCount)} فروش کاربر در صف واریز است؛ نیاز به تأمین ریال {amt(need)} تومان. با تسویه‌ی ابطال، فروش‌ها خودکار پرداخت می‌شوند.
+                    {faDigits(rt.main.queuedCount)} فروش کاربر در صف واریز است؛ نیاز به تأمین ریال {amt(need)} تومان. با ثبت ابطال، فروش‌ها همان لحظه و خودکار پرداخت می‌شوند.
                   </Note>
                 )
                 : <span className="mute" style={{ fontSize: 12 }}>همه‌ی مبالغ به تومان. فیش‌های در انتظار تأیید جزو موجودی نیستند. ریال آزاد نمادنو سقف سفارش‌های صدور تازه است.</span>}

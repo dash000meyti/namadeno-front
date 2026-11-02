@@ -85,8 +85,11 @@ export interface UserMetaRow {
 }
 export interface UsersMeta {
   meta: Record<string, UserMetaRow>;
-  /** kycPending / kycAvgDays are deprecated (always 0): there is no KYC review queue. */
-  totals: { users: number; newThisMonth: number; locked: number; lockedPct: number; kycPending: number; kycAvgDays: number; legal: number; suspended: number };
+  /**
+   * kycPending / kycAvgDays are deprecated (always 0): there is no KYC review queue.
+   * blocked = people shown as «مسدود» (account blocked or part of the assets blocked, each once); legal and suspended are its parts.
+   */
+  totals: { users: number; newThisMonth: number; locked: number; lockedPct: number; kycPending: number; kycAvgDays: number; legal: number; suspended: number; blocked: number };
 }
 
 export interface UserNote { id: string; text: string; tag: 'security' | 'credit' | 'support'; by: string; at: ISODate }

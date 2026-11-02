@@ -2,8 +2,9 @@
 /**
  * «صف تأمین» pieces shared by /op/funds (the «نیاز به خرید» card and its inspector, the rial inspector) and
  * /op/funds/[id] (stock tab). Nothing goes negative: what a fund's stock — or Namadno's free rial — cannot cover waits
- * in the queue and is fulfilled automatically, oldest first, as soon as it is covered (a «صدور» settles, or rial is
- * raised). Every item is promised by `eta` (fund settlement + one working day). Data: GET /op/treasury/queue.
+ * in the queue and is fulfilled automatically, oldest first, as soon as it is covered (a «صدور» is recorded — orders are
+ * done at once — or rial is raised by a «ابطال»). Every item is promised by `eta` (fund settlement + one working day).
+ * Data: GET /op/treasury/queue.
  */
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -27,9 +28,6 @@ export function buyAsk(p: TreasuryPosition): OrderAsk {
     ? { fundId: p.fundId, side: 'buy', amount: s.amount, source: 'suggestion', reason: s.reason }
     : { fundId: p.fundId, side: 'buy', source: 'manual' };
 }
-
-/** An open buy order already covers what the queue needs. */
-export const needCovered = (p: Pick<TreasuryPosition, 'needBuyValue' | 'pendingBuyValue'>) => p.needBuyValue > 0 && p.pendingBuyValue >= p.needBuyValue;
 
 /** Who an item waits for: the organization (packages) or the user; aggregated orders get their count. */
 export function queueWho(i: QueueItem): string {
@@ -92,24 +90,13 @@ export function QueueList({ items, loading, empty = 'موردی در صف نیس
   );
 }
 
-/**
- * What a fund in need must buy, by when, and «ثبت صدور» (prefilled with the suggestion). When an open buy already covers
- * the need, says so instead.
- */
+/** What a fund in need must buy, by when, and «ثبت صدور» (prefilled with the suggestion). */
 export function NeedNote({ p, onOrder, stack }: {
   p: TreasuryPosition; onOrder?: (o: OrderAsk) => void;
   /** Button under the text (narrow places like the inspector) instead of beside it. */
   stack?: boolean;
 }) {
   const need = p.needBuyValue;
-  if (needCovered(p)) {
-    return (
-      <Note tone="ok" icon={TI.order}>
-        <b style={{ fontWeight: 600 }}>سفارش صدور باز ({amt(p.pendingBuyValue)} تومان) این نیاز را پوشش می‌دهد</b>
-        <span style={{ display: 'block' }}>با ثبت تسویه، {faDigits(p.queuedCount)} مورد در صف به ترتیب و خودکار تحویل می‌شود.</span>
-      </Note>
-    );
-  }
   if (need <= 0) {
     return <Note tone="info" icon={TI.clock}>موجودی آزاد صف را پوشش می‌دهد؛ موارد به ترتیب و خودکار تحویل می‌شوند.</Note>;
   }
@@ -121,7 +108,7 @@ export function NeedNote({ p, onOrder, stack }: {
       <span style={{ display: 'block' }}>
         {faDigits(p.queuedCount)} مورد منتظر موجودی این صندوق است.
         {s ? ` صدور پیشنهادی ${amt(s.amount)} تومان صف را تأمین می‌کند${s.amount > need ? ' و موجودی را به حداقل هدف می‌رساند' : ''}.` : ''}
-        {' '}با تسویه‌ی صدور، موارد به ترتیب و خودکار تحویل می‌شوند.
+        {' '}با ثبت صدور، موارد همان لحظه به ترتیب و خودکار تحویل می‌شوند.
       </span>
       {stack && btn && <span style={{ display: 'block', marginTop: 10 }}>{btn}</span>}
     </Note>
@@ -135,11 +122,10 @@ export function QueueCard({ p, onOrder, selectedId, onSelect }: {
   const q = useStockQueue(p.fundId);
   const items = q.data ?? [];
   const pg = usePaging(items, 8);
-  const covered = needCovered(p);
   return (
     <Card flush title="صف تأمین" count={items.length || p.queuedCount || undefined}
       sub={`${amt(p.queuedValue)} تومان در انتظار موجودی این صندوق`}
-      actions={covered ? <Pill tone="success" dot>سفارش باز پوشش می‌دهد</Pill> : p.needBuyValue > 0 ? <Pill tone="error" dot>نیاز به خرید</Pill> : undefined}>
+      actions={p.needBuyValue > 0 ? <Pill tone="error" dot>نیاز به خرید</Pill> : undefined}>
       <div className="nm-card-b" style={{ paddingTop: 4 }}><NeedNote p={p} onOrder={onOrder} /></div>
       <Table
         columns={queueColumns()} rows={pg.rows} rowKey={(i) => i.id} rowLabel={(i) => i.title}

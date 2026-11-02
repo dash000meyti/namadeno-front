@@ -52,6 +52,6 @@ export const routes = {
     funds: '/op/funds', fund: (id: string) => `/op/funds/${id}`, products: '/op/products', rules: '/op/rules',
     users: '/op/users', user: (id: string) => `/op/users/${id}`, requests: '/op/requests', risk: '/op/risk', settings: '/op/settings',
     // treasury and monitoring (the separate reports page was merged into the overview)
-    orders: '/op/orders', cash: '/op/cash', planning: '/op/planning', activity: '/op/activity',
+    orders: '/op/orders', cash: '/op/cash', planning: '/op/planning', activity: '/op/activity', notifications: '/op/notifications',
   },
 };

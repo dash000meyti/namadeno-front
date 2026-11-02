@@ -23,12 +23,18 @@
  *   GET   /op/treasury/targets  · PATCH (TargetsPatch) → TreasuryTargets  422 bad_mix|bad_target|bad_date
  *   GET   /op/treasury/plan?horizon=30|60|90           → TreasuryPlan
  *   GET   /op/actions                                   → ActionItem[]   (most severe first, then oldest)
+ *   GET   /op/notifications                             → { items: OpNotification[] }  needs action (the action queue) + updates
+ *                                                          (recent treasury / customer events of the last 7 days + console news)
+ *   POST  /op/notifications/read {ids?}                 → { ok: true }   (omitted = all; kept per operator)
  *   GET   /op/activity?actor&category&orgId&userId&q&limit&offset → ActivityPage
  */
 import { http, type HttpHandler } from 'msw';
 import type { ActivityFilter, Horizon, TargetsPatch } from '@/api/op-treasury-extra';
 import { db } from '../db';
+import type { ActivityEvent, OpNotification } from '@/api/op-treasury-extra';
 import { body, fail, latency, ok, p, qs, who } from '../http';
+import { OP_UPDATES } from '../seed/extra-op-system';
+import { now } from '@/lib/clock';
 import { seed_opTreasury } from '../seed/extra-op-treasury';
 import { deliverPackage } from './org';
 import {
@@ -62,7 +68,57 @@ export const treasuryTickHandlers: HttpHandler[] = [
   }),
 ];
 
+// ═════════ notifications («اعلان‌ها» of the console) ═════════
+
+/** Events worth telling the operator about (the rest stay in «فعالیت‌ها»). */
+const UPDATE_KINDS = new Set([
+  'order_settled', 'order_placed', 'order_cancelled', 'targets_updated', 'queue_filled', 'queue_sale_paid', 'package_stock_wait',
+  'deposit_confirmed', 'deposit_rejected', 'deposit_recorded', 'contract_updated', 'org_onboarding', 'legal_hold', 'milestone_reclaimed',
+]);
+const UPDATE_DAYS = 7;
+const UPDATE_MAX = 14;
+
+function opNotifications(): Omit<OpNotification, 'read'>[] {
+  const d = ensure();
+  const s = snapshot(d);
+  const at = now().toISOString();
+  // needs action: the action queue as it is now (most severe first)
+  const action: Omit<OpNotification, 'read'>[] = actions(s).map((a) => ({
+    id: `n-${a.id}`, kind: 'action', title: a.title, body: a.sub, createdAt: a.at && a.at <= at ? a.at : at, href: a.href,
+    severity: a.severity, actionKind: a.kind,
+  }));
+  // updates: recent treasury and customer events + console news, newest first
+  const since = new Date(now().getTime() - UPDATE_DAYS * 86_400_000).toISOString();
+  const events = ((treasuryOf(d)?.activity ?? []) as ActivityEvent[])
+    .filter((e) => UPDATE_KINDS.has(e.kind) && e.at >= since && e.at <= at)
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, UPDATE_MAX)
+    .map((e): Omit<OpNotification, 'read'> => ({
+      id: `n-${e.id}`, kind: 'update', title: e.title, body: [e.actor.name, e.sub].filter(Boolean).join(' · '), createdAt: e.at, href: e.href, category: e.category,
+    }));
+  const news = OP_UPDATES.map((u): Omit<OpNotification, 'read'> => ({ ...u, kind: 'update', category: 'console' }));
+  const updates = [...events, ...news].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return [...action, ...updates];
+}
+const readStore = () => ((db().extra.opNotifRead ??= {}) as Record<string, string[]>);
+
 export const opTreasuryHandlers: HttpHandler[] = [
+  http.get(p('/op/notifications'), async ({ request }) => {
+    await latency();
+    const read = new Set(readStore()[who(request, 'operator').userId] ?? []);
+    return ok({ items: opNotifications().map((n) => ({ ...n, read: read.has(n.id) })) });
+  }),
+  http.post(p('/op/notifications/read'), async ({ request }) => {
+    await latency();
+    const me = who(request, 'operator').userId;
+    const b = await body<{ ids?: string[] }>(request);
+    const map = readStore();
+    const cur = new Set(map[me] ?? []);
+    for (const id of b.ids ?? opNotifications().map((n) => n.id)) cur.add(id);
+    map[me] = [...cur];
+    return ok({ ok: true });
+  }),
+
   // ═════════ queue («صف تأمین»): items waiting for stock or free rial ═════════
   http.get(p('/op/treasury/queue'), async ({ request }) => {
     await latency();

@@ -5,6 +5,7 @@ import { db, newId, recalcHoldings } from '../db';
 import { body, fail, latency, ok, p, qs } from '../http';
 import { panelAccessOf } from '../identity';
 import { now } from '@/lib/clock';
+import { faDigits } from '@/lib/format';
 import { ledger, portfolioOf } from './app';
 import { LOCK_TYPES, aumMonthlyLive, snapshot, totalsOf, treasuryOf } from '../treasury';
 
@@ -126,6 +127,8 @@ export const opHandlers = [
     if (filter === 'locked') list = list.filter((u) => u.lockedValue > 0);
     if (filter === 'kyc') list = list.filter((u) => u.kycLevel < 2);
     if (filter === 'legal') list = list.filter((u) => u.flags.includes('legal_hold'));
+    // «مسدود»: the account is blocked or part of the assets is (one kind; the reason is in the description)
+    if (filter === 'blocked') list = list.filter((u) => u.status === 'suspended' || u.flags.includes('legal_hold'));
     return ok(list);
   }),
   http.get(p('/op/users/:id'), async ({ params }) => {
@@ -161,8 +164,8 @@ export const opHandlers = [
       if (!pu.flags.includes('legal_hold')) pu.flags.push('legal_hold');
       return ok({ ok: true });
     }
-    const lock = ledger.addLock(ud, b.holdingKind, { type: 'legal', amount: b.amount, title: 'مسدودی قانونی', condition: 'تا رفع دستور مرجع · ' + b.reason, reference: b.reference });
-    ledger.notify(ud, { title: 'مسدودی قانونی روی حساب شما اعمال شد', body: 'برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.', tone: 'error', icon: 'lock', href: '/app/support' });
+    const lock = ledger.addLock(ud, b.holdingKind, { type: 'legal', amount: b.amount, title: 'مسدود — دستور شماره ' + faDigits(b.reference), condition: 'تا رفع دستور مرجع · ' + b.reason, reference: b.reference });
+    ledger.notify(ud, { title: 'بخشی از دارایی شما مسدود شد', body: 'برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.', tone: 'error', icon: 'lock', href: '/app/support' });
     return ok(lock);
   }),
   http.delete(p('/op/users/:id/legal-hold/:lockId'), async ({ params }) => {

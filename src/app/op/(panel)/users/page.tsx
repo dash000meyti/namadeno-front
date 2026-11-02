@@ -24,8 +24,9 @@ import { LOCK_META } from '@/lib/locks';
 import { roleLabel } from '@/lib/org';
 import { routes } from '@/lib/routes';
 
-type Filt = 'all' | 'active' | 'locked' | 'legal' | 'blocked';
-const SERVER_FILTER: Partial<Record<Filt, string>> = { locked: 'locked', legal: 'legal' };
+// «مسدود» is one kind: the account is blocked or part of the assets is (the reason shows in the row and the profile)
+type Filt = 'all' | 'active' | 'locked' | 'blocked';
+const SERVER_FILTER: Partial<Record<Filt, string>> = { locked: 'locked', blocked: 'blocked' };
 const PAGE = 8;
 const STATUS: Record<PlatformUser['status'], [string, Tone]> = { active: ['فعال', 'success'], invited: ['غیرفعال', 'neutral'], suspended: ['مسدود', 'error'] };
 const FAC_TONE: Record<Facility['kind'], Tone> = { card: 'primary', loan: 'info', bnpl: 'success' };
@@ -70,7 +71,6 @@ export default function OpUsersPage() {
   const rows = useMemo(() => (listQ.data ?? []).filter((u) => {
     if (org !== 'all' && u.orgId !== org) return false;
     if (filt === 'active' && u.status !== 'active') return false;
-    if (filt === 'blocked' && u.status !== 'suspended') return false;
     if (needle && !(u.fullName.includes(q.trim()) || u.mobile.includes(needle) || u.nationalId.includes(needle) || (u.employeeCode ?? '').includes(needle))) return false;
     return true;
   }), [listQ.data, org, filt, needle, q]);
@@ -103,10 +103,14 @@ export default function OpUsersPage() {
       key: 'locked', label: 'رزروشده', width: '124px', col: true, render: (u) => {
         const m = meta[u.id];
         const legal = u.flags.includes('legal_hold') || !!m?.lockTypes.includes('legal');
+        // reservation types in one short line that stays inside the column: up to two by name, then «… و N نوع دیگر»
+        const types = (m?.lockTypes ?? []).map((t) => LOCK_META[t].short);
+        const all = types.join(' · ');
+        const line = !u.lockedValue ? 'همه آزاد' : !types.length ? 'رزرو' : types.length <= 2 ? all : `${types[0]} و ${faDigits(types.length - 1)} نوع دیگر`;
         return (
           <>
             <span className="num" style={{ color: u.lockedValue ? undefined : 'var(--text-disabled)' }}>{u.lockedValue ? money(u.lockedValue) : '—'}</span>
-            {legal ? <Pill tone="error">مسدودی قانونی</Pill> : <span className="sm el">{u.lockedValue ? (m?.lockTypes.map((t) => LOCK_META[t].short).join(' · ') || 'رزرو') : 'همه آزاد'}</span>}
+            {legal ? <Pill tone="error" title="بخشی از دارایی به دستور مرجع مسدود است">مسدود</Pill> : <span className="sm el" style={{ maxWidth: '100%' }} title={u.lockedValue && types.length > 2 ? all : undefined}>{line}</span>}
           </>
         );
       },
@@ -124,7 +128,7 @@ export default function OpUsersPage() {
 
   const tabs: { key: Filt; label: string }[] = [
     { key: 'all', label: 'همه' }, { key: 'active', label: 'فعال' },
-    { key: 'locked', label: 'دارای رزرو' }, { key: 'legal', label: 'مسدودی قانونی' }, { key: 'blocked', label: 'مسدود' },
+    { key: 'locked', label: 'دارای رزرو' }, { key: 'blocked', label: 'مسدود' },
   ];
   const clear = () => { setFilt('all'); setOrg('all'); setQ(''); };
 
@@ -137,8 +141,7 @@ export default function OpUsersPage() {
       <StatStrip loading={!totals} items={totals ? [
         { label: 'کاربران', value: money(totals.users), unit: 'نفر', note: `+${money(totals.newThisMonth)} این ماه`, trend: 'up' },
         { label: 'دارای دارایی رزروشده', value: money(totals.locked), unit: 'نفر', note: `${pctFa(totals.lockedPct)} کاربران` },
-        { label: 'مسدودی قانونی', value: money(totals.legal), unit: 'حساب', note: 'با دستور مرجع' },
-        { label: 'مسدود موقت', value: money(totals.suspended), unit: 'حساب', note: 'به‌دست بهره‌بردار' },
+        { label: 'مسدود', value: money(totals.blocked), unit: 'کاربر', note: `حساب ${money(totals.suspended)} · بخشی از دارایی ${money(totals.legal)}` },
       ] : []} />
 
       <Card flush>
@@ -298,7 +301,7 @@ function UserInspector({ user, onClose }: { user: PlatformUser; onClose: () => v
           </>
         )}
       >
-        <span className="mute">با مسدودسازی، کاربر نمی‌تواند وارد اپ شود، کارت نمادنو غیرفعال می‌شود و سفارش‌های باز خرید و فروش لغو می‌شوند. دارایی‌ها و اقساط بدون تغییر باقی می‌مانند.</span>
+        <span className="mute">با مسدودسازی، کاربر نمی‌تواند وارد اپ شود و کارت نمادنو غیرفعال می‌شود. دارایی‌ها، اقساط و موارد پرداخت‌شده‌ی او در صف تأمین بدون تغییر باقی می‌مانند.</span>
         <Field label="دلیل مسدودسازی">
           <Chips label="دلیل مسدودسازی" value={reason} onChange={setReason} options={REASONS.map((l, i) => ({ key: i, label: l }))} />
         </Field>

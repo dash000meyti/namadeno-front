@@ -121,7 +121,7 @@ const LOCK_TEXT: Record<LockType, { title: string; condition: string }> = {
   vesting: { title: 'پاداش تیر ۱۴۰۵', condition: 'آزاد در ۱۴۰۵/۱۰/۱۵' },
   milestone: { title: 'قرارداد پروژه', condition: 'با تأیید هر مرحله توسط سازمان آزاد می‌شود' },
   installment: { title: 'خرید اقساطی', condition: 'با پرداخت هر قسط، بخشی آزاد می‌شود' },
-  legal: { title: 'مسدودی قانونی', condition: 'با دستور مرجع رفع می‌شود' },
+  legal: { title: 'مسدود', condition: 'به دستور مرجع · با دستور رفع آزاد می‌شود' },
 };
 
 function synthHoldings(e: Employee, pr: OrgPeopleProfile, loan?: Loan): Holding[] {

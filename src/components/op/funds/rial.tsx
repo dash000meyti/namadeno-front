@@ -1,7 +1,8 @@
 'use client';
 /**
  * The two rial treasuries, shown like funds — first — on /op/funds and in the command center:
- *   «ریال»      users' rial wallets, organizations' free balances, cash tied in open buy orders and Namadno's free rial
+ *   «ریال»      users' rial wallets, organizations' free balances and Namadno's free rial (orders to funds are paid when
+ *              recorded, so no cash is tied in orders)
  *   «ریال رزرو» money of sent packages waiting for recipients (blocked); the part whose deposit receipt is not approved
  *              yet waits in the queue (not here) until its receipt is approved — receipts have no due date
  * Namadno's free rial is never negative: users' sales it cannot pay wait in the queue («فروش در صف واریز») and the
@@ -116,9 +117,7 @@ export function RialCell({ col, id, r }: { col: StockCol; id: RialTreasuryId; r:
         return (
           <>
             <span className="num" style={{ fontWeight: 600 }} title="ریال آزاد نمادنو">{sbn(Math.max(0, m.available))}</span>
-            {(m.needValue ?? 0) > 0
-              ? <span className="sm" style={{ color: 'var(--error-text)' }} title="فروش کاربران در صف واریز">نیاز <span className="num">{sbn(m.needValue)}</span></span>
-              : m.tied > 0 && <span className="sm">در سفارش <span className="num">{sbn(m.tied)}</span></span>}
+            {(m.needValue ?? 0) > 0 && <span className="sm" style={{ color: 'var(--error-text)' }} title="فروش کاربران در صف واریز">نیاز <span className="num">{sbn(m.needValue)}</span></span>}
           </>
         );
       }
@@ -158,15 +157,14 @@ const COL = {
   users: 'var(--chart-1)',
   orgFree: 'var(--warning-main)',
   setAside: 'var(--warning-light)',
-  tied: 'var(--info-main)',
   reserve: `var(${RIAL_UI.rial_reserve.col})`,
   queue: 'var(--error-main)',
   free: 'var(--chart-2)',
 };
 
 /**
- * «موجودی حساب بانکی» − کیف پول کاربران − حساب آزاد سازمان‌ها − کنار گذاشته برای بسته‌های در صف − در سفارش‌های صدور باز
- * − ریال رزرو = ریال آزاد نمادنو (never negative). With users' sales waiting for rial: − فروش در صف واریز =
+ * «موجودی حساب بانکی» − کیف پول کاربران − حساب آزاد سازمان‌ها − کنار گذاشته برای بسته‌های در صف − ریال رزرو
+ * = ریال آزاد نمادنو (never negative). With users' sales waiting for rial: − فروش در صف واریز =
  * ریال آزاد پس از صف, or «نیاز به تأمین ریال» when the queue is larger.
  * `bar` adds the shares bar above; `unit` writes «تومان» after each amount.
  */
@@ -184,7 +182,6 @@ export function BankWaterfall({ r, bar, unit }: { r: RialTreasury; bar?: boolean
       [<OpLabel key="u" op="−" sub={m.usersReserved > 0 ? `شامل رزرو ${amt(m.usersReserved)}` : undefined}>کیف پول کاربران</OpLabel>, a(m.users)],
       [<OpLabel key="o" op="−">حساب آزاد سازمان‌ها</OpLabel>, a(m.orgFree)],
       ...((m.orgSetAside ?? 0) > 0 ? [[<OpLabel key="q" op="−" sub="از حساب سازمان‌ها، تا تأیید فیش">کنار گذاشته برای بسته‌های در صف</OpLabel>, a(m.orgSetAside)] as [ReactNode, ReactNode]] : []),
-      [<OpLabel key="t" op="−">در سفارش‌های صدور باز</OpLabel>, a(m.tied)],
       [<OpLabel key="r" op="−">ریال رزرو (بسته‌ها)</OpLabel>, a(r.reserve.held)],
       [<OpLabel key="f" op="=" strong>ریال آزاد نمادنو</OpLabel>, a(free, true)],
       ...(queued > 0 ? [
@@ -202,7 +199,6 @@ export function BankWaterfall({ r, bar, unit }: { r: RialTreasury; bar?: boolean
         { label: 'کیف پول کاربران', value: m.users, color: COL.users },
         { label: 'حساب آزاد سازمان‌ها', value: m.orgFree, color: COL.orgFree },
         ...((m.orgSetAside ?? 0) > 0 ? [{ label: 'کنار گذاشته برای بسته‌های در صف', value: m.orgSetAside, color: COL.setAside }] : []),
-        ...(m.tied > 0 ? [{ label: 'در سفارش‌های باز', value: m.tied, color: COL.tied }] : []),
         { label: 'ریال رزرو', value: r.reserve.held, color: COL.reserve },
         ...(queued > 0 ? [{ label: 'فروش در صف واریز', value: Math.min(queued, free), color: COL.queue }] : []),
         { label: queued > 0 ? 'ریال آزاد پس از صف' : 'ریال آزاد نمادنو', value: Math.max(0, free - queued), color: COL.free },
@@ -367,9 +363,9 @@ export function rialReportRows(r: RialTreasury, n: (v: number) => Cell, blank: C
   const m = r.main;
   const v = r.reserve;
   return [
-    ['خزانه', 'موجودی', 'کیف پول کاربران', 'رزرو کیف پول‌ها', 'حساب آزاد سازمان‌ها', 'کنار گذاشته برای بسته‌های در صف', 'در سفارش‌های صدور باز', 'بلاک‌شده برای بسته‌ها', 'فیش در انتظار تأیید', 'آزاد', 'فروش در صف واریز', 'نیاز به تأمین ریال', 'وضعیت'],
-    [RIAL_UI.rial.name, n(m.held), n(m.users), n(m.usersReserved), n(m.orgFree), n(m.orgSetAside ?? 0), n(m.tied), blank, blank, n(Math.max(0, m.available)), n(m.queuedValue ?? 0), n(m.needValue ?? 0), mainStatus(r).label],
-    [RIAL_UI.rial_reserve.name, n(v.held), blank, blank, blank, blank, blank, n(v.blocked), blank, blank, blank, blank, reserveStatus(r).label],
-    ['حساب بانکی (جمع)', n(r.bank), n(m.users), n(m.usersReserved), n(m.orgFree), n(m.orgSetAside ?? 0), n(m.tied), n(v.blocked), n(v.expected), blank, blank, blank, blank],
+    ['خزانه', 'موجودی', 'کیف پول کاربران', 'رزرو کیف پول‌ها', 'حساب آزاد سازمان‌ها', 'کنار گذاشته برای بسته‌های در صف', 'بلاک‌شده برای بسته‌ها', 'فیش در انتظار تأیید', 'آزاد', 'فروش در صف واریز', 'نیاز به تأمین ریال', 'وضعیت'],
+    [RIAL_UI.rial.name, n(m.held), n(m.users), n(m.usersReserved), n(m.orgFree), n(m.orgSetAside ?? 0), blank, blank, n(Math.max(0, m.available)), n(m.queuedValue ?? 0), n(m.needValue ?? 0), mainStatus(r).label],
+    [RIAL_UI.rial_reserve.name, n(v.held), blank, blank, blank, blank, n(v.blocked), blank, blank, blank, blank, reserveStatus(r).label],
+    ['حساب بانکی (جمع)', n(r.bank), n(m.users), n(m.usersReserved), n(m.orgFree), n(m.orgSetAside ?? 0), n(v.blocked), n(v.expected), blank, blank, blank, blank],
   ];
 }

@@ -1,8 +1,8 @@
 'use client';
 /**
  * Operator console — user profile. Kit detail page: heading with avatar + status pills + actions → stats → tabs → cards.
- * Holdings with free/locked split (the rial wallet first, «کیف پول ریالی»), the user's rial movements, lock items (legal
- * hold apply/remove), transactions, facilities, risk, audit log, notes.
+ * Holdings with free/locked split (the rial wallet first, «کیف پول ریالی»), the user's rial movements, lock items («مسدود»:
+ * block part of an asset / release), transactions, facilities, risk, audit log, notes.
  * «اعتبار و دسترسی» also shows the account's organization-panel access (one Namadno account for the app and the panel).
  */
 import { useState } from 'react';
@@ -108,7 +108,10 @@ export default function OpUserPage() {
   const lockedHoldings = holdings.filter((h) => h.locked > 0).length;
   const idl = idLevel(user.kycLevel);
   const blocked = user.status === 'suspended';
-  const acct: [string, Tone] = blocked ? ['مسدود موقت', 'error'] : user.status === 'invited' ? ['در انتظار فعال‌سازی', 'warning'] : ['فعال', 'success'];
+  const legalSum = lockRows.filter(({ l }) => l.type === 'legal').reduce((s, { l }) => s + l.amount, 0);
+  // one kind «مسدود»; what is blocked goes in the description
+  const blockNote = [blocked && 'حساب مسدود است: ورود به اپ و کارت نمادنو غیرفعال است', legalOn && (legalSum ? `${money(legalSum)} تومان از دارایی به دستور مرجع مسدود است` : 'بخشی از دارایی به دستور مرجع مسدود است')].filter(Boolean).join(' · ');
+  const acct: [string, Tone] = blocked ? ['مسدود', 'error'] : user.status === 'invited' ? ['در انتظار فعال‌سازی', 'warning'] : ['فعال', 'success'];
   const loanSum = facilities.filter((f) => f.kind === 'loan').reduce((s, f) => s + f.amount, 0);
   const cardSum = facilities.filter((f) => f.kind === 'card').reduce((s, f) => s + f.amount, 0);
   const bnplSum = facilities.filter((f) => f.kind === 'bnpl').reduce((s, f) => s + f.amount, 0);
@@ -136,16 +139,16 @@ export default function OpUserPage() {
     setLhTried(true);
     if (!lhH || lhErrors.amount || lhErrors.ref) return;
     applyHold.mutate({ userId: user.id, holdingKind: lhH.kind as 'rial' | 'gold' | 'fixed', amount: lhAmt, reference: enDigits(lhRef).replace(/\D/g, ''), reason: LH_REASONS[lhReason] }, {
-      onSuccess: () => { setModal(''); setTab('locks'); toast(`مسدودی قانونی ${money(lhAmt)} روی «${holdName(lhH)}» اعمال شد`); },
+      onSuccess: () => { setModal(''); setTab('locks'); toast(`${money(lhAmt)} تومان از «${holdName(lhH)}» مسدود شد`); },
       onError: (e) => setLhErr(errMsg(e)),
     });
   };
   const removeLegal = (l: Lock) => removeHold.mutate({ userId: user.id, lockId: l.id }, {
-    onSuccess: () => toast(`رفع مسدودی قانونی · +${money(l.amount)} آزاد شد`),
+    onSuccess: () => toast(`رفع مسدودی · +${money(l.amount)} آزاد شد`),
     onError: (e) => toast(errMsg(e), 'error'),
   });
   const changeStatus = (status: PlatformUser['status']) => setStatus.mutate({ id: user.id, status }, {
-    onSuccess: () => toast(status === 'suspended' ? `حساب ${user.fullName} به‌طور موقت مسدود شد` : 'مسدودی حساب برداشته شد'),
+    onSuccess: () => toast(status === 'suspended' ? `حساب ${user.fullName} مسدود شد` : 'مسدودی حساب برداشته شد'),
     onError: (e) => toast(errMsg(e), 'error'),
   });
   const saveNote = () => {
@@ -228,11 +231,11 @@ export default function OpUserPage() {
         lead={<Ava letter={user.avatarLetter} id={user.id} size="xl" />}
         title={user.fullName}
         sub={<><Link href={routes.op.organization(user.orgId)}>{user.orgName}</Link> · کد پرسنلی <span className="num">{faDigits(user.employeeCode ?? '—')}</span>{x?.department ? ` · واحد ${x.department}` : ''} · عضو از <span className="num">{jDate(user.joinedAt)}</span></>}
-        pills={<><Pill tone={acct[1]} dot>{acct[0]}</Pill>{kycPill}<Pill tone="primary">{user.creditScore ? `امتیاز ${faDigits(user.creditScore)} · ${band(user.creditScore)}` : 'بدون امتیاز اعتباری'}</Pill>{legalOn && <Pill tone="error" icon={ICON.lock}>مسدودی قانونی</Pill>}</>}
+        pills={<><Pill tone={acct[1]} dot title={blocked ? blockNote : undefined}>{acct[0]}</Pill>{kycPill}<Pill tone="primary">{user.creditScore ? `امتیاز ${faDigits(user.creditScore)} · ${band(user.creditScore)}` : 'بدون امتیاز اعتباری'}</Pill>{legalOn && !blocked && <Pill tone="error" title={blockNote}>مسدود · بخشی از دارایی</Pill>}</>}
       >
         <button type="button" className="nm-btn ghost" onClick={() => setModal('note')}><Icon d={ICON.pen} size={16} />یادداشت{notes.length > 0 && <span className="nm-count" style={{ height: 18 }}>{faDigits(notes.length)}</span>}</button>
         {!blocked
-          ? <button type="button" className="nm-btn line danger" disabled={setStatus.isPending} onClick={() => changeStatus('suspended')}><Icon d={ICON.ban} size={16} />مسدودسازی موقت</button>
+          ? <button type="button" className="nm-btn line danger" disabled={setStatus.isPending} onClick={() => changeStatus('suspended')}><Icon d={ICON.ban} size={16} />مسدود کردن حساب</button>
           : <button type="button" className="nm-btn line ok" disabled={setStatus.isPending} onClick={() => changeStatus('active')}><Icon d={ICON.check} size={16} />رفع مسدودی</button>}
       </PageHeading>
 
@@ -300,7 +303,7 @@ export default function OpUserPage() {
 
       {tab === 'locks' && (
         <Card flush title="اقلام رزرو" count={lockRows.length} sub="آزادسازی فقط با تحقق شرط یا دستور مرجع"
-          actions={pf && <button type="button" className="nm-btn sm line danger" onClick={openLegal} disabled={!lhOptions.length}><Icon d={ICON.lock} size={15} />اعمال مسدودی قانونی</button>}>
+          actions={pf && <button type="button" className="nm-btn sm line danger" onClick={openLegal} disabled={!lhOptions.length}><Icon d={ICON.ban} size={15} />مسدود کردن دارایی</button>}>
           <Table columns={lockCols} rows={lockRows} rowKey={({ l }) => l.id} dimRow={() => false} minWidth={860}
             empty={<Empty icon={LOCK_META.none.d} tone="success" title={pf ? 'همه دارایی‌های این کاربر آزاد است' : 'جزئیات رزروها در دسترس نیست'} />} />
           {lockRows.length > 0 && (
@@ -385,8 +388,8 @@ export default function OpUserPage() {
         <Field label="برچسب"><Chips label="برچسب یادداشت" value={noteTag} onChange={setNoteTag} options={NOTE_TAGS.map(([k, l]) => ({ key: k, label: l }))} /></Field>
       </Dialog>
 
-      <Dialog open={modal === 'legal'} onClose={() => setModal('')} width={560} title={`اعمال مسدودی قانونی — ${user.fullName}`} icon={<Tile d={ICON.lock} tone="error" size="lg" />}
-        footer={lhH && <><button type="button" className="nm-btn ghost" onClick={() => setModal('')}>انصراف</button><button type="button" className="nm-btn danger" disabled={applyHold.isPending} onClick={applyLegal}>{applyHold.isPending ? 'در حال اعمال…' : 'اعمال مسدودی'}</button></>}>
+      <Dialog open={modal === 'legal'} onClose={() => setModal('')} width={560} title={`مسدود کردن دارایی — ${user.fullName}`} icon={<Tile d={ICON.ban} tone="error" size="lg" />}
+        footer={lhH && <><button type="button" className="nm-btn ghost" onClick={() => setModal('')}>انصراف</button><button type="button" className="nm-btn danger" disabled={applyHold.isPending} onClick={applyLegal}>{applyHold.isPending ? 'در حال ثبت…' : 'مسدود کردن'}</button></>}>
         {lhH ? (
           <>
             <Field label="دارایی">
@@ -405,7 +408,7 @@ export default function OpUserPage() {
               </Field>
             </div>
             <Field label="دلیل"><Chips label="دلیل مسدودی" value={lhReason} onChange={setLhReason} options={LH_REASONS.map((r, i) => ({ key: i, label: r }))} /></Field>
-            <Note tone="err">مبلغ از بخش آزاد «{holdName(lhH)}» کسر و مسدود می‌شود؛ تا رفع دستور مرجع قابل فروش یا برداشت نیست. کاربر اعلان «مسدودی قانونی» می‌بیند.</Note>
+            <Note tone="err">مبلغ از بخش آزاد «{holdName(lhH)}» کسر و مسدود می‌شود؛ تا رفع دستور مرجع قابل فروش یا برداشت نیست. کاربر اعلان «بخشی از دارایی شما مسدود شد» را می‌بیند.</Note>
             {lhErr && <span role="alert" style={{ fontSize: 12, color: 'var(--error-text)', fontWeight: 600 }}>{lhErr}</span>}
           </>
         ) : <span className="mute">این کاربر دارایی آزادی برای مسدودسازی ندارد.</span>}

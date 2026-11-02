@@ -82,7 +82,7 @@ export default function SecurityPage() {
       <Section eyebrow="شفافیت و همراهی" title="در هر شرایطی شفاف،" mute="و کنار شما." lead="اگر بخشی از دارایی به حکم قانون مسدود شود، دقیقاً می‌دانید چرا؛ و با چند عادت ساده، حسابتان امن‌تر می‌ماند.">
         <div className="s-split" style={{ alignItems: 'start' }}>
           <div className="card s-card">
-            <h3 className="s-h3">مسدودی قانونی، فقط همان مبلغ</h3>
+            <h3 className="s-h3">مسدودی، فقط همان مبلغ</h3>
             <p style={{ fontSize: 14, lineHeight: 2, color: 'var(--text-secondary)' }}>
               اگر مرجع قضایی یا قانونی دستور مسدودی صادر کند، فقط همان مبلغ با برچسب زیر مسدود می‌شود و دلیل و مرجع آن در اپ نمایش داده می‌شود. باقی دارایی شما آزاد و در دسترس می‌ماند.
             </p>

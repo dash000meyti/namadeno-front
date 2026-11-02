@@ -262,7 +262,8 @@ export const appHandlers = [
     }
     credit(ud, 'rial', b.amount - fee);
     onUserTrade(ud, f, 'sell', b.amount, fee); // the units go back to the shared stock
-    const tx = addTx(ud, { category: 'trade', title: 'فروش ' + f.name, subtitle: f.symbol + ' · واریز به کیف پول ریالی', amount: b.amount - fee, units: -(b.amount / f.nav), holdingKind: f.kind, status: 'pending', details: [{ label: 'کارمزد', value: money(fee) + ' تومان' }, { label: 'تسویه', value: f.settlement }] });
+    // cash first: Namadno pays from its free rial at once — the sale is done (no settlement wait)
+    const tx = addTx(ud, { category: 'trade', title: 'فروش ' + f.name, subtitle: f.symbol + ' · واریز به کیف پول ریالی', amount: b.amount - fee, units: -(b.amount / f.nav), holdingKind: f.kind, details: [{ label: 'کارمزد', value: money(fee) + ' تومان' }] });
     return ok(tx);
   }),
 

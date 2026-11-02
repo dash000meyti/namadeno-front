@@ -9,7 +9,9 @@ import type {
   Severity, StockMovement, StockState, TreasuryOrder,
 } from '@/api/op-treasury-extra';
 import { FUND_UI } from '@/components/op/system/funds';
-import { compactMoney, faDigits } from '@/lib/format';
+import { JALALI_MONTHS, compactMoney, faDigits } from '@/lib/format';
+import { jParts, jalaliToIsoAny } from '@/lib/jalali';
+import { now } from '@/lib/clock';
 import type { AssetKind } from '@/types/domain';
 
 /** Icons used across the treasury pages. */
@@ -90,7 +92,7 @@ export const isNeed = (s: StockState) => s === 'need_buy' || s === 'shortfall';
 export const STOCK_STATE: Record<StockState, { label: string; tone: Tone; hint: string }> = {
   need_buy: NEED_BUY,
   shortfall: NEED_BUY,
-  below: { label: 'زیر هدف', tone: 'warning', hint: 'موجودی آزاد کمتر از هدف پوشش است' },
+  below: { label: 'زیر هدف', tone: 'warning', hint: 'موجودی آزاد کمتر از حداقل هدف است' },
   ok: { label: 'متعادل', tone: 'success', hint: 'موجودی آزاد در محدوده‌ی هدف است' },
   surplus: { label: 'مازاد', tone: 'info', hint: 'موجودی آزاد بیشتر از سقف هدف است' },
   inactive: { label: 'غیرفعال', tone: 'neutral', hint: 'صندوق فعال نیست' },
@@ -109,10 +111,21 @@ export const SIDE: Record<OrderSide, { label: string; long: string; tone: Tone; 
   redeem: { label: 'ابطال', long: 'ابطال واحد (فروش به صندوق)', tone: 'info', d: TI.redeem },
 };
 
+/**
+ * Cash-first: an order to a fund is recorded only when it is done (paid, units in or out of the stock at once), so every
+ * order reads «ثبت‌شده». `placed` / `cancelled` are no longer produced; old data falls back to «ثبت‌شده» / «لغوشده».
+ */
 export function orderStatus(o: TreasuryOrder): { label: string; tone: Tone } {
-  if (o.status === 'settled') return { label: 'تسویه‌شده', tone: 'success' };
   if (o.status === 'cancelled') return { label: 'لغوشده', tone: 'neutral' };
-  return o.dueNow ? { label: 'سررسید تسویه', tone: 'warning' } : { label: 'در انتظار تسویه', tone: 'info' };
+  return { label: 'ثبت‌شده', tone: 'success' };
+}
+/** When an order was recorded (= done). */
+export const orderAt = (o: TreasuryOrder): string => o.settledAt ?? o.placedAt;
+/** The current Jalali month: its name and the ISO start (half a day early so the whole first day counts). */
+export function thisMonth(): { name: string; from: string } {
+  const p = jParts(now());
+  const start = jalaliToIsoAny(p.y, p.m, 1);
+  return { name: JALALI_MONTHS[p.m - 1], from: start ? new Date(Date.parse(start) - 12 * 3_600_000).toISOString() : '' };
 }
 
 export const CASH_KIND: Record<CashEntryKind, { label: string; tone: Tone }> = {
@@ -168,6 +181,7 @@ export const ACTION_KIND: Record<ActionKind, { d: string; tone: Tone }> = {
   stock_shortfall: { d: TI.alert, tone: 'error' },
   stock_below: { d: TI.stock, tone: 'warning' },
   stock_surplus: { d: TI.stock, tone: 'info' },
+  /** no longer produced (orders are recorded only when done) */
   order_settle: { d: TI.order, tone: 'primary' },
   deposit_overdue: { d: TI.cash, tone: 'error' },
   deposit_expected: { d: TI.cash, tone: 'warning' },
@@ -189,7 +203,8 @@ export const EVENT_KIND: Record<ForecastEvent['kind'], { label: string; tone: To
   milestone_due: { label: 'سررسید مرحله', tone: 'info' },
   package_expiry: { label: 'پایان مهلت بسته', tone: 'neutral' },
   planned_package: { label: 'بسته‌ی برنامه‌ریزی‌شده', tone: 'warning' },
-  order_settle: { label: 'تسویه‌ی سفارش', tone: 'primary' },
+  // kept for the type; orders are recorded only when done, so this event is no longer produced
+  order_settle: { label: 'سفارش صندوق', tone: 'primary' },
   // kept for the type; receipts are reviewed instead, so this event is no longer produced
   deposit_due: { label: 'فیش واریز', tone: 'warning' },
 };

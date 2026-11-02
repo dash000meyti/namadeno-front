@@ -1,16 +1,17 @@
 'use client';
 /**
- * «ثبت سفارش» — one dialog for every place that orders units from a fund (stock page, fund detail, orders page,
- * suggestions, the command center's action queue). Shows a live quote (units, fee, settlement date) and the effect on
- * cash and free stock, with the server's warnings before anything is placed.
+ * «ثبت صدور» / «ثبت ابطال» — one dialog for every place that orders units from a fund (stock page, fund detail, orders
+ * page, suggestions, the command center's action queue). Cash-first: the order is recorded only when it is done — at
+ * «ثبت» the amount is paid and the units are in (or out of) the stock at once, and the queue «صف تأمین» is served right
+ * after. Shows a live quote (units, NAV, fee) and Namadno's free rial and free stock after it, with the server's warnings.
  */
 import { useEffect, useState } from 'react';
 import { useOrderQuote, usePlaceOrder, useTreasuryPositions, type OrderSide, type TreasuryOrder } from '@/api/op-treasury-extra';
 import { Chips, Dialog, Field, KV, Note, NumberInput, Select, Tile } from '@/components/panel/kit';
 import { useToast } from '@/components/ui/Toast';
 import { errMsg } from '@/components/op/system/fmt';
-import { jDate, money } from '@/lib/format';
-import { SIDE, TI, amt, daysText, fundUi, unitsText } from './ui';
+import { money } from '@/lib/format';
+import { SIDE, amt, fundUi, unitsText } from './ui';
 
 export interface OrderDialogProps {
   open: boolean;
@@ -55,7 +56,9 @@ export function OrderDialog({ open, onClose, fundId, side = 'buy', amount, sourc
     if (!ok) { setErr('مبلغ سفارش حداقل ۱۰ میلیون تومان است.'); return; }
     place.mutate({ fundId: fund, side: s, amount: value, note: note.trim() || undefined, source, recommendationId }, {
       onSuccess: (o) => {
-        toast(`سفارش ${SIDE[o.side].label} ${o.code} ثبت شد · تسویه ${jDate(o.settleAt)}`);
+        toast(o.side === 'buy'
+          ? `صدور ${o.code} ثبت شد؛ ${unitsText(o.units)} واحد به موجودی اضافه شد`
+          : `ابطال ${o.code} ثبت شد؛ ${unitsText(o.units)} واحد از موجودی کم شد`);
         onPlaced?.(o);
         onClose();
       },
@@ -65,14 +68,16 @@ export function OrderDialog({ open, onClose, fundId, side = 'buy', amount, sourc
 
   return (
     <Dialog
-      open={open} onClose={onClose} width={560} title="ثبت سفارش"
-      sub="سفارش به صندوق ارسال می‌شود و پس از تسویه، موجودی خزانه به‌روز می‌شود."
-      icon={<Tile d={TI.order} tone="primary" size="lg" />}
+      open={open} onClose={onClose} width={560} title={`ثبت ${SIDE[s].label}`}
+      sub={s === 'buy'
+        ? 'با ثبت، مبلغ پرداخت و واحدها همان لحظه به موجودی اضافه می‌شود؛ موارد صف تأمین خودکار تحویل می‌شوند.'
+        : 'با ثبت، واحدها همان لحظه از موجودی کم و مبلغ به ریال آزاد نمادنو اضافه می‌شود؛ فروش‌های در صف واریز خودکار پرداخت می‌شوند.'}
+      icon={<Tile d={SIDE[s].d} tone={SIDE[s].tone} size="lg" />}
       footer={(
         <>
           <button type="button" className="nm-btn ghost" onClick={onClose}>انصراف</button>
           <button type="button" className="nm-btn" onClick={submit} disabled={place.isPending || !ok}>
-            {place.isPending ? 'در حال ثبت…' : `ثبت سفارش ${SIDE[s].label}`}
+            {place.isPending ? 'در حال ثبت…' : `ثبت ${SIDE[s].label}`}
           </button>
         </>
       )}
@@ -101,12 +106,12 @@ export function OrderDialog({ open, onClose, fundId, side = 'buy', amount, sourc
 
       {q && ok && (
         <KV rows={[
+          ['مبلغ', <span key="m" className="num">{money(q.amount)} تومان</span>],
           ['تعداد واحد', <span key="u" className="num">{unitsText(q.units)}</span>],
           ['قیمت هر واحد (NAV)', <span key="n" className="num">{money(q.nav)} تومان</span>],
           ['کارمزد', <span key="f" className="num">{money(q.fee)} تومان</span>],
-          ['تاریخ تسویه', <span key="d" className="num">{jDate(q.settleAt)}</span>],
-          ['نقد در دسترس پس از سفارش', <span key="c" className="num" style={q.cashAvailableAfter < 0 ? { color: 'var(--error-text)' } : undefined}>{money(q.cashAvailableAfter)} تومان</span>],
-          ['موجودی آزاد پس از تسویه', <span key="a" className="num">{amt(q.availableValueAfter)} تومان · پوشش {daysText(q.coverageDaysAfter)}</span>],
+          ['ریال آزاد نمادنو پس از ثبت', <span key="c" className="num" style={q.cashAvailableAfter < 0 ? { color: 'var(--error-text)' } : undefined}>{money(q.cashAvailableAfter)} تومان</span>],
+          ['موجودی آزاد پس از ثبت', <span key="a" className="num">{amt(q.availableValueAfter)} تومان</span>],
         ]} />
       )}
       {q && ok && q.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}

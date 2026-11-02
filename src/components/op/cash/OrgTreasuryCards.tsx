@@ -24,7 +24,7 @@ import { ReviewDepositDialog, depositPurpose } from './ReviewDepositDialog';
 import { RialMoveRow, RialSplit } from './rial';
 
 const EVENT_ICONS: Partial<Record<ForecastEvent['kind'], string>> = {
-  vesting_release: TI.clock, milestone_due: TI.target, package_expiry: TI.order, planned_package: TI.plan, order_settle: TI.order,
+  vesting_release: TI.clock, milestone_due: TI.target, package_expiry: TI.order, planned_package: TI.plan,
 };
 const eventIcon = (k: ForecastEvent['kind']) => EVENT_ICONS[k] ?? TI.deposit;
 

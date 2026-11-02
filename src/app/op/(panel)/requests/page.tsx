@@ -5,6 +5,8 @@
  * (requester, amount · SLA · risk, details, risk factors, manual review checklist, approve / reject with reason / refer to risk).
  * Withdrawals are not reviewed here (they go through within the fixed daily / monthly caps of /op/rules), and identity is
  * verified automatically in the app (شاهکار، ثبت احوال، سجام): there are no withdrawal or KYC requests.
+ * What is left — loans, installment purchases, credit increases — are credit products, so while facilities are off
+ * (FEATURES.orgCredit) the page is a calm «به‌زودی» notice, like «محصولات اعتباری».
  */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,8 +17,9 @@ import { useDecideOpRequest, useOpRequests, useOpUsers } from '@/api/op';
 import { useEscalateRequest, useReopenRequest, useRequestMeta, useUpdateRequestChecks, type RequestMeta } from '@/api/op-system-extra';
 import {
   Ava, Card, Chips, Dialog, Empty, Field, Ident, Inspector, KV, KeyStats, Legend, List, ListRow, Meter, Note, PageHeading, Pill,
-  SearchField, Section, Select, StatStrip, Table, TableFoot, Tabs, Toolbar, Who, usePaging, type Column, type Tone,
+  SearchField, Section, Select, StatStrip, Table, TableFoot, Tabs, Tile, Toolbar, Who, usePaging, type Column, type Tone,
 } from '@/components/panel/kit';
+import { FEATURES } from '@/lib/features';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { IC } from '@/components/op/system/ui';
@@ -72,6 +75,39 @@ function slaOf(r: ApprovalRequest, m?: RequestMeta): { t: string; min: number; t
 const slaColor = (s: ReturnType<typeof slaOf>) => (s.closed ? 'var(--text-disabled)' : s.tone ? `var(--${s.tone}-text)` : 'var(--text-secondary)');
 
 export default function OpRequestsPage() {
+  return FEATURES.orgCredit ? <RequestsPage /> : <RequestsComingSoon />;
+}
+
+/** The request kinds that arrive with the credit products (shown on the coming-soon page, no actions). */
+const SOON: { d: string; tone: Tone; title: string; sub: string }[] = [
+  { d: IC.percent, tone: 'info', title: 'وام با پشتوانه‌ی دارایی', sub: 'بررسی درخواست وام کاربران؛ پشتوانه از بخش آزاد دارایی رزرو می‌شود و دارایی فروخته نمی‌شود.' },
+  { d: IC.bag, tone: 'success', title: 'خرید اقساطی', sub: 'بررسی خرید اقساطی از فروشگاه‌های طرف قرارداد.' },
+  { d: IC.card, tone: 'primary', title: 'افزایش اعتبار کارت', sub: 'بررسی درخواست افزایش سقف اعتبار کارت نمادنو.' },
+];
+
+function RequestsComingSoon() {
+  return (
+    <>
+      <PageHeading title="درخواست‌ها" crumbs={[{ label: 'مشتریان' }]} sub="درخواست‌های اعتباری با فعال شدن محصولات اعتباری اینجا بررسی می‌شوند">
+        <Pill>به‌زودی</Pill>
+      </PageHeading>
+      <Card>
+        <Empty
+          icon={IC.inbox} tone="primary" title="درخواست‌ها به‌زودی"
+          sub="برداشت تأیید لازم ندارد (سقف ثابت روزانه و ماهانه) و احراز هویت خودکار در اپ انجام می‌شود؛ درخواست‌های این بخش فقط برای محصولات اعتباری است."
+        />
+        <List>
+          {SOON.map((p) => (
+            <ListRow key={p.title} lead={<Tile d={p.d} tone={p.tone} />} title={p.title}
+              sub={<span style={{ whiteSpace: 'normal' }}>{p.sub}</span>} trail={<Pill>به‌زودی</Pill>} />
+          ))}
+        </List>
+      </Card>
+    </>
+  );
+}
+
+function RequestsPage() {
   const toast = useToast();
   const reqs = useOpRequests();
   const metaQ = useRequestMeta();

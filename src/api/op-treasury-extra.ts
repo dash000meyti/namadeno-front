@@ -17,7 +17,7 @@
  *   allocated = baseline + Σ modelled holdings          reserved = baseline + Σ modelled reservations
  *   committed = baseline + pending recipients of sent packages × split
  *   available (free stock) = held − allocated − committed − pending redeem       (negative = shortfall)
- *   coverageDays = (available + pending buy) value / net daily demand            (null when net demand ≤ 0)
+ *   coverageDays = (available + pending buy) value / net daily demand            (deprecated: not shown; null when net demand ≤ 0)
  * Cash: balance (bank) = opening + Σ done entries.
  * Organization rial account: balance = approved deposits − paid to recipients + reclaimed shares;
  *   blocked = pending recipients of its sent packages (always covered by the balance — a package is sent only when it is paid);
@@ -44,11 +44,12 @@ import { qk } from './keys';
 export type StockState = 'need_buy' | 'shortfall' | 'below' | 'ok' | 'surplus' | 'inactive';
 export type OrderSide = 'buy' | 'redeem';
 
-/** Per-fund stock targets. Free stock should stay above max(minFreeValue, net daily demand × targetDays). */
+/** Per-fund stock targets. Free stock (after the queue) should stay above `minFreeValue`; above `maxFreeValue` a redemption is suggested. */
 export interface StockTarget {
   fundId: ID;
   minFreeValue: Toman;
-  targetDays: number;
+  /** @deprecated Cover days are not used any more (ignored; may be missing). */
+  targetDays?: number;
   /** Above this the fund is «مازاد» and a redemption is suggested. */
   maxFreeValue?: Toman;
 }
@@ -94,9 +95,10 @@ export interface TreasuryPosition {
   unrealizedPnl: Toman;
   /** NET daily drain of free stock in Toman: user buys + new packages − user sells. ≤ 0 means the stock grows. */
   demandPerDay: Toman;
+  /** @deprecated Cover days are not shown any more (still computed). */
   coverageDays: number | null;
   target?: StockTarget;
-  /** Lower edge of the target band in Toman: max(target.minFreeValue, max(0, demandPerDay) × target.targetDays). */
+  /** Lower edge of the target band in Toman: target.minFreeValue. */
   minTargetValue?: Toman;
   state: StockState;
   suggestion?: StockSuggestion;
@@ -647,6 +649,27 @@ export interface ActivityEvent {
   refs?: { type: string; id: ID; label?: string }[];
 }
 
+/**
+ * A notification of the operator console («اعلان‌ها», the bell) — same idea as the organization panel's:
+ *   action  something that needs the operator now (the action queue: need to buy, receipts to review, orders to settle,
+ *           risk alerts, incidents …; `actionKind` / `severity` say which and how urgent)
+ *   update  what changed recently in the treasury and with customers (orders settled, receipts approved / rejected,
+ *           queue delivered, contracts, legal holds …; `category`) and news of the console itself
+ * `read` is kept per operator.
+ */
+export interface OpNotification {
+  id: ID;
+  kind: 'action' | 'update';
+  title: string;
+  body: string;
+  createdAt: ISODate;
+  href?: string;
+  read: boolean;
+  severity?: Severity;
+  actionKind?: ActionKind;
+  category?: ActivityCategory | 'console';
+}
+
 export interface ActivityPage {
   items: ActivityEvent[];
   total: number;
@@ -686,6 +709,7 @@ export const tq = {
   plan: (h: number) => ['op', 'treasury', 'plan', h] as const,
   actions: ['op', 'actions'] as const,
   queue: (f?: Record<string, unknown>) => ['op', 'treasury', 'queue', f ?? {}] as const,
+  notifications: ['op', 'notifications'] as const,
   activity: (f?: Record<string, unknown>) => ['op', 'activity', f ?? {}] as const,
 };
 
@@ -777,6 +801,18 @@ export const useTreasuryPlan = (horizon: Horizon = 30) =>
 /** «صف تأمین»: everything waiting for stock or free rial, oldest first (optionally one fund, or 'rial'). */
 export const useStockQueue = (fundId?: string) =>
   useQuery({ queryKey: tq.queue(clean({ fundId })), queryFn: () => get<QueueItem[]>('/op/treasury/queue', clean({ fundId })) });
+
+/** «اعلان‌ها» of the operator console: needs action (most severe first) + updates (newest first). */
+export const useOpNotifications = () =>
+  useQuery({ queryKey: tq.notifications, queryFn: () => get<{ items: OpNotification[] }>('/op/notifications') });
+/** Mark notifications as read for the signed-in operator (`ids` omitted = all). */
+export const useMarkOpNotificationsRead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { ids?: ID[] }) => post<{ ok: true }>('/op/notifications/read', v),
+    onSuccess: () => qc.invalidateQueries({ queryKey: tq.notifications }),
+  });
+};
 
 /** «صف اقدام»: everything that needs the operator, most severe first. */
 export const useTreasuryActions = () =>
